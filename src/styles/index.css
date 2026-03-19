@@ -1,0 +1,45 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: 'IBM Plex Sans', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+  --color-canvas-bg: #0F172A;
+  --color-canvas-text: #F1F5F9;
+  --color-canvas-border: #334155;
+  --color-primary: #3B82F6;
+  --color-surface: #1E293B;
+  --color-surface-hover: #283548;
+  --color-method-get: #22C55E;
+  --color-method-post: #F59E0B;
+  --color-method-put: #F97316;
+  --color-method-delete: #EF4444;
+  --color-method-patch: #A855F7;
+}
+
+html, body, #root {
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+}
+
+/* React Flow overrides for dark theme */
+.react-flow__background {
+  background-color: var(--color-canvas-bg) !important;
+}
+
+.react-flow__controls button {
+  background-color: var(--color-surface) !important;
+  border-color: var(--color-canvas-border) !important;
+  color: var(--color-canvas-text) !important;
+  fill: var(--color-canvas-text) !important;
+}
+
+.react-flow__controls button:hover {
+  background-color: var(--color-surface-hover) !important;
+}
+
+@keyframes dashdraw {
+  to {
+    stroke-dashoffset: -10;
+  }
+}
