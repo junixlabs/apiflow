@@ -1,8 +1,8 @@
 @import "tailwindcss";
 
 @theme {
-  --font-sans: 'IBM Plex Sans', system-ui, sans-serif;
-  --font-mono: 'JetBrains Mono', monospace;
+  --font-sans: 'Inter', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
   --color-canvas-bg: #0F172A;
   --color-canvas-text: #F1F5F9;
   --color-canvas-border: #334155;
@@ -36,6 +36,43 @@ html, body, #root {
 
 .react-flow__controls button:hover {
   background-color: var(--color-surface-hover) !important;
+}
+
+/* Light theme overrides */
+[data-theme="light"] {
+  --color-canvas-bg: #f8fafc;
+  --color-canvas-text: #0f172a;
+  --color-canvas-border: #cbd5e1;
+  --color-primary: #2563eb;
+  --color-surface: #ffffff;
+  --color-surface-hover: #f1f5f9;
+  /* Method colors stay vivid */
+}
+
+[data-theme="light"] .react-flow__background {
+  background-color: var(--color-canvas-bg) !important;
+}
+
+[data-theme="light"] .react-flow__background pattern circle,
+[data-theme="light"] .react-flow__background pattern line {
+  fill: #94a3b8 !important;
+  stroke: #94a3b8 !important;
+}
+
+[data-theme="light"] .react-flow__controls button {
+  background-color: var(--color-surface) !important;
+  border-color: var(--color-canvas-border) !important;
+  color: var(--color-canvas-text) !important;
+  fill: var(--color-canvas-text) !important;
+}
+
+[data-theme="light"] .react-flow__controls button:hover {
+  background-color: var(--color-surface-hover) !important;
+}
+
+[data-theme="light"] .react-flow__minimap {
+  background-color: var(--color-surface) !important;
+  border-color: var(--color-canvas-border) !important;
 }
 
 @keyframes dashdraw {

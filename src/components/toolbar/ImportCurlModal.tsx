@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { X } from 'lucide-react';
 import { parseCurl } from '../../utils/curlParser';
 import { useFlowStore } from '../../store/flowStore';
 
@@ -46,7 +47,7 @@ export function ImportCurlModal({ onClose }: Props) {
         <div className="flex items-center justify-between px-4 py-3 border-b border-canvas-border">
           <h3 className="text-sm font-medium text-canvas-text">Import cURL</h3>
           <button onClick={onClose} className="text-canvas-text/40 hover:text-canvas-text">
-            &times;
+            <X className="w-3.5 h-3.5" />
           </button>
         </div>
 

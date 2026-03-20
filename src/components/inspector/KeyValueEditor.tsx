@@ -1,4 +1,5 @@
 import { useState, useRef } from 'react';
+import { X } from 'lucide-react';
 import type { KeyValuePair } from '../../types';
 
 interface Props {
@@ -121,9 +122,9 @@ export function KeyValueEditor({
           <button
             onClick={() => removePair(i)}
             aria-label="Remove row"
-            className="text-canvas-text/30 hover:text-method-delete shrink-0 w-5 h-5 flex items-center justify-center rounded hover:bg-method-delete/10 text-xs"
+            className="text-canvas-text/30 hover:text-method-delete shrink-0 w-5 h-5 flex items-center justify-center rounded hover:bg-method-delete/10"
           >
-            &times;
+            <X className="w-3 h-3" />
           </button>
         </div>
       ))}

@@ -1,5 +1,6 @@
 import { useState, useCallback, useMemo } from 'react';
 import { createPortal } from 'react-dom';
+import { Copy, Check, Maximize2, ChevronRight, Plus, Minus, Search } from 'lucide-react';
 
 type ViewMode = 'tree' | 'raw';
 
@@ -51,14 +52,14 @@ export function JsonTreeView({ data, defaultMode = 'raw' }: { data: unknown; def
               title="Expand all"
               className="px-1 py-0.5 text-[10px] text-canvas-text/40 hover:text-canvas-text/70 rounded hover:bg-surface-hover"
             >
-              <svg width="10" height="10" viewBox="0 0 10 10"><path d="M2 5h6M5 2v6" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/></svg>
+              <Plus className="w-2.5 h-2.5" />
             </button>
             <button
               onClick={() => setExpandLevel((p) => p - 1)}
               title="Collapse all"
               className="px-1 py-0.5 text-[10px] text-canvas-text/40 hover:text-canvas-text/70 rounded hover:bg-surface-hover"
             >
-              <svg width="10" height="10" viewBox="0 0 10 10"><path d="M2 5h6" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/></svg>
+              <Minus className="w-2.5 h-2.5" />
             </button>
           </>
         )}
@@ -69,7 +70,7 @@ export function JsonTreeView({ data, defaultMode = 'raw' }: { data: unknown; def
             showSearch || search ? 'text-primary bg-primary/10' : 'text-canvas-text/40 hover:text-canvas-text/70 hover:bg-surface-hover'
           }`}
         >
-          <svg width="10" height="10" viewBox="0 0 10 10"><circle cx="4.5" cy="4.5" r="3" stroke="currentColor" strokeWidth="1.2" fill="none"/><path d="M7 7l2 2" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/></svg>
+          <Search className="w-2.5 h-2.5" />
         </button>
         <button
           onClick={handleCopy}
@@ -83,9 +84,7 @@ export function JsonTreeView({ data, defaultMode = 'raw' }: { data: unknown; def
           title="Expand view"
           className="px-1 py-0.5 text-[10px] text-canvas-text/40 hover:text-canvas-text/70 rounded hover:bg-surface-hover"
         >
-          <svg width="10" height="10" viewBox="0 0 10 10">
-            <path d="M1 3.5V1h2.5M6.5 1H9v2.5M9 6.5V9H6.5M3.5 9H1V6.5" stroke="currentColor" strokeWidth="1.2" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
+          <Maximize2 className="w-2.5 h-2.5" />
         </button>
       </div>
     </div>
@@ -197,14 +196,14 @@ function JsonViewerModal({
                   className="px-1.5 py-1 text-xs text-canvas-text/50 hover:text-canvas-text hover:bg-surface-hover rounded"
                   title="Expand all"
                 >
-                  <svg width="12" height="12" viewBox="0 0 10 10"><path d="M2 5h6M5 2v6" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/></svg>
+                  <Plus className="w-3 h-3" />
                 </button>
                 <button
                   onClick={() => setExpandLevel((p) => p - 1)}
                   className="px-1.5 py-1 text-xs text-canvas-text/50 hover:text-canvas-text hover:bg-surface-hover rounded"
                   title="Collapse all"
                 >
-                  <svg width="12" height="12" viewBox="0 0 10 10"><path d="M2 5h6" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/></svg>
+                  <Minus className="w-3 h-3" />
                 </button>
               </>
             )}
@@ -489,7 +488,7 @@ function CopyPathButton({ path }: { path: string }) {
       title={`Copy path: ${path}`}
       className="opacity-0 group-hover/row:opacity-100 ml-1 px-1 text-[9px] text-canvas-text/30 hover:text-primary shrink-0 transition-opacity"
     >
-      {copied ? '✓' : '$'}
+      {copied ? <Check className="w-2.5 h-2.5" /> : <Copy className="w-2.5 h-2.5" />}
     </button>
   );
 }
@@ -500,9 +499,7 @@ function Chevron({ collapsed, onClick }: { collapsed: boolean; onClick: () => vo
       onClick={onClick}
       className="inline-flex items-center justify-center w-3.5 h-3.5 text-canvas-text/40 hover:text-canvas-text/80 select-none shrink-0 align-middle"
     >
-      <svg width="8" height="8" viewBox="0 0 8 8" className={`transition-transform ${collapsed ? '' : 'rotate-90'}`}>
-        <path d="M2 1L6 4L2 7" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" />
-      </svg>
+      <ChevronRight className={`w-2.5 h-2.5 transition-transform ${collapsed ? '' : 'rotate-90'}`} />
     </button>
   );
 }

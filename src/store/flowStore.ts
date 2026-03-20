@@ -7,7 +7,7 @@ import {
   type OnEdgesChange,
   type OnConnect,
 } from '@xyflow/react';
-import type { ApiNode, FlowEdge, ApiNodeData, ApiNodeConfig, HttpMethod, ApiViewFile } from '../types';
+import type { ApiNode, FlowEdge, ApiNodeData, ApiNodeConfig, HttpMethod, ApiViewFile, ApiViewFileV2, ApiViewFileAny, CoreApiNode, CoreFlowEdge, Assertion } from '../types';
 import { generateNodeId, generateEdgeId } from '../utils/idGenerator';
 import { useHistoryStore } from './historyStore';
 
@@ -26,13 +26,17 @@ interface FlowState {
   addNodeFromConfig: (config: ApiNodeConfig, label?: string) => void;
   addAnnotation: () => void;
   addGroup: () => void;
+  addConditionNode: () => void;
+  addLoopNode: () => void;
   deleteNode: (nodeId: string) => void;
   updateNodeData: (nodeId: string, data: Partial<ApiNodeData>) => void;
   setSelectedNodeId: (id: string | null) => void;
   deleteEdge: (edgeId: string) => void;
   exportFlow: (environments: ApiViewFile['environments'], activeEnvironmentName: string) => ApiViewFile;
-  loadFlow: (file: ApiViewFile) => void;
+  exportFlowV2: (assertions: Record<string, Assertion[]>) => ApiViewFileV2;
+  loadFlow: (file: ApiViewFileAny) => void;
   setClean: () => void;
+  addNodes: (newNodes: CoreApiNode[], newEdges: CoreFlowEdge[]) => void;
   pushHistory: () => void;
   restoreSnapshot: (nodes: ApiNode[], edges: FlowEdge[]) => void;
   undo: () => void;
@@ -168,6 +172,51 @@ export const useFlowStore = create<FlowState>((set, get) => ({
     }));
   },
 
+  addConditionNode: () => {
+    get().pushHistory();
+    const id = generateNodeId();
+    const nodeCount = get().nodes.length;
+    set((state) => ({
+      nodes: [
+        ...state.nodes,
+        {
+          id,
+          type: 'conditionNode',
+          position: { x: 200 + nodeCount * 280, y: 150 },
+          data: {
+            label: 'Condition',
+            sourceNodeLabel: '',
+            condition: { fieldPath: 'status', operator: 'equals', expected: '200' },
+          } as unknown as ApiNodeData,
+        },
+      ],
+      selectedNodeId: id,
+      isDirty: true,
+    }));
+  },
+
+  addLoopNode: () => {
+    get().pushHistory();
+    const id = generateNodeId();
+    const nodeCount = get().nodes.length;
+    set((state) => ({
+      nodes: [
+        ...state.nodes,
+        {
+          id,
+          type: 'loopNode',
+          position: { x: 200 + nodeCount * 280, y: 150 },
+          data: {
+            label: 'Loop',
+            loopConfig: { mode: 'pagination', pageParam: 'page', startPage: 1, maxIterations: 20 },
+          } as unknown as ApiNodeData,
+        },
+      ],
+      selectedNodeId: id,
+      isDirty: true,
+    }));
+  },
+
   deleteNode: (nodeId) => {
     get().pushHistory();
     set((state) => ({
@@ -211,6 +260,17 @@ export const useFlowStore = create<FlowState>((set, get) => ({
     };
   },
 
+  exportFlowV2: (assertions) => {
+    const state = get();
+    return {
+      version: 2 as const,
+      metadata: { ...state.metadata, updatedAt: new Date().toISOString() },
+      nodes: state.nodes,
+      edges: state.edges,
+      assertions,
+    };
+  },
+
   loadFlow: (file) => {
     useHistoryStore.getState().clear();
     set({
@@ -238,5 +298,14 @@ export const useFlowStore = create<FlowState>((set, get) => ({
     if (snapshot) {
       set({ nodes: snapshot.nodes, edges: snapshot.edges, isDirty: true });
     }
+  },
+
+  addNodes: (newNodes, newEdges) => {
+    get().pushHistory();
+    set((state) => ({
+      nodes: [...state.nodes, ...newNodes],
+      edges: [...state.edges, ...newEdges],
+      isDirty: true,
+    }));
   },
 }));

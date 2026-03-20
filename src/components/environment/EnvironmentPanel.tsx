@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { X } from 'lucide-react';
 import { useEnvironmentStore } from '../../store/environmentStore';
 import { KeyValueEditor } from '../inspector/KeyValueEditor';
 
@@ -35,7 +36,7 @@ export function EnvironmentPanel({ onClose }: Props) {
             aria-label="Close"
             className="text-canvas-text/40 hover:text-canvas-text w-6 h-6 flex items-center justify-center rounded hover:bg-surface-hover"
           >
-            &times;
+            <X className="w-3.5 h-3.5" />
           </button>
         </div>
 

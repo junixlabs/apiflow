@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import { ChevronRight } from 'lucide-react';
 import type { ExecutionResult } from '../../types';
 import { StatusBadge } from '../shared/StatusBadge';
 import { JsonTreeView } from '../json-viewer/JsonTreeView';
@@ -46,9 +47,7 @@ export function ResponseTab({ result }: { result: ExecutionResult }) {
             onClick={() => setShowHeaders(!showHeaders)}
             className="flex items-center gap-1 text-xs text-canvas-text/60 uppercase tracking-wide mb-1.5 hover:text-canvas-text/80"
           >
-            <svg width="8" height="8" viewBox="0 0 8 8" className={`transition-transform ${showHeaders ? 'rotate-90' : ''}`}>
-              <path d="M2 1L6 4L2 7" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" />
-            </svg>
+            <ChevronRight className={`w-3 h-3 transition-transform ${showHeaders ? 'rotate-90' : ''}`} />
             Headers ({headerCount})
           </button>
           {showHeaders && (

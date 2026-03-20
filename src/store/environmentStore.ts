@@ -1,5 +1,13 @@
 import { create } from 'zustand';
 import type { Environment, KeyValuePair } from '../types';
+import * as apiClient from '../utils/apiClient';
+
+function slugify(name: string): string {
+  return name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
 
 interface EnvironmentState {
   environments: Environment[];
@@ -11,6 +19,9 @@ interface EnvironmentState {
   deleteEnvironment: (name: string) => void;
   updateVariables: (envName: string, variables: KeyValuePair[]) => void;
   loadEnvironments: (environments: Environment[], activeName: string) => void;
+  loadFromProject: () => Promise<void>;
+  saveToProject: (envName: string) => Promise<void>;
+  deleteFromProject: (envName: string) => Promise<void>;
 }
 
 export const useEnvironmentStore = create<EnvironmentState>((set, get) => ({
@@ -61,4 +72,23 @@ export const useEnvironmentStore = create<EnvironmentState>((set, get) => ({
 
   loadEnvironments: (environments, activeName) =>
     set({ environments, activeEnvironmentName: activeName }),
+
+  loadFromProject: async () => {
+    const envs = await apiClient.listEnvironments();
+    const config = await apiClient.getConfig();
+    const activeName = config.activeEnvironment || (envs.length > 0 ? envs[0].name : 'Default');
+    set({ environments: envs, activeEnvironmentName: activeName });
+  },
+
+  saveToProject: async (envName: string) => {
+    const env = get().environments.find((e) => e.name === envName);
+    if (!env) return;
+    const slug = slugify(envName);
+    await apiClient.saveEnvironment(slug, env);
+  },
+
+  deleteFromProject: async (envName: string) => {
+    const slug = slugify(envName);
+    await apiClient.deleteEnvironment(slug);
+  },
 }));

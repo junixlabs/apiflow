@@ -44,6 +44,19 @@ export function useVariableAutocomplete(
       const suggestions: Suggestion[] = [];
       const lowerQuery = query.toLowerCase();
 
+      // Built-in variables
+      const builtins: Suggestion[] = [
+        { label: '$timestamp', value: '{{$timestamp}}', type: 'env' as const },
+        { label: '$isoTimestamp', value: '{{$isoTimestamp}}', type: 'env' as const },
+        { label: '$uuid', value: '{{$uuid}}', type: 'env' as const },
+        { label: '$randomInt', value: '{{$randomInt}}', type: 'env' as const },
+      ];
+      for (const b of builtins) {
+        if (b.label.toLowerCase().includes(lowerQuery) || lowerQuery === '' || lowerQuery.startsWith('$')) {
+          suggestions.push(b);
+        }
+      }
+
       // Env variables
       const activeEnv = environments.find((e) => e.name === activeEnvironmentName);
       if (activeEnv) {

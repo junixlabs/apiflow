@@ -1,8 +1,10 @@
 import { useRef, useMemo, useCallback, useState } from 'react';
-import type { ApiNodeData, HttpMethod } from '../../types';
+import { Maximize2, ChevronRight } from 'lucide-react';
+import type { ApiNodeData, HttpMethod, AuthType } from '../../types';
 import { KeyValueEditor } from './KeyValueEditor';
 import { useVariableAutocomplete } from '../../hooks/useVariableAutocomplete';
 import { VariableAutocomplete } from '../shared/VariableAutocomplete';
+import { AssertionsSection } from './AssertionsSection';
 
 const METHODS: HttpMethod[] = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'];
 
@@ -17,12 +19,14 @@ const METHOD_SELECT_COLORS: Record<HttpMethod, string> = {
 interface Props {
   data: ApiNodeData;
   onChange: (data: Partial<ApiNodeData>) => void;
+  nodeId: string;
 }
 
-export function ConfigTab({ data, onChange }: Props) {
+export function ConfigTab({ data, onChange, nodeId }: Props) {
   const { config } = data;
   const urlRef = useRef<HTMLInputElement>(null);
   const bodyRef = useRef<HTMLTextAreaElement>(null);
+  const [showRetry, setShowRetry] = useState(false);
 
   const urlAutocomplete = useVariableAutocomplete(urlRef);
   const bodyAutocomplete = useVariableAutocomplete(bodyRef);
@@ -98,8 +102,71 @@ export function ConfigTab({ data, onChange }: Props) {
         />
       </div>
       <p className="text-[10px] text-canvas-text/30 -mt-2">
-        Use {'{{nodes["Name"].response.body.path}}'} to reference other nodes
+        {'{{base_url}}'}/path, {'{{$timestamp}}'}, or {'{{nodes["Name"].response.body.id}}'}
       </p>
+
+      {/* Auth */}
+      <div>
+        <label className="text-xs text-canvas-text/60 uppercase tracking-wide mb-1.5 block">
+          Auth
+        </label>
+        <select
+          value={config.auth?.type || 'none'}
+          onChange={(e) => updateConfig({ auth: { ...config.auth, type: e.target.value as AuthType } })}
+          className="w-full bg-canvas-bg border border-canvas-border rounded px-2 py-1.5 text-sm text-canvas-text focus:border-primary focus:outline-none mb-2"
+        >
+          <option value="none">No Auth</option>
+          <option value="bearer">Bearer Token</option>
+          <option value="basic">Basic Auth</option>
+          <option value="apikey">API Key</option>
+        </select>
+
+        {config.auth?.type === 'bearer' && (
+          <input
+            type="text"
+            value={config.auth.token || ''}
+            onChange={(e) => updateConfig({ auth: { ...config.auth, type: 'bearer', token: e.target.value } })}
+            placeholder="{{token}}"
+            className="w-full bg-canvas-bg border border-canvas-border rounded px-2 py-1.5 text-sm font-mono text-canvas-text placeholder:text-canvas-text/30 focus:border-primary focus:outline-none"
+          />
+        )}
+        {config.auth?.type === 'basic' && (
+          <div className="space-y-1.5">
+            <input
+              type="text"
+              value={config.auth.username || ''}
+              onChange={(e) => updateConfig({ auth: { ...config.auth, type: 'basic', username: e.target.value } })}
+              placeholder="Username"
+              className="w-full bg-canvas-bg border border-canvas-border rounded px-2 py-1.5 text-sm font-mono text-canvas-text placeholder:text-canvas-text/30 focus:border-primary focus:outline-none"
+            />
+            <input
+              type="password"
+              value={config.auth.password || ''}
+              onChange={(e) => updateConfig({ auth: { ...config.auth, type: 'basic', password: e.target.value } })}
+              placeholder="Password"
+              className="w-full bg-canvas-bg border border-canvas-border rounded px-2 py-1.5 text-sm font-mono text-canvas-text placeholder:text-canvas-text/30 focus:border-primary focus:outline-none"
+            />
+          </div>
+        )}
+        {config.auth?.type === 'apikey' && (
+          <div className="space-y-1.5">
+            <input
+              type="text"
+              value={config.auth.headerName || ''}
+              onChange={(e) => updateConfig({ auth: { ...config.auth, type: 'apikey', headerName: e.target.value } })}
+              placeholder="Header name (e.g. X-API-Key)"
+              className="w-full bg-canvas-bg border border-canvas-border rounded px-2 py-1.5 text-sm font-mono text-canvas-text placeholder:text-canvas-text/30 focus:border-primary focus:outline-none"
+            />
+            <input
+              type="text"
+              value={config.auth.apiKey || ''}
+              onChange={(e) => updateConfig({ auth: { ...config.auth, type: 'apikey', apiKey: e.target.value } })}
+              placeholder="API key value"
+              className="w-full bg-canvas-bg border border-canvas-border rounded px-2 py-1.5 text-sm font-mono text-canvas-text placeholder:text-canvas-text/30 focus:border-primary focus:outline-none"
+            />
+          </div>
+        )}
+      </div>
 
       {/* Headers */}
       <div>
@@ -133,6 +200,61 @@ export function ConfigTab({ data, onChange }: Props) {
           bodyAutocomplete={bodyAutocomplete}
         />
       )}
+
+      {/* Retry */}
+      <div>
+        <button
+          onClick={() => setShowRetry(!showRetry)}
+          className="flex items-center gap-1.5 text-xs text-canvas-text/60 uppercase tracking-wide hover:text-canvas-text/80"
+        >
+          <ChevronRight className={`w-3 h-3 transition-transform ${showRetry ? 'rotate-90' : ''}`} />
+          Retry
+        </button>
+        {showRetry && (
+          <div className="space-y-2 mt-2">
+            <div className="flex gap-2">
+              <div className="flex-1">
+                <label className="text-[10px] text-canvas-text/40 block mb-1">Retries</label>
+                <input
+                  type="number"
+                  value={config.retry?.count ?? 0}
+                  min={0}
+                  max={10}
+                  onChange={(e) => updateConfig({ retry: { count: Number(e.target.value), backoffMs: config.retry?.backoffMs ?? 1000, retryOn: config.retry?.retryOn ?? [429, 500, 502, 503] } })}
+                  className="w-full bg-canvas-bg border border-canvas-border rounded px-2 py-1.5 text-sm font-mono text-canvas-text focus:border-primary focus:outline-none"
+                />
+              </div>
+              <div className="flex-1">
+                <label className="text-[10px] text-canvas-text/40 block mb-1">Backoff (ms)</label>
+                <input
+                  type="number"
+                  value={config.retry?.backoffMs ?? 1000}
+                  min={0}
+                  step={100}
+                  onChange={(e) => updateConfig({ retry: { count: config.retry?.count ?? 0, backoffMs: Number(e.target.value), retryOn: config.retry?.retryOn ?? [429, 500, 502, 503] } })}
+                  className="w-full bg-canvas-bg border border-canvas-border rounded px-2 py-1.5 text-sm font-mono text-canvas-text focus:border-primary focus:outline-none"
+                />
+              </div>
+            </div>
+            <div>
+              <label className="text-[10px] text-canvas-text/40 block mb-1">Retry on status codes</label>
+              <input
+                type="text"
+                value={config.retry?.retryOn?.join(', ') ?? '429, 500, 502, 503'}
+                onChange={(e) => {
+                  const codes = e.target.value.split(',').map(s => Number(s.trim())).filter(n => !isNaN(n) && n > 0);
+                  updateConfig({ retry: { count: config.retry?.count ?? 0, backoffMs: config.retry?.backoffMs ?? 1000, retryOn: codes } });
+                }}
+                placeholder="429, 500, 502, 503"
+                className="w-full bg-canvas-bg border border-canvas-border rounded px-2 py-1.5 text-sm font-mono text-canvas-text placeholder:text-canvas-text/30 focus:border-primary focus:outline-none"
+              />
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Assertions */}
+      <AssertionsSection nodeId={nodeId} />
     </div>
   );
 }
@@ -273,9 +395,7 @@ function BodyEditor({ value, onChange, bodyRef, bodyAutocomplete }: BodyEditorPr
             className="px-1.5 py-0.5 text-[10px] text-canvas-text/40 hover:text-canvas-text/70 hover:bg-surface-hover rounded"
             title="Expand editor"
           >
-            <svg width="10" height="10" viewBox="0 0 10 10" className="inline">
-              <path d="M1 3.5V1h2.5M6.5 1H9v2.5M9 6.5V9H6.5M3.5 9H1V6.5" stroke="currentColor" strokeWidth="1.2" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
+            <Maximize2 className="w-2.5 h-2.5 inline" />
           </button>
         </div>
       </div>

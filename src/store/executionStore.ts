@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import type { ExecutionResult, NodeStatus } from '../types';
+import { useHistoryResultStore } from './historyResultStore';
 
 interface ExecutionState {
   nodeResults: Map<string, ExecutionResult>;
@@ -36,12 +37,14 @@ export const useExecutionStore = create<ExecutionState>((set, get) => ({
   steppingLevels: null,
   currentStepIndex: 0,
 
-  setNodeResult: (nodeId, result) =>
+  setNodeResult: (nodeId, result) => {
     set((state) => {
       const newResults = new Map(state.nodeResults);
       newResults.set(nodeId, result);
       return { nodeResults: newResults };
-    }),
+    });
+    useHistoryResultStore.getState().pushResult(nodeId, result);
+  },
 
   setNodeStatus: (nodeId, status) =>
     set((state) => {

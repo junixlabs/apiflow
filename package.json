@@ -1,19 +1,60 @@
 {
-  "name": "api-view",
-  "private": true,
-  "version": "0.1.0",
+  "name": "apiflow",
+  "version": "1.0.0",
+  "description": "Visual API flow testing tool. Build flows, chain requests, test assertions. Local-first, git-friendly, open source.",
   "type": "module",
+  "license": "MIT",
+  "keywords": [
+    "api",
+    "api-testing",
+    "api-client",
+    "visual",
+    "flow",
+    "rest",
+    "http",
+    "developer-tools",
+    "postman-alternative",
+    "openapi",
+    "curl"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/junixlabs/apiflow"
+  },
+  "homepage": "https://github.com/junixlabs/apiflow",
+  "bin": {
+    "apiflow": "./bin/cli.js"
+  },
+  "files": [
+    "bin/",
+    "dist/",
+    "proxy/",
+    "src/core/",
+    "src/mcp/",
+    "skills/",
+    "package.json",
+    "index.html",
+    "vite.config.ts",
+    "tsconfig*.json",
+    "postcss.config.js",
+    "tailwind.config.*"
+  ],
   "scripts": {
     "dev": "concurrently \"vite\" \"tsx proxy/index.ts\"",
     "dev:client": "vite",
     "dev:proxy": "tsx proxy/index.ts",
+    "dev:mcp": "tsx src/mcp/server.ts",
     "build": "tsc -b && vite build",
+    "start": "node bin/cli.js",
     "lint": "eslint .",
     "preview": "vite preview"
   },
   "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.27.1",
     "@xyflow/react": "^12.8.2",
     "html-to-image": "^1.11.13",
+    "js-yaml": "^4.1.1",
+    "lucide-react": "^0.577.0",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
     "zustand": "^5.0.5"
@@ -23,6 +64,7 @@
     "@tailwindcss/postcss": "^4.1.8",
     "@types/cors": "^2.8.17",
     "@types/express": "^5.0.0",
+    "@types/js-yaml": "^4.0.9",
     "@types/node": "^24.12.0",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
