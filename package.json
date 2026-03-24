@@ -22,6 +22,10 @@
     "url": "https://github.com/junixlabs/apiflow"
   },
   "homepage": "https://github.com/junixlabs/apiflow",
+  "bugs": {
+    "url": "https://github.com/junixlabs/apiflow/issues"
+  },
+  "author": "junixlabs",
   "bin": {
     "apiflow": "./bin/cli.js"
   },

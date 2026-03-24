@@ -20,7 +20,7 @@ All notable changes to API View are documented here.
 - 12 tools: `load_flow`, `save_flow`, `list_nodes`, `add_node`, `update_node`, `delete_node`, `connect_nodes`, `run_node`, `run_flow`, `set_environment`, `export_curl`, `import_collection`
 - 3 resources: `apiview://flow/state`, `apiview://flow/results`, `apiview://flow/environments`
 - In-memory state manager (`McpState`) replaces Zustand for MCP context
-- Run with: `npm run dev:mcp` or `claude mcp add api-view -- npx tsx src/mcp/server.ts`
+- Run with: `npm run dev:mcp` or `claude mcp add apiflow -- npx tsx src/mcp/server.ts`
 
 **Laravel Analyzer Skill:**
 - Claude Code skill at `skills/api-flow-analyzer/skill.md`
