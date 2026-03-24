@@ -15,7 +15,6 @@ export function EnvironmentPanel({ onClose }: Props) {
   const addEnvironment = useEnvironmentStore((s) => s.addEnvironment);
   const deleteEnvironment = useEnvironmentStore((s) => s.deleteEnvironment);
   const updateVariables = useEnvironmentStore((s) => s.updateVariables);
-  const saveToProject = useEnvironmentStore((s) => s.saveToProject);
   const deleteFromProject = useEnvironmentStore((s) => s.deleteFromProject);
   const isProjectMode = useProjectStore((s) => s.isProjectMode);
   const [newEnvName, setNewEnvName] = useState('');
