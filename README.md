@@ -230,4 +230,4 @@ Open http://localhost:5173. PRs welcome.
 
 ## License
 
-MIT
+MIT — see [LICENSE](LICENSE).
