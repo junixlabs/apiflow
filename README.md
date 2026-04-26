@@ -226,7 +226,7 @@ npm install
 npm run dev
 ```
 
-Open http://localhost:5173. PRs welcome.
+Open http://localhost:5173. PRs welcome — see [CONTRIBUTING.md](CONTRIBUTING.md) for the full setup, branch naming, and contribution flow.
 
 ## License
 
