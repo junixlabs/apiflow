@@ -4,6 +4,14 @@ All notable changes to API View are documented here.
 
 ---
 
+## [Unreleased]
+
+### Internal
+
+- E2E pipeline dispatch smoke test marker (ISS-5).
+
+---
+
 ## [0.4.0] - 2026-03-20
 
 ### Phase 4: Claude Code Integration
