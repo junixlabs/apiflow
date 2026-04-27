@@ -228,6 +228,8 @@ npm run dev
 
 Open http://localhost:5173. PRs welcome.
 
+Please review our [Code of Conduct](CODE_OF_CONDUCT.md) before contributing.
+
 ## License
 
 MIT — see [LICENSE](LICENSE).
