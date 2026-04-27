@@ -4,6 +4,12 @@ All notable changes to API View are documented here.
 
 ---
 
+## [Unreleased]
+
+_No changes yet._
+
+---
+
 ## [0.4.0] - 2026-03-20
 
 ### Phase 4: Claude Code Integration
