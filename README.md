@@ -1,5 +1,7 @@
 # apiflow
 
+> **Mục tiêu & cái không được làm:** [`NORTH-STAR.md`](./NORTH-STAR.md) — đọc trước khi thêm tính năng.
+
 **Visual API flow testing tool.** Build flows, chain requests, test assertions. Local-first, git-friendly, open source.
 
 The only API testing tool where you can **see** how your APIs connect.
