@@ -53,15 +53,22 @@ commit cuối 2026-04-27       — nằm im 3,7 tháng
 src/core/executor.ts:298     — loop node là NO-OP passthrough, dù có UI + type đầy đủ
 ```
 
+**Đã xử lý (19/08/2026, cùng ngày).** Bốn dòng đầu: 90 test cho `src/core/`; `bin/cli.js` tự build;
+loop node đã xoá. Dòng `docs/proposals` giữ nguyên — §7 cấm viết thêm, không bắt phải dọn.
+Cái mới thêm: `scan-fe` · `scan-be` · `probe` · `link` · `impact` — cả hai phía trích xuất cộng phép
+nối, thứ trước đó **chưa tồn tại**.
+
 **Phần thật sự tốt:** `src/core/` (1.435 dòng) là headless thật, dùng chung bởi cả React app lẫn MCP
 server — `src/engine/*` và `src/utils/*` chỉ là shim re-export, không phải bản sao. Executor có
 retry/backoff, auth theo node, chaining biến, rẽ nhánh có cắt tỉa. Cả 4 loại assertion implement đủ.
 Parser cURL / OpenAPI 3.x / Postman đều thật.
 
 **Mảnh duy nhất ĐÃ SỐNG THẬT:** `skills/api-flow-analyzer/` — một bản byte-identical đang chạy
-trong một dự án nội bộ, làm Laravel routes → flow.
-**Dưới định vị bản đồ phụ thuộc, đây là LÕI, không phải mảnh vụn cần cứu** — nó chính là phía trích
-xuất.
+trong một dự án nội bộ, làm Laravel routes → flow. Nó là **bản agent-only** của việc mà `scan-be`
+giờ làm bằng code; giữ lại cho stack CLI chưa phủ.
+
+Bản đồ đủ hai nửa từ 19/08/2026: `scan-fe` (màn hình → endpoint → field đọc) và `scan-be` + `probe`
+(endpoint → payload → response **đã đo bằng data test**), nối bằng `link`.
 
 **Bảo mật — đã xử lý.** `.claude/` và `.mcp.json` trong working tree chứa cấu hình nội bộ (host
 và skill vận hành của một khách hàng). Chúng không tracked nhưng cũng **không ignored**, trên một
@@ -114,19 +121,48 @@ giờ dừng được.**
 
 Thứ tự này thay cho danh sách cũ (bản trước xếp canvas vào nhóm “bỏ” — sai dưới định vị hiện tại).
 
-1. **Build lại được từ clone sạch.** Bỏ `dist/` khỏi gitignore, hoặc thêm bước build vào
-   `bin/cli.js`. Người lạ hiện chạy lệnh đầu tiên là gãy.
-2. **`api-flow-analyzer` thành mảnh hạng nhất.** Trích màn hình → endpoint → field từ một FE thật.
-   Đây là lõi, không phải skill phụ.
-3. **Quyết loop node.** Implement hoặc xoá.
-4. **Test cho `src/core/`.** Executor, assertionRunner, ba parser là phần đáng test nhất.
-5. **Chỉ sau đó** mới tính chuyện bind làm MCP vào `pipelineConfig.states.testing.mcpServers`
+1. ✅ **Build lại được từ clone sạch.** `bin/cli.js` tự build `dist/` khi thiếu.
+2. ✅ **Phía trích xuất FE.** `apiflow scan-fe` + `.apimap` + `apiflow impact` +
+   `skills/fe-map-extractor`.
+2b. ✅ **Phía trích xuất BE bằng CLI + probe.** `apiflow scan-be` (4 stack + generic),
+   `apiflow probe` (đo response thật bằng data test), `apiflow link` (nối hai nửa),
+   `skills/be-map-extractor`. `api-flow-analyzer` giờ là bản agent-only của cùng việc này.
+3. ✅ **Quyết loop node.** Đã xoá.
+4. ✅ **Test cho `src/core/`.** 90 test: executor, assertionRunner, ba parser, và cả lớp map mới.
+5. **Map một FE thật** (mốc 60 ngày ở §5). Đây là việc mở tiếp theo — chạy `scan-fe` trên một FE
+   thật, giải hết Unresolved bằng hints, và trả lời một câu hỏi ảnh hưởng thật.
+6. **Canvas đọc bản đồ.** Chỉ sau khi có §8.5 — layout bằng elkjs/dagre, collapse mặc định, focus
+   một node rồi bung theo bậc. Không render cả bản đồ.
+7. **Chỉ sau đó** mới tính chuyện bind làm MCP vào `pipelineConfig.states.testing.mcpServers`
    (`pipeline-config-schema.ts:245` — config-only, không sửa forge core).
 
 Trong bốn sản phẩm, apiflow public **cuối cùng** — vì **xây ít nhất**, không phải vì thiếu giá trị.
 
 ## 9. Nhật ký quyết định
 
+- **2026-08-19** — **Không tin OpenAPI spec làm nguồn response.** Spec mốc so với code là chuyện
+  thường. Response lấy từ **code** (Resource/DTO/`response_model`/struct tag), rồi **xác nhận bằng
+  cách chạy thật với data test** — harness sinh ra chạy trong bộ test của chính dự án (PHPUnit
+  `RefreshDatabase`, vitest+supertest, Go `httptest`, pytest `TestClient`), nên nằm trên test DB,
+  không đụng DB thật. Mỗi field mang cờ `declared` và `observed` tách nhau: declared mà không
+  observed = code nói dối.
+- **2026-08-19** — **Phía BE cũng dùng CLI, không để agent đọc code.** Route và payload có khai báo
+  tĩnh nên quét bằng code chính xác và rẻ hơn. Agent chỉ còn 4 việc máy không làm được: điền harness
+  probe, phân loại field lệch (bug / có điều kiện / scanner sót), và báo cáo.
+- **2026-08-19** — **Nối `.apimap` FE ↔ BE.** Khớp theo `METHOD + path chuẩn hoá`, có khớp hậu tố cho
+  prefix gateway. Mở ra ba câu hỏi không nửa nào tự trả lời được: field API gửi mà không màn nào đọc ·
+  field khai báo mà chưa từng gửi · endpoint không màn nào gọi.
+- **2026-08-19** — **Bản đồ đọc dùng layout tính-lúc-render, không lưu toạ độ.** Tham khảo jsoncrack
+  (Apache-2.0, `reaflow` → `elkjs` chạy trong web worker, có `NODE_LIMIT` vì graph DOM chết ở quy mô
+  lớn): nó không bao giờ lưu `x/y`. `.apiview` giữ nguyên toạ độ cho flow người dựng tay; `.apimap`
+  — bản đồ do máy sinh — chỉ lưu quan hệ. Không ai kéo tay 300 node, và toạ độ sinh ra làm mỗi lần
+  re-scan thành một diff toàn file. Cùng lý do: `.apimap` **không có** `generatedAt`.
+- **2026-08-19** — **Phía trích xuất FE là mảnh còn thiếu, không phải `api-flow-analyzer`.**
+  `api-flow-analyzer` quét **backend** (route → endpoint) — đúng thứ Swagger đã làm. Nửa độc quyền
+  ở §2 là *màn nào ăn endpoint này*, và trước hôm nay không có một dòng code nào. Đã dựng:
+  `scan-fe` (CLI tất định) + `skills/fe-map-extractor` (agent chỉ xử lý phần CLI không quyết được).
+- **2026-08-19** — **Xoá loop node** thay vì implement. §7 bắt quyết; loop là tính năng *chạy*, đúng
+  nửa đang bị hạ ưu tiên.
 - **2026-08-19** — **Rút lại kết luận “apiflow không sở hữu gì độc quyền”.** Kết luận đó đúng với
   phát biểu giá trị suy ra *từ code* (một trình chạy flow có canvas, đụng Postman). Phát biểu của
   chủ sở hữu là bản đồ phụ thuộc màn hình ↔ API ↔ field — và dưới nó apiflow sở hữu một thứ có thật.

@@ -6,6 +6,67 @@ All notable changes to API View are documented here.
 
 ## [Unreleased]
 
+### Added — dependency map (the read half)
+
+- `.apimap` format (`src/core/apimap.ts`): screens, endpoints, fields and the edges between them.
+  Ids derive from content and no timestamp is written, so re-scanning an unchanged repo produces a
+  byte-identical file. Positions are **not** stored — a generated map is laid out at render time.
+- `apiflow scan-fe <dir>` — deterministic, framework-agnostic scanner. Finds HTTP call sites,
+  normalizes urls onto endpoints, attributes them to a screen (file-based route, else the enclosing
+  component) and traces which response fields are read. Every edge carries `exact`/`inferred`/`guess`
+  and a `file:line`; what it cannot resolve goes to an Unresolved list rather than being dropped.
+- `apiflow impact <map.apimap> --endpoint=… | --field=…` — answers "which screens break if this
+  changes", which is the question the whole product exists for.
+- `--hints=<file>` — the agent-resolvable half. `skills/fe-map-extractor/` reads the Unresolved list,
+  works out what a variable url really is, and feeds it back as hints; ids stay derived by code.
+
+### Added — provider half, and the join
+
+- `apiflow scan-be <dir>` — deterministic backend scanner. Routes, request payloads and response
+  shapes from **code**, per stack: Laravel (`Route::verb`, `Route::resource` expanded to 5, group
+  prefixes, FormRequest `rules()`, API Resource `toArray()`), NestJS/Express (`@Controller`+`@Get`,
+  Zod, class-validator DTO), Go (gin/chi/echo/fiber/`HandleFunc`+`.Methods()`, struct `json:` tags),
+  Python (FastAPI/Flask, Pydantic, `response_model=`). A generic pass runs on every file too, so a
+  sidecar in another language is not lost. Cross-file: a route naming `UserController@store` is
+  followed into the controller, then into its FormRequest and Resource.
+- `apiflow probe <map> --emit` / `--ingest=` — **response shapes confirmed against reality**.
+  Emits a test in the project's *own* runner (PHPUnit+`RefreshDatabase`, vitest+supertest, Go
+  `httptest`, pytest+`TestClient`) so the probe runs on the test database and never touches real
+  rows. Ingest merges observed shapes, marks each field `declared` / `observed`, and reports
+  **fields declared in code that the running API never sent**. Only 2xx bodies are learned from —
+  an error envelope is not a contract.
+- `apiflow link <fe.apimap> <be.apimap>` — joins the two halves on `METHOD + normalized path`, with
+  suffix matching for a gateway prefix only the frontend sees. Unlocks three questions neither half
+  could answer alone: fields the API sends that no screen reads, fields declared but never sent, and
+  endpoints no screen calls.
+- `skills/be-map-extractor/` — the judgement layer: wire the probe harness into the project's own
+  fixtures/auth, and classify each declared-but-never-sent field as bug, conditional, or scanner miss.
+
+### Changed
+
+- `.apimap` fields now carry `kind` (`request`/`response`), `type`, and independent `declared` /
+  `observed` flags, plus `declaredAs` when a wrapper (`{data: …}`) renames the observed path.
+- FE scanner follows callback parameters: `rows.data.map(u => u.email)` now traces `data.email`.
+  Without it every list screen traced nothing and the link audit called live fields dead.
+
+### Added — tests
+
+- vitest, and 90 tests over `src/core/` (apimap, feScanner, executor, assertionRunner,
+  variableResolver, topologicalSort, all three parsers, curl exporter, beScanner, shape, probe harness, link).
+
+### Removed
+
+- Loop node. The executor treated it as a pass-through while shipping a full config UI; a headline
+  feature that does not run is worse than an absent one. Gone from executor, canvas, inspector,
+  toolbar, store and types.
+
+### Fixed
+
+- `apiflow` (serve mode) builds `dist/` on demand instead of exiting — a git clone had no way to run
+  the documented first command.
+- `proxy/` and `src/mcp/` are now type-checked (`tsconfig.node.json`), which surfaced and fixed an
+  unchecked `res.json()` cast in `httpClient` and dead code in the proxy.
+
 ### Internal
 
 - E2E pipeline dispatch smoke test marker (ISS-5).

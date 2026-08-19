@@ -1,0 +1,453 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>apiflow — toàn cảnh</title>
+<style>
+  :root {
+    --bg: #f6f8fb; --surface: #ffffff; --surface-2: #f1f5f9;
+    --ink: #0f172a; --muted: #64748b; --line: #dde5ee;
+    --code: #2563eb; --agent: #7c3aed; --done: #059669; --open: #d97706; --dead: #dc2626;
+    --shadow: 0 1px 2px rgba(15,23,42,.05), 0 8px 24px rgba(15,23,42,.06);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0a1020; --surface: #111a2c; --surface-2: #0e1626;
+      --ink: #e6edf6; --muted: #8fa2bb; --line: #223148;
+      --code: #60a5fa; --agent: #a78bfa; --done: #34d399; --open: #fbbf24; --dead: #f87171;
+      --shadow: 0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.35);
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font: 15px/1.6 ui-sans-serif, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 56px 24px 96px; }
+  header { margin-bottom: 48px; }
+  h1 { font-size: 30px; letter-spacing: -.02em; margin: 0 0 8px; font-weight: 650; }
+  .sub { color: var(--muted); font-size: 16px; margin: 0; max-width: 68ch; }
+  .stamp { color: var(--muted); font-size: 13px; margin-top: 14px; font-variant-numeric: tabular-nums; }
+  section { margin: 0 0 44px; }
+  h2 {
+    font-size: 13px; text-transform: uppercase; letter-spacing: .09em; color: var(--muted);
+    font-weight: 600; margin: 0 0 4px;
+  }
+  h2 + .lede { margin: 0 0 18px; font-size: 17px; color: var(--ink); max-width: 74ch; }
+  .card {
+    background: var(--surface); border: 1px solid var(--line); border-radius: 14px;
+    padding: 22px; box-shadow: var(--shadow); overflow-x: auto;
+  }
+  svg { display: block; width: 100%; height: auto; min-width: 640px; }
+  .legend { display: flex; flex-wrap: wrap; gap: 18px; margin-top: 16px; font-size: 13px; color: var(--muted); }
+  .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 6px; vertical-align: 1px; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 600; }
+  tr:last-child td { border-bottom: 0; }
+  code, .mono {
+    font-family: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, monospace; font-size: .9em;
+    background: var(--surface-2); padding: 1px 5px; border-radius: 5px;
+  }
+  .tag { font-size: 11px; font-weight: 650; padding: 2px 8px; border-radius: 999px; letter-spacing: .02em; white-space: nowrap; }
+  .t-done { color: var(--done); background: color-mix(in srgb, var(--done) 14%, transparent); }
+  .t-open { color: var(--open); background: color-mix(in srgb, var(--open) 16%, transparent); }
+  .t-dead { color: var(--dead); background: color-mix(in srgb, var(--dead) 14%, transparent); }
+  .note { color: var(--muted); font-size: 14px; margin-top: 14px; max-width: 76ch; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+  @media (max-width: 820px) { .grid2 { grid-template-columns: 1fr; } }
+  .st { font-size: 13px; }
+  .st b { display: block; font-size: 22px; font-weight: 650; letter-spacing: -.01em; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>apiflow — toàn cảnh</h1>
+  <p class="sub">
+    Bản đồ <b>màn hình ↔ endpoint ↔ field</b>. Một câu hỏi duy nhất:
+    <em>“đổi endpoint/field này thì màn hình nào vỡ?”</em> — trả lời trước khi sửa.
+  </p>
+  <p class="stamp">19/08/2026 · 90 test · tsc sạch · codemap sạch</p>
+</header>
+
+<section>
+  <h2>1 — Hai nửa của bản đồ</h2>
+  <p class="lede">Cả hai nửa giờ đều do CLI quét — tất định, rẻ, chạy được trong CI. Agent chỉ chạm vào phần code không quyết nổi.</p>
+  <div class="card">
+  <svg viewBox="0 0 1000 360" role="img" aria-label="scan-be và scan-fe hội tụ qua link về câu hỏi ảnh hưởng">
+    <defs>
+      <marker id="a1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+        <path d="M0,0 L10,5 L0,10 z" fill="currentColor"/>
+      </marker>
+    </defs>
+
+    <g color="var(--muted)">
+      <rect x="8" y="18" width="316" height="140" rx="12" fill="var(--surface-2)" stroke="var(--line)"/>
+      <text x="26" y="42" font-size="11" font-weight="700" letter-spacing=".08em" fill="var(--muted)">PROVIDER — repo backend</text>
+      <text x="26" y="68" font-size="13" font-weight="650" fill="var(--code)">apiflow scan-be</text>
+      <text x="26" y="87" font-size="11.5" fill="var(--muted)">route · payload · response (khai báo)</text>
+      <text x="26" y="105" font-size="11.5" fill="var(--muted)">Laravel · Nest/Express · Go · Python</text>
+      <text x="26" y="130" font-size="13" font-weight="650" fill="var(--code)">apiflow probe</text>
+      <text x="26" y="148" font-size="11.5" fill="var(--done)">chạy thật bằng data test → response ĐO ĐƯỢC</text>
+      <path d="M328 88 L392 88" stroke="currentColor" stroke-width="1.5" fill="none" marker-end="url(#a1)"/>
+    </g>
+
+    <g color="var(--muted)">
+      <rect x="8" y="196" width="316" height="118" rx="12" fill="var(--surface-2)" stroke="var(--line)"/>
+      <text x="26" y="220" font-size="11" font-weight="700" letter-spacing=".08em" fill="var(--muted)">CONSUMER — repo frontend</text>
+      <text x="26" y="246" font-size="13" font-weight="650" fill="var(--code)">apiflow scan-fe</text>
+      <text x="26" y="265" font-size="11.5" fill="var(--muted)">call site → màn hình → field được đọc</text>
+      <text x="26" y="288" font-size="11.5" fill="var(--muted)">bất kỳ stack nào — chỉ generic</text>
+      <text x="26" y="306" font-size="11.5" fill="var(--agent)">skills/fe-map-extractor giải phần còn lại</text>
+      <path d="M328 250 L392 250" stroke="currentColor" stroke-width="1.5" fill="none" marker-end="url(#a1)"/>
+    </g>
+
+    <g color="var(--muted)">
+      <rect x="396" y="56" width="176" height="64" rx="10" fill="var(--surface)" stroke="var(--line)"/>
+      <text x="412" y="82" font-size="13" font-weight="650" fill="var(--ink)">api.apimap</text>
+      <text x="412" y="102" font-size="11.5" fill="var(--muted)">declared + observed</text>
+
+      <rect x="396" y="218" width="176" height="64" rx="10" fill="var(--surface)" stroke="var(--line)"/>
+      <text x="412" y="244" font-size="13" font-weight="650" fill="var(--ink)">web.apimap</text>
+      <text x="412" y="264" font-size="11.5" fill="var(--muted)">screen → endpoint → read</text>
+
+      <path d="M576 88 C 616 88, 616 154, 656 154" stroke="currentColor" stroke-width="1.5" fill="none" marker-end="url(#a1)"/>
+      <path d="M576 250 C 616 250, 616 186, 656 186" stroke="currentColor" stroke-width="1.5" fill="none" marker-end="url(#a1)"/>
+    </g>
+
+    <g>
+      <rect x="660" y="130" width="150" height="80" rx="10" fill="var(--surface-2)" stroke="var(--code)" stroke-width="1.5"/>
+      <text x="678" y="156" font-size="11" font-weight="700" fill="var(--code)">apiflow link</text>
+      <text x="678" y="178" font-size="11.5" fill="var(--muted)">khớp METHOD +</text>
+      <text x="678" y="195" font-size="11.5" fill="var(--muted)">path, kể cả hậu tố</text>
+      <path d="M814 170 L850 170" stroke="var(--muted)" stroke-width="1.5" fill="none" marker-end="url(#a1)"/>
+    </g>
+
+    <g>
+      <rect x="854" y="66" width="138" height="208" rx="12" fill="var(--surface)" stroke="var(--done)" stroke-width="1.5"/>
+      <text x="870" y="92" font-size="11" font-weight="700" letter-spacing=".06em" fill="var(--done)">TRẢ LỜI ĐƯỢC</text>
+      <text x="870" y="118" font-size="11.5" fill="var(--ink)">đổi endpoint →</text>
+      <text x="870" y="134" font-size="11.5" fill="var(--muted)">màn nào vỡ</text>
+      <text x="870" y="158" font-size="11.5" fill="var(--ink)">đổi field →</text>
+      <text x="870" y="174" font-size="11.5" fill="var(--muted)">màn nào vỡ</text>
+      <text x="870" y="198" font-size="11.5" fill="var(--ink)">field API gửi mà</text>
+      <text x="870" y="214" font-size="11.5" fill="var(--muted)">không ai đọc</text>
+      <text x="870" y="238" font-size="11.5" fill="var(--ink)">field khai báo mà</text>
+      <text x="870" y="254" font-size="11.5" fill="var(--muted)">chưa từng gửi</text>
+    </g>
+  </svg>
+  <div class="legend">
+    <span><i style="background:var(--code)"></i>CLI tất định</span>
+    <span><i style="background:var(--agent)"></i>skill / agent</span>
+    <span><i style="background:var(--done)"></i>đo từ response thật</span>
+  </div>
+  </div>
+  <p class="note">
+    Nét đứt ở bản trước — hai nửa chưa nối — đã bỏ. <code>link</code> khớp endpoint theo
+    <code>METHOD + path chuẩn hoá</code>, và khớp theo hậu tố khi FE đi qua gateway có prefix riêng.
+  </p>
+</section>
+
+<section>
+  <h2>2 — Workflow phía FE: từ repo tới câu trả lời</h2>
+  <p class="lede">CLI đọc hết repo và quyết cái máy quyết được. Agent chỉ mở đúng những file CLI chịu thua — thường vài chục dòng, không phải vài nghìn file.</p>
+  <div class="card">
+  <svg viewBox="0 0 1000 350" role="img" aria-label="Vòng lặp scan, giải unresolved bằng hints, re-scan, rồi hỏi impact">
+    <defs>
+      <marker id="a2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+        <path d="M0,0 L10,5 L0,10 z" fill="currentColor"/>
+      </marker>
+    </defs>
+
+    <g color="var(--muted)">
+      <rect x="8" y="60" width="168" height="86" rx="10" fill="var(--surface-2)" stroke="var(--code)" stroke-width="1.5"/>
+      <text x="26" y="86" font-size="11" font-weight="700" fill="var(--code)">1 · CODE</text>
+      <text x="26" y="110" font-size="13" font-weight="650" fill="var(--ink)">scan-fe</text>
+      <text x="26" y="130" font-size="11.5" fill="var(--muted)">walk · call site · route</text>
+      <path d="M180 103 L232 103" stroke="currentColor" stroke-width="1.5" fill="none" marker-end="url(#a2)"/>
+
+      <rect x="236" y="46" width="188" height="114" rx="10" fill="var(--surface)" stroke="var(--line)"/>
+      <text x="254" y="72" font-size="11" font-weight="700" fill="var(--muted)">2 · BÁO CÁO</text>
+      <text x="254" y="96" font-size="12.5" fill="var(--ink)">exact / inferred / guess</text>
+      <text x="254" y="118" font-size="12.5" fill="var(--ink)">Unresolved — n</text>
+      <text x="254" y="140" font-size="11.5" fill="var(--muted)">mỗi dòng là file:line</text>
+      <path d="M428 103 L480 103" stroke="currentColor" stroke-width="1.5" fill="none" marker-end="url(#a2)"/>
+
+      <rect x="484" y="46" width="188" height="114" rx="10" fill="var(--surface-2)" stroke="var(--agent)" stroke-width="1.5"/>
+      <text x="502" y="72" font-size="11" font-weight="700" fill="var(--agent)">3 · AGENT</text>
+      <text x="502" y="96" font-size="12.5" fill="var(--ink)">mở CHỈ file trong list</text>
+      <text x="502" y="118" font-size="12.5" fill="var(--ink)">url biến này là gì?</text>
+      <text x="502" y="140" font-size="11.5" fill="var(--muted)">có phải HTTP thật không?</text>
+      <path d="M676 103 L728 103" stroke="currentColor" stroke-width="1.5" fill="none" marker-end="url(#a2)"/>
+
+      <rect x="732" y="60" width="180" height="86" rx="10" fill="var(--surface)" stroke="var(--line)"/>
+      <text x="750" y="86" font-size="11" font-weight="700" fill="var(--muted)">4 · HINTS</text>
+      <text x="750" y="110" font-size="13" font-weight="650" fill="var(--ink)">hints.json</text>
+      <text x="750" y="130" font-size="11.5" fill="var(--muted)">resolve[] · ignore[]</text>
+    </g>
+
+    <!-- feedback loop -->
+    <g color="var(--code)">
+      <path d="M822 150 C 822 208, 92 200, 92 152" stroke="currentColor" stroke-width="1.5" fill="none"
+            marker-end="url(#a2)" stroke-dasharray="5 4"/>
+      <text x="392" y="200" font-size="12" fill="var(--code)">re-scan --hints= · lặp tới khi phần còn lại thật sự không giải được</text>
+    </g>
+
+    <!-- outputs -->
+    <g color="var(--muted)">
+      <rect x="8" y="236" width="290" height="98" rx="10" fill="var(--surface)" stroke="var(--line)"/>
+      <text x="26" y="262" font-size="11" font-weight="700" fill="var(--muted)">5 · KẾT QUẢ</text>
+      <text x="26" y="286" font-size="13" font-weight="650" fill="var(--ink)">.apimap</text>
+      <text x="26" y="306" font-size="11.5" fill="var(--muted)">id suy từ nội dung · không timestamp</text>
+      <text x="26" y="324" font-size="11.5" fill="var(--muted)">re-scan repo không đổi → file y hệt</text>
+      <path d="M302 285 L354 285" stroke="currentColor" stroke-width="1.5" fill="none" marker-end="url(#a2)"/>
+
+      <rect x="358" y="236" width="554" height="98" rx="10" fill="var(--surface)" stroke="var(--done)" stroke-width="1.5"/>
+      <text x="378" y="262" font-size="11" font-weight="700" fill="var(--done)">6 · TRẢ LỜI</text>
+      <text x="378" y="288" font-size="12.5" font-family="ui-monospace, monospace" fill="var(--ink)">apiflow impact web.apimap --endpoint="GET /api/users/{id}"</text>
+      <text x="378" y="312" font-size="12.5" fill="var(--muted)">→ 2 màn vỡ · /users/{param} [exact] · AccountMenu [guess]</text>
+    </g>
+  </svg>
+  <div class="legend">
+    <span><i style="background:var(--code)"></i>tất định — chạy được trong CI</span>
+    <span><i style="background:var(--agent)"></i>agent — chỉ phần code không quyết nổi</span>
+  </div>
+  </div>
+  <p class="note">
+    Agent <b>không bao giờ sửa thẳng</b> <code>.apimap</code>. Nó chỉ ghi <code>hints.json</code>; id vẫn do code suy ra.
+    Đó là thứ giữ cho mỗi lần scan lại không thành một diff toàn file trong git.
+  </p>
+</section>
+
+<section>
+  <h2>3 — Vòng probe: chỗ duy nhất bảo đảm "sát API thực tế"</h2>
+  <p class="lede">Scan tĩnh chỉ thấy cái code <em>khai báo</em>. Probe chạy endpoint thật — nhưng bên trong bộ test của chính dự án, nên nằm trên test DB.</p>
+  <div class="card">
+  <svg viewBox="0 0 1000 300" role="img" aria-label="vòng probe: emit harness, điền fixture, chạy test, ingest">
+    <defs>
+      <marker id="a4" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+        <path d="M0,0 L10,5 L0,10 z" fill="currentColor"/>
+      </marker>
+    </defs>
+    <g color="var(--muted)">
+      <rect x="8" y="40" width="180" height="92" rx="10" fill="var(--surface-2)" stroke="var(--code)" stroke-width="1.5"/>
+      <text x="26" y="66" font-size="11" font-weight="700" fill="var(--code)">1 · CODE</text>
+      <text x="26" y="90" font-size="12.5" font-weight="650" fill="var(--ink)">probe --emit</text>
+      <text x="26" y="110" font-size="11" fill="var(--muted)">sinh test theo runner</text>
+      <text x="26" y="126" font-size="11" fill="var(--muted)">của chính dự án</text>
+      <path d="M192 86 L240 86" stroke="currentColor" stroke-width="1.5" fill="none" marker-end="url(#a4)"/>
+
+      <rect x="244" y="40" width="196" height="92" rx="10" fill="var(--surface-2)" stroke="var(--agent)" stroke-width="1.5"/>
+      <text x="262" y="66" font-size="11" font-weight="700" fill="var(--agent)">2 · AGENT</text>
+      <text x="262" y="90" font-size="12" fill="var(--ink)">điền /* apiflow:fill */</text>
+      <text x="262" y="110" font-size="11" fill="var(--muted)">app instance · auth</text>
+      <text x="262" y="126" font-size="11" fill="var(--muted)">factory · id fixture</text>
+      <path d="M444 86 L492 86" stroke="currentColor" stroke-width="1.5" fill="none" marker-end="url(#a4)"/>
+
+      <rect x="496" y="40" width="196" height="92" rx="10" fill="var(--surface)" stroke="var(--done)" stroke-width="1.5"/>
+      <text x="514" y="66" font-size="11" font-weight="700" fill="var(--done)">3 · CHẠY TEST</text>
+      <text x="514" y="90" font-size="12" fill="var(--ink)">RefreshDatabase</text>
+      <text x="514" y="110" font-size="11" fill="var(--muted)">httptest · TestClient</text>
+      <text x="514" y="126" font-size="11" fill="var(--done)">test DB — không đụng DB thật</text>
+      <path d="M696 86 L744 86" stroke="currentColor" stroke-width="1.5" fill="none" marker-end="url(#a4)"/>
+
+      <rect x="748" y="40" width="244" height="92" rx="10" fill="var(--surface-2)" stroke="var(--code)" stroke-width="1.5"/>
+      <text x="766" y="66" font-size="11" font-weight="700" fill="var(--code)">4 · CODE</text>
+      <text x="766" y="90" font-size="12.5" font-weight="650" fill="var(--ink)">probe --ingest</text>
+      <text x="766" y="110" font-size="11" fill="var(--muted)">chỉ học từ 2xx · gỡ lớp bọc data.</text>
+      <text x="766" y="126" font-size="11" fill="var(--muted)">gắn cờ observed cho từng field</text>
+    </g>
+
+    <g color="var(--muted)">
+      <rect x="8" y="170" width="484" height="110" rx="10" fill="var(--surface)" stroke="var(--line)"/>
+      <text x="26" y="196" font-size="11" font-weight="700" fill="var(--muted)">HAI CỜ ĐỘC LẬP TRÊN MỖI FIELD</text>
+      <text x="26" y="222" font-size="12.5" fill="var(--ink)"><tspan fill="var(--done)">declared + observed</tspan> — code nói đúng</text>
+      <text x="26" y="244" font-size="12.5" fill="var(--ink)"><tspan fill="var(--dead)">declared, không observed</tspan> — code nói dối, hoặc field có điều kiện</text>
+      <text x="26" y="266" font-size="12.5" fill="var(--ink)"><tspan fill="var(--open)">observed, không declared</tspan> — field lọt ra ngoài hợp đồng</text>
+
+      <rect x="508" y="170" width="484" height="110" rx="10" fill="var(--surface)" stroke="var(--line)"/>
+      <text x="526" y="196" font-size="11" font-weight="700" fill="var(--muted)">VÌ SAO KHÔNG DÙNG OPENAPI LÀM NGUỒN</text>
+      <text x="526" y="222" font-size="12.5" fill="var(--muted)">Spec mốc so với code là chuyện thường, và không có gì</text>
+      <text x="526" y="242" font-size="12.5" fill="var(--muted)">bắt nó phải đúng. Code là thứ đang chạy; probe là thứ</text>
+      <text x="526" y="262" font-size="12.5" fill="var(--muted)">chứng minh code làm đúng cái nó khai.</text>
+    </g>
+  </svg>
+  </div>
+  <p class="note">
+    Chỉ response <code>2xx</code> có body mới được học. Body của 401/500 là phong bì lỗi — ghi nó vào
+    map là ghi nhầm hợp đồng, nên bị đưa sang danh sách bỏ qua kèm lý do.
+  </p>
+</section>
+
+<section>
+  <h2>4 — Kiến trúc as-is</h2>
+  <p class="lede">Một lõi headless, bốn cửa vào. <code>src/core/</code> không biết React, không biết Node — nên cả app, MCP server lẫn CLI đều dùng chung một bản.</p>
+  <div class="card">
+  <svg viewBox="0 0 1000 380" role="img" aria-label="Kiến trúc: bốn cửa vào dùng chung src/core">
+    <defs>
+      <marker id="a3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+        <path d="M0,0 L10,5 L0,10 z" fill="currentColor"/>
+      </marker>
+    </defs>
+
+    <text x="8" y="26" font-size="11" font-weight="700" letter-spacing=".08em" fill="var(--muted)">CỬA VÀO</text>
+    <g color="var(--muted)">
+      <rect x="8" y="38" width="230" height="72" rx="10" fill="var(--surface-2)" stroke="var(--line)"/>
+      <text x="26" y="64" font-size="13" font-weight="650" fill="var(--ink)">React app</text>
+      <text x="26" y="84" font-size="11.5" fill="var(--muted)">canvas @xyflow · zustand</text>
+      <text x="26" y="101" font-size="11.5" fill="var(--muted)">src/components · src/store</text>
+
+      <rect x="254" y="38" width="230" height="72" rx="10" fill="var(--surface-2)" stroke="var(--line)"/>
+      <text x="272" y="64" font-size="13" font-weight="650" fill="var(--ink)">MCP server</text>
+      <text x="272" y="84" font-size="11.5" fill="var(--muted)">12 tool cho Claude Code</text>
+      <text x="272" y="101" font-size="11.5" fill="var(--muted)">src/mcp</text>
+
+      <rect x="500" y="38" width="230" height="72" rx="10" fill="var(--surface-2)" stroke="var(--done)" stroke-width="1.5"/>
+      <text x="518" y="64" font-size="13" font-weight="650" fill="var(--ink)">CLI bản đồ</text>
+      <text x="518" y="84" font-size="11.5" fill="var(--muted)">scan-fe · scan-be · probe · link · impact</text>
+      <text x="518" y="101" font-size="11.5" fill="var(--done)">src/cli — mới 19/08</text>
+
+      <rect x="746" y="38" width="246" height="72" rx="10" fill="var(--surface-2)" stroke="var(--line)"/>
+      <text x="764" y="64" font-size="13" font-weight="650" fill="var(--ink)">proxy</text>
+      <text x="764" y="84" font-size="11.5" fill="var(--muted)">vượt CORS · đọc/ghi project</text>
+      <text x="764" y="101" font-size="11.5" fill="var(--muted)">proxy/index.ts</text>
+
+      <path d="M123 114 L123 158" stroke="currentColor" stroke-width="1.5" fill="none" marker-end="url(#a3)"/>
+      <path d="M369 114 L369 158" stroke="currentColor" stroke-width="1.5" fill="none" marker-end="url(#a3)"/>
+      <path d="M615 114 L615 158" stroke="currentColor" stroke-width="1.5" fill="none" marker-end="url(#a3)"/>
+      <path d="M869 114 L869 158" stroke="currentColor" stroke-width="1.5" fill="none" marker-end="url(#a3)"/>
+    </g>
+
+    <text x="8" y="182" font-size="11" font-weight="700" letter-spacing=".08em" fill="var(--muted)">LÕI HEADLESS — src/core (zero-dep, 90 test)</text>
+    <g color="var(--muted)">
+      <rect x="8" y="192" width="984" height="96" rx="12" fill="var(--surface)" stroke="var(--line)"/>
+
+      <rect x="26" y="212" width="216" height="58" rx="8" fill="var(--surface-2)" stroke="var(--line)"/>
+      <text x="42" y="234" font-size="12.5" font-weight="650" fill="var(--ink)">chạy</text>
+      <text x="42" y="254" font-size="11" fill="var(--muted)">executor · assertion · topo · vars</text>
+
+      <rect x="258" y="212" width="216" height="58" rx="8" fill="var(--surface-2)" stroke="var(--line)"/>
+      <text x="274" y="234" font-size="12.5" font-weight="650" fill="var(--ink)">nhập / xuất</text>
+      <text x="274" y="254" font-size="11" fill="var(--muted)">cURL · OpenAPI · Postman</text>
+
+      <rect x="490" y="212" width="216" height="58" rx="8" fill="var(--surface-2)" stroke="var(--done)" stroke-width="1.5"/>
+      <text x="506" y="234" font-size="12.5" font-weight="650" fill="var(--ink)">bản đồ</text>
+      <text x="506" y="254" font-size="11" fill="var(--done)">apimap · feScanner · beScanner · shape · probe</text>
+
+      <rect x="722" y="212" width="252" height="58" rx="8" fill="var(--surface-2)" stroke="var(--line)"/>
+      <text x="738" y="234" font-size="12.5" font-weight="650" fill="var(--ink)">http</text>
+      <text x="738" y="254" font-size="11" fill="var(--muted)">httpClient · types</text>
+    </g>
+
+    <text x="8" y="318" font-size="11" font-weight="700" letter-spacing=".08em" fill="var(--muted)">FILE TRÊN ĐĨA — commit vào git</text>
+    <g color="var(--muted)">
+      <rect x="8" y="328" width="484" height="44" rx="10" fill="var(--surface)" stroke="var(--line)"/>
+      <text x="28" y="356" font-size="12.5" fill="var(--ink)">.apiview/flows/*.apiview — người dựng tay, <tspan fill="var(--muted)">toạ độ được lưu</tspan></text>
+
+      <rect x="508" y="328" width="484" height="44" rx="10" fill="var(--surface)" stroke="var(--done)" stroke-width="1.5"/>
+      <text x="528" y="356" font-size="12.5" fill="var(--ink)">.apiview/map/*.apimap — máy sinh, <tspan fill="var(--done)">layout tính lúc render</tspan></text>
+    </g>
+  </svg>
+  </div>
+  <p class="note">
+    Hai định dạng tách nhau là quyết định, không phải trùng lặp: flow người dựng cần giữ chỗ node đã kéo;
+    bản đồ máy sinh mà lưu toạ độ thì mỗi lần scan lại là một diff toàn file — và không ai kéo tay 300 node.
+    Tham khảo jsoncrack: nó không bao giờ lưu <code>x/y</code>, layout do <code>elkjs</code> tính trong web worker.
+  </p>
+</section>
+
+<section>
+  <h2>5 — Hôm nay đổi gì</h2>
+  <div class="card">
+    <table>
+      <thead><tr><th style="width:110px">Trạng thái</th><th style="width:220px">Việc</th><th>Chi tiết</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><span class="tag t-done">XONG</span></td>
+          <td>Phía trích xuất FE</td>
+          <td><code>src/core/apimap.ts</code> · <code>src/core/feScanner.ts</code> · <code>src/cli/{scanFe,impact}.ts</code> · <code>skills/fe-map-extractor</code>. Trước hôm nay nửa này <b>không có một dòng nào</b> — <code>api-flow-analyzer</code> quét backend, không quét màn hình.</td>
+        </tr>
+        <tr>
+          <td><span class="tag t-done">XONG</span></td>
+          <td>Phía trích xuất BE bằng CLI</td>
+          <td><code>src/core/beScanner.ts</code> · <code>src/cli/scanBe.ts</code>. Laravel (<code>Route::resource</code> bung 5 endpoint, prefix group, FormRequest, API Resource) · NestJS/Express (Zod, class-validator) · Go (struct tag, <code>.Methods()</code>) · Python (Pydantic, <code>response_model</code>). Nối được route → controller → FormRequest → Resource qua nhiều file.</td>
+        </tr>
+        <tr>
+          <td><span class="tag t-done">XONG</span></td>
+          <td>Probe bằng data test</td>
+          <td><code>src/core/probeHarness.ts</code> · <code>src/cli/probe.ts</code>. Sinh test theo runner của dự án, chạy trên test DB, ingest chỉ học từ 2xx. Gỡ được lớp bọc <code>{data:…}</code> nên không báo nhầm "khai báo mà không gửi".</td>
+        </tr>
+        <tr>
+          <td><span class="tag t-done">XONG</span></td>
+          <td>Nối hai nửa</td>
+          <td><code>apiflow link</code> — khớp <code>METHOD + path</code>, khớp hậu tố cho prefix gateway. Mở ra 3 câu hỏi mới. Có <code>skills/be-map-extractor</code> cho phần phán đoán.</td>
+        </tr>
+        <tr>
+          <td><span class="tag t-done">XONG</span></td>
+          <td>Test cho <code>src/core/</code></td>
+          <td>90 test / 5 file. Bắt được 2 bug thật: <code>fetch('/a')</code> ăn nhầm <code>method:</code> của call kế tiếp vì cửa sổ tìm kiếm cố định 400 ký tự; và <code>body.data.map(u =&gt; u.email)</code> không truy được field qua tham số lambda, khiến audit gọi nhầm field đang sống là chết.</td>
+        </tr>
+        <tr>
+          <td><span class="tag t-dead">XOÁ</span></td>
+          <td>Loop node</td>
+          <td>Executor coi nó là pass-through trong khi UI config đủ bộ. Đã bỏ khỏi executor, canvas, inspector, toolbar, store, types.</td>
+        </tr>
+        <tr>
+          <td><span class="tag t-done">XONG</span></td>
+          <td>Build từ clone sạch</td>
+          <td><code>bin/cli.js</code> tự build <code>dist/</code> khi thiếu, thay vì thoát với lỗi.</td>
+        </tr>
+        <tr>
+          <td><span class="tag t-done">XONG</span></td>
+          <td>Typecheck lan tới proxy + mcp</td>
+          <td>Hai thư mục này trước đó không nằm trong tsconfig nào. Bật lên là lộ ngay 2 lỗi thật — đã sửa.</td>
+        </tr>
+        <tr>
+          <td><span class="tag t-open">MỞ</span></td>
+          <td>Map một FE thật</td>
+          <td>Mốc 60 ngày ở §5. Chạy <code>scan-fe</code> trên một FE thật, giải hết Unresolved bằng hints, trả lời một câu hỏi ảnh hưởng thật.</td>
+        </tr>
+        <tr>
+          <td><span class="tag t-open">MỞ</span></td>
+          <td>Canvas đọc bản đồ</td>
+          <td>Chỉ sau khi có mục trên. Layout elkjs/dagre, collapse mặc định, focus một node rồi bung theo bậc — không render cả bản đồ.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section>
+  <h2>6 — Ba mức tin cậy</h2>
+  <p class="lede">Một scanner tổng quát chỉ giải được một phần. Bản đồ không nói được mình chắc tới đâu sẽ được tin quá mức nó đáng.</p>
+  <div class="grid2">
+    <div class="card st">
+      <b style="color:var(--done)">exact</b>
+      url là literal và verb hiện rõ tại call site — <code>axios.post('/api/users')</code>.
+    </div>
+    <div class="card st">
+      <b style="color:var(--code)">inferred</b>
+      một nửa được suy ra: base-url là biến, verb mặc định GET của <code>fetch</code>, hoặc do hints cấp.
+    </div>
+    <div class="card st">
+      <b style="color:var(--open)">guess</b>
+      path bới ra từ một biểu thức lớn hơn. Dùng được để khoanh vùng, không dùng để kết luận.
+    </div>
+    <div class="card st">
+      <b style="color:var(--done)">observed</b>
+      response đo được từ một lần chạy thật với data test. Đây là mức duy nhất nói được "sát API thực tế".
+    </div>
+    <div class="card st">
+      <b style="color:var(--muted)">Unresolved</b>
+      chắc chắn là HTTP nhưng không giải nổi url. <b>Không bao giờ bị bỏ im lặng</b> — nó là danh sách việc cho agent.
+    </div>
+  </div>
+</section>
+
+</div>
+</body>
+</html>
