@@ -1,14 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-  createApiMap,
-  endpointId,
-  fieldId,
-  finalizeApiMap,
-  normalizePath,
-  screenId,
-  screensAffectedByEndpoint,
-  screensAffectedByField,
-} from './apimap';
+import { createApiMap, endpointId, fieldId, finalizeApiMap, normalizePath, screenId, screensAffectedByEndpoint, screensAffectedByField, unreadResponseFields } from './apimap';
 import type { ApiMapFile } from './apimap';
 
 describe('normalizePath', () => {
@@ -126,5 +117,36 @@ describe('normalizePath with template literals', () => {
 
   it('leaves a plain path untouched', () => {
     expect(normalizePath('/agents/list')).toBe('/agents/list');
+  });
+});
+
+describe('unreadResponseFields kinship', () => {
+  const map = createApiMap('t', '/tmp', 'test');
+  const endpoint = { id: endpointId('GET', '/keys'), method: 'GET' as const, path: '/keys', source: { file: 'r.ts', line: 1 } };
+  map.endpoints.push(endpoint);
+  const field = (path: string) => ({
+    id: fieldId(endpoint.id, path),
+    endpointId: endpoint.id,
+    path,
+    kind: 'response' as const,
+    observed: true as const,
+  });
+  map.fields.push(field('keys'), field('keys.id'), field('keys.createdAt'), field('meta'));
+  map.reads.push({
+    screenId: 'sc_x',
+    fieldId: fieldId(endpoint.id, 'keys'),
+    confidence: 'inferred',
+    source: { file: 'page.tsx', line: 2 },
+  });
+
+  const unread = unreadResponseFields(finalizeApiMap(map)).map((a) => a.field.path);
+
+  it('does not claim a child of a subtree the screen took whole', () => {
+    expect(unread).not.toContain('keys.createdAt');
+    expect(unread).not.toContain('keys.id');
+  });
+
+  it('still claims a sibling nobody touched', () => {
+    expect(unread).toEqual(['meta']);
   });
 });

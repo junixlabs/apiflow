@@ -268,3 +268,26 @@ describe('typed api client classes', () => {
     expect(memberAt(objectMembers(src), enclosingSymbols(src), 4, lines)).toBe('list');
   });
 });
+
+describe('reads through a project wrapper', () => {
+  const SYNC = `export async function connect() {
+  const res = await authFetch('/api/state');
+  const root: Root = await res.json();
+  applyServerRoot(root.projects);
+  count(root.orgs.length);
+}`;
+
+  it('sees past a type annotation on the parse hop', () => {
+    const scan = scanFile('src/store/sync.ts', SYNC, { wrappers: ['authFetch'] });
+    expect(scan.fields.map((f) => f.path).sort()).toEqual(['orgs', 'projects']);
+  });
+
+  it('still traces reads when the callee is a plain fetch', () => {
+    const plain = `export async function load() {
+  const res = await fetch('/api/state');
+  const body = await res.json();
+  return body.items;
+}`;
+    expect(scanFile('load.ts', plain).fields.map((f) => f.path)).toContain('items');
+  });
+});

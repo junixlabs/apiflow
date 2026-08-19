@@ -347,14 +347,29 @@ export function endpointsWithTracedReads(map: ApiMapFile): Set<string> {
 
 // cm:guard Only endpoints where the frontend side actually traced a read can support this claim.
 // A typed client hides its fields in TS types, so "no screen reads it" there means "not analysed".
+// cm:guard Kinship both ways: reading `keys` covers `keys.createdAt` (the subtree left the scan's
+// sight), and reading `key.id` covers `key` (a parent is read whenever a child of it is).
 export function unreadResponseFields(map: ApiMapFile): FieldAudit[] {
   const analysable = endpointsWithTracedReads(map);
+  const readPaths = new Map<string, Set<string>>();
+  for (const read of map.reads) {
+    const field = map.fields.find((f) => f.id === read.fieldId);
+    if (!field) continue;
+    const paths = readPaths.get(field.endpointId) ?? new Set<string>();
+    paths.add(field.path);
+    readPaths.set(field.endpointId, paths);
+  }
+
   const out: FieldAudit[] = [];
   for (const field of map.fields) {
     if (field.kind !== 'response') continue;
     if (!field.declared && !field.observed) continue;
     if (!analysable.has(field.endpointId)) continue;
     if (map.reads.some((r) => r.fieldId === field.id)) continue;
+    const covered = [...(readPaths.get(field.endpointId) ?? [])].some(
+      (p) => field.path.startsWith(`${p}.`) || p.startsWith(`${field.path}.`)
+    );
+    if (covered) continue;
     const endpoint = map.endpoints.find((e) => e.id === field.endpointId);
     if (endpoint) out.push({ endpoint, field, readers: [] });
   }

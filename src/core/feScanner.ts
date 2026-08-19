@@ -440,12 +440,20 @@ export function stripCallSegments(chain: string): string {
   return segs.join('.');
 }
 
-const RESULT_BINDING = /(?:const|let|var)\s+(?:\{([^}]*)\}|([A-Za-z_$][\w$]*))\s*=\s*(?:await\s+)?$/;
+// cm:guard The type annotation must be optional in BOTH bindings: `const root: Root = await
+// res.json()` is the norm in TypeScript, and without it every field read in the file is invisible.
+const TYPE_ANNOTATION = String.raw`(?:\s*:\s*[^=]+?)?`;
+const RESULT_BINDING = new RegExp(
+  String.raw`(?:const|let|var)\s+(?:\{([^}]*)\}|([A-Za-z_$][\w$]*))${TYPE_ANNOTATION}\s*=\s*(?:await\s+)?$`
+);
 
 function tracedReads(content: string, site: CallSite): Array<{ path: string; line: number; confidence: Confidence }> {
   const lineStart = content.lastIndexOf('\n', site.argIdx) + 1;
   const head = content.slice(lineStart, site.argIdx);
-  const bind = RESULT_BINDING.exec(head.replace(/\b(fetch|\$fetch|ofetch|useFetch|useSWR|request|axios)\b[\s\S]*$/, ''));
+  // cm:guard Strips the callee by SHAPE, not by a name list: a project wrapper like `authFetch` is
+  // not in any list, and leaving its name in place makes the binding regex miss every read.
+  const callee = /(?:await\s+)?[A-Za-z_$][\w$]*(?:\s*\.\s*[A-Za-z_$][\w$]*)*\s*(?:<[^()]*>)?\s*$/;
+  const bind = RESULT_BINDING.exec(head.replace(callee, (m) => (/^await\s/.test(m) ? 'await ' : '')));
   const out: Array<{ path: string; line: number; confidence: Confidence }> = [];
   const lineOf = (idx: number) => content.slice(0, idx).split('\n').length;
 
@@ -460,7 +468,9 @@ function tracedReads(content: string, site: CallSite): Array<{ path: string; lin
     const window = content.slice(site.argIdx, site.argIdx + 2000);
     // cm:why `const r = await fetch(...)` then `const b = await r.json()` is the dominant shape —
     // stopping at `r` traces nothing, so follow exactly one parse hop before reading the chain.
-    const hop = new RegExp(`(?:const|let|var)\\s+([A-Za-z_$][\\w$]*)\\s*=\\s*(?:await\\s+)?${root}\\s*\\.\\s*(?:json|text)\\s*\\(`).exec(window);
+    const hop = new RegExp(
+      `(?:const|let|var)\\s+([A-Za-z_$][\\w$]*)${TYPE_ANNOTATION}\\s*=\\s*(?:await\\s+)?${root}\\s*\\.\\s*(?:json|text)\\s*\\(`
+    ).exec(window);
     const roots = hop ? [root, hop[1]] : [root];
     const chain = new RegExp(`\\b(?:${roots.join('|')})\\s*((?:\\.\\s*[A-Za-z_$][\\w$]*)+)`, 'g');
     for (const m of window.matchAll(chain)) {
