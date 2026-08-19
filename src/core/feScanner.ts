@@ -388,7 +388,6 @@ export function findCallSites(content: string, wrappers: readonly string[] = [])
         argIdx: idx,
         methodExplicit: explicit !== null,
         definitelyHttp: receiver === undefined || receiver === 'this' || HTTP_RECEIVER.test(receiver),
-        memberCall: receiver !== undefined ? true : undefined,
       });
     }
   }
@@ -519,8 +518,8 @@ export function scanFile(file: string, rawContent: string, hints?: ScanHints): F
     const source = { file, line: site.line };
 
     if (index.ignore.has(hintKey(file, site.line))) continue;
-    // cm:guard Only member calls: `useSWR('/x', fetcher)` passes a function too, and treating that
-    // as a registration would drop a real screen-to-endpoint edge instead of a fake one.
+    // cm:guard Verb calls only — never a wrapper: `this.send(path, {}, async (r) => …)` passes a
+    // RESPONSE READER third, and reading that as a handler drops the real call site it belongs to.
     if (site.memberCall && registersRoute(content, site.argIdx)) {
       if (site.definitelyHttp) out.unresolved.push({ source, reason: 'reads as a route registration, not a call', snippet });
       continue;

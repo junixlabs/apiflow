@@ -224,6 +224,14 @@ app.post('/api/auth/login', async (req, res) => res.json({}));`;
     expect(scanFile('lib/api.ts', client).endpoints.map((e) => `${e.method} ${e.path}`)).toEqual(['POST /files']);
   });
 
+  it('keeps a wrapper call whose last argument reads the response', () => {
+    const client = `export function listProducts(query: string) {
+  return send<ProductList>(\`/products\${query}\`, {}, async (response) => parse(response));
+}`;
+    const scan = scanFile('lib/api.ts', client, { wrappers: ['send'] });
+    expect(scan.endpoints.map((e) => e.path)).toContain('/products');
+  });
+
   it('keeps a fetcher passed to useSWR', () => {
     const swr = `export const useUsers = () => useSWR('/api/users', (url) => fetch(url).then((r) => r.json()));`;
     expect(scanFile('hooks/users.ts', swr).endpoints.some((e) => e.path === '/api/users')).toBe(true);
