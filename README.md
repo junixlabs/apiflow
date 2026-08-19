@@ -56,9 +56,11 @@ npx @junixlabs/apiflow impact ./my-frontend/.apiview/map/web.apimap --field=emai
 - **AccountMenu** [guess]  — src/components/AccountMenu.tsx:31
 ```
 
-The scanner finds HTTP call sites, normalizes urls onto endpoints, attributes each to a screen
-(file-based route where there is one, else the enclosing component) and traces which response
-fields get read. Every edge carries a confidence — `exact`, `inferred` or `guess` — and a
+The scanner finds HTTP call sites, normalizes urls onto endpoints, and attributes each to a
+**screen**. When the call lives in an api module rather than a page — the usual case — it walks the
+import graph back through hooks and components until it reaches a file-based route, and reports how
+many hops that took. Members are kept apart, so `agentsApi.remove` does not drag in every screen
+that only calls `agentsApi.list`. It also traces which response fields get read. Every edge carries a confidence — `exact`, `inferred` or `guess` — and a
 `file:line`. What it cannot resolve goes into an **Unresolved** list instead of being dropped.
 
 To close that list, `skills/fe-map-extractor/` reads only those call sites, works out what a

@@ -129,8 +129,10 @@ Thứ tự này thay cho danh sách cũ (bản trước xếp canvas vào nhóm 
    `skills/be-map-extractor`. `api-flow-analyzer` giờ là bản agent-only của cùng việc này.
 3. ✅ **Quyết loop node.** Đã xoá.
 4. ✅ **Test cho `src/core/`.** 90 test: executor, assertionRunner, ba parser, và cả lớp map mới.
-5. **Map một FE thật** (mốc 60 ngày ở §5). Đây là việc mở tiếp theo — chạy `scan-fe` trên một FE
-   thật, giải hết Unresolved bằng hints, và trả lời một câu hỏi ảnh hưởng thật.
+5. ✅ **Map một FE thật** (mốc 60 ngày ở §5) — đã chạy trên một hệ Next.js + Strapi thật:
+   196 endpoint FE · 419 endpoint BE · 166 khớp cả hai phía. Câu trả lời ảnh hưởng đã kiểm chứng
+   bằng tay: `GET /agents` → `/admin/agents`, qua đúng chuỗi page → component → hook → api client.
+   Còn lại: giải Unresolved bằng hints, và chạy `probe` thật trên bộ test của dự án.
 6. **Canvas đọc bản đồ.** Chỉ sau khi có §8.5 — layout bằng elkjs/dagre, collapse mặc định, focus
    một node rồi bung theo bậc. Không render cả bản đồ.
 7. **Chỉ sau đó** mới tính chuyện bind làm MCP vào `pipelineConfig.states.testing.mcpServers`
@@ -140,6 +142,11 @@ Trong bốn sản phẩm, apiflow public **cuối cùng** — vì **xây ít nh�
 
 ## 9. Nhật ký quyết định
 
+- **2026-08-19** — **Call site phải truy ngược tới màn hình, không dừng ở api module.** Chạy thật
+  trên một Next.js: chỉ 13/203 call quy được về route, phần còn lại dừng ở `agentsApi`, `usersApi` —
+  đúng nhưng không phải câu hỏi ở §1. Thêm `callerGraph`: đồ thị import + cạnh trong cùng file
+  (hook gọi api client), truy tới file có route. Sau đó: **254/321**. Có phân biệt member nên
+  `agentsApi.remove` không kéo theo màn chỉ dùng `agentsApi.list`.
 - **2026-08-19** — **Không tin OpenAPI spec làm nguồn response.** Spec mốc so với code là chuyện
   thường. Response lấy từ **code** (Resource/DTO/`response_model`/struct tag), rồi **xác nhận bằng
   cách chạy thật với data test** — harness sinh ra chạy trong bộ test của chính dự án (PHPUnit

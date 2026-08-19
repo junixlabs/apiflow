@@ -1,10 +1,12 @@
-import { readdirSync, readFileSync, mkdirSync, writeFileSync, statSync, realpathSync } from 'fs';
+import { readdirSync, readFileSync, mkdirSync, writeFileSync, statSync, realpathSync, existsSync } from 'fs';
 import { join, relative, resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
-import type { ApiMapFile, Confidence } from '../core/apimap';
-import { createApiMap, finalizeApiMap } from '../core/apimap';
+import type { ApiMapFile, Confidence, ScreenNode } from '../core/apimap';
+import { createApiMap, finalizeApiMap, screenId } from '../core/apimap';
 import type { ScanHints } from '../core/feScanner';
-import { isScannableFile, scanFile } from '../core/feScanner';
+import { enclosingSymbols, isScannableFile, memberAt, objectMembers, routeFromFilePath, scanFile, symbolAt } from '../core/feScanner';
+import type { ModuleNode, ResolveImport } from '../core/callerGraph';
+import { attributeToScreens, buildCallerGraph, parseModule, stripJsonComments } from '../core/callerGraph';
 
 const GENERATOR = 'apiflow scan-fe/1';
 
@@ -26,8 +28,59 @@ function walk(root: string, dir: string, acc: string[] = []): string[] {
   return acc;
 }
 
+const EXTENSIONS = ['.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs', '.vue', '.svelte', '.astro'];
+
+// cm:why Alias imports (`@/lib/api/agents`) are the norm in Next/Vite apps; without reading the
+// tsconfig paths every consumer edge through an alias is invisible and the hop finds nothing.
+export function buildResolver(root: string, files: Set<string>): ResolveImport {
+  const aliases: Array<[string, string[]]> = [];
+  for (const name of ['tsconfig.json', 'jsconfig.json']) {
+    const path = join(root, name);
+    if (!existsSync(path)) continue;
+    try {
+      const config = JSON.parse(stripJsonComments(readFileSync(path, 'utf8'))) as {
+        compilerOptions?: { baseUrl?: string; paths?: Record<string, string[]> };
+      };
+      const baseUrl = config.compilerOptions?.baseUrl ?? '.';
+      for (const [pattern, targets] of Object.entries(config.compilerOptions?.paths ?? {})) {
+        aliases.push([pattern, targets.map((t) => normalizePosix(join(baseUrl, t)))]);
+      }
+    } catch {
+      continue;
+    }
+  }
+
+  const candidate = (base: string): string | null => {
+    if (files.has(base)) return base;
+    for (const ext of EXTENSIONS) if (files.has(`${base}${ext}`)) return `${base}${ext}`;
+    for (const ext of EXTENSIONS) if (files.has(`${base}/index${ext}`)) return `${base}/index${ext}`;
+    return null;
+  };
+
+  return (fromFile, specifier) => {
+    if (specifier.startsWith('.')) {
+      return candidate(normalizePosix(join(dirname(fromFile), specifier)));
+    }
+    for (const [pattern, targets] of aliases) {
+      const prefix = pattern.replace(/\*$/, '');
+      if (!pattern.endsWith('*') || !specifier.startsWith(prefix)) continue;
+      const rest = specifier.slice(prefix.length);
+      for (const target of targets) {
+        const hit = candidate(normalizePosix(target.replace(/\*$/, '') + rest));
+        if (hit) return hit;
+      }
+    }
+    return null;
+  };
+}
+
+function normalizePosix(p: string): string {
+  return p.split('\\').join('/').replace(/^\.\//, '');
+}
+
 export function scanDirectory(root: string, name: string, hints?: ScanHints): ApiMapFile {
   const map = createApiMap(name, root, GENERATOR);
+  const sources = new Map<string, string>();
   for (const rel of walk(root, root)) {
     let content: string;
     try {
@@ -35,6 +88,7 @@ export function scanDirectory(root: string, name: string, hints?: ScanHints): Ap
     } catch {
       continue;
     }
+    sources.set(rel, content);
     const scan = scanFile(rel, content, hints);
     map.screens.push(...scan.screens);
     map.endpoints.push(...scan.endpoints);
@@ -43,7 +97,99 @@ export function scanDirectory(root: string, name: string, hints?: ScanHints): Ap
     map.reads.push(...scan.reads);
     map.unresolved.push(...scan.unresolved);
   }
-  return finalizeApiMap(map);
+  return finalizeApiMap(resolveCallerHops(map, sources, root));
+}
+
+export interface HopStats {
+  reattributed: number;
+  stillModuleLevel: number;
+}
+
+export let lastHopStats: HopStats = { reattributed: 0, stillModuleLevel: 0 };
+
+// cm:edge protocol -> src/core/callerGraph.ts — runs AFTER every file is scanned, because a call in
+// an api module can only be attributed once the whole import graph exists.
+export function resolveCallerHops(map: ApiMapFile, sources: Map<string, string>, root: string): ApiMapFile {
+  const files = new Set(sources.keys());
+  const resolve = buildResolver(root, files);
+  const symbolIndex = new Map<
+    string,
+    { symbols: Array<{ line: number; name: string }>; members: Array<{ line: number; name: string }>; lines: string[] }
+  >();
+
+  const modules: ModuleNode[] = [];
+  for (const [file, content] of sources) {
+    modules.push({ file, parsed: parseModule(content), route: routeFromFilePath(file) });
+    symbolIndex.set(file, { symbols: enclosingSymbols(content), members: objectMembers(content), lines: content.split('\n') });
+  }
+  const graph = buildCallerGraph(modules, resolve);
+
+  const enclosingAt = (file: string, line: number) => {
+    const index = symbolIndex.get(file);
+    if (!index) return { symbol: file };
+    const symbol = symbolAt(index.symbols, line, file);
+    return { symbol, member: memberAt(index.members, index.symbols, line, index.lines) };
+  };
+
+  const screens = new Map(map.screens.map((s) => [s.id, s]));
+  const extraScreens: ScreenNode[] = [];
+  const rewrite = new Map<string, Array<{ id: string; precise: boolean; hops: number }>>();
+  let reattributed = 0;
+  let stillModuleLevel = 0;
+
+  for (const screen of map.screens) {
+    if (screen.route || !screen.symbol) continue;
+    const attributions = attributeToScreens(
+      { file: screen.source.file, symbol: screen.symbol, member: screen.member },
+      graph,
+      enclosingAt
+    );
+    if (attributions.length === 0) {
+      stillModuleLevel++;
+      continue;
+    }
+    reattributed++;
+    const targets = attributions.map((a) => {
+      const id = screenId(a.route, a.file, a.symbol);
+      if (!screens.has(id)) {
+        const node: ScreenNode = {
+          id,
+          label: a.route,
+          route: a.route,
+          source: { file: a.file, line: a.line },
+          viaHops: a.hops,
+        };
+        screens.set(id, node);
+        extraScreens.push(node);
+      }
+      return { id, precise: a.precise, hops: a.hops };
+    });
+    rewrite.set(screen.id, targets);
+  }
+
+  lastHopStats = { reattributed, stillModuleLevel };
+  if (rewrite.size === 0) return map;
+
+  // cm:why Confidence only ever drops across a hop. An imprecise hop (member unknown on one side)
+  // widens the blast radius, so the edge must stop claiming to be exact.
+  const degrade = (c: Confidence, precise: boolean): Confidence =>
+    precise ? (c === 'exact' ? 'inferred' : c) : 'guess';
+
+  const keep = (id: string) => !rewrite.has(id);
+  return {
+    ...map,
+    screens: [...map.screens.filter((s) => keep(s.id)), ...extraScreens],
+    calls: map.calls.flatMap((c) => {
+      const targets = rewrite.get(c.screenId);
+      if (!targets) return [c];
+      return targets.map((t) => ({ ...c, screenId: t.id, confidence: degrade(c.confidence, t.precise) }));
+    }),
+    reads: map.reads.flatMap((r) => {
+      const targets = rewrite.get(r.screenId);
+      if (!targets) return [r];
+      return targets.map((t) => ({ ...r, screenId: t.id, confidence: degrade(r.confidence, t.precise) }));
+    }),
+  };
 }
 
 function countBy(items: Array<{ confidence: Confidence }>): Record<Confidence, number> {
@@ -65,6 +211,10 @@ export function renderReport(map: ApiMapFile, outPath: string): string {
   lines.push(`**Endpoints**: ${map.endpoints.length}`);
   lines.push(`**Calls**: ${map.calls.length} (exact ${c.exact} · inferred ${c.inferred} · guess ${c.guess})`);
   lines.push(`**Fields traced**: ${map.fields.length}`);
+  lines.push(
+    `**Attributed to a route**: ${lastHopStats.reattributed} call sites walked back to a screen · ` +
+      `${lastHopStats.stillModuleLevel} stopped at module level`
+  );
   lines.push('');
   lines.push(`### Unresolved — ${map.unresolved.length === 0 ? 'none' : map.unresolved.length}`);
   for (const u of map.unresolved.slice(0, 50)) {

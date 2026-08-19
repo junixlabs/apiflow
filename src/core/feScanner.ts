@@ -44,6 +44,41 @@ export function enclosingSymbols(content: string): Array<{ line: number; name: s
   return out;
 }
 
+const MEMBER_PATTERNS: RegExp[] = [
+  /^\s*([A-Za-z_$][\w$]*)\s*:\s*(?:async\s+)?(?:\([^)]*\)|[A-Za-z_$][\w$]*)\s*=>/,
+  /^\s*([A-Za-z_$][\w$]*)\s*:\s*(?:async\s+)?function\b/,
+  /^\s*(?:async\s+)?([A-Za-z_$][\w$]*)\s*\([^)]*\)\s*\{/,
+];
+
+export function objectMembers(content: string): Array<{ line: number; name: string }> {
+  const out: Array<{ line: number; name: string }> = [];
+  content.split('\n').forEach((text, i) => {
+    for (const re of MEMBER_PATTERNS) {
+      const m = re.exec(text);
+      if (m) {
+        out.push({ line: i + 1, name: m[1] });
+        return;
+      }
+    }
+  });
+  return out;
+}
+
+// cm:guard Members exist only on a symbol declared AS an object literal. Otherwise `queryFn: () =>`
+// inside a hook body reads as that hook's member, and every caller-hop through it loses precision.
+export function memberAt(
+  members: Array<{ line: number; name: string }>,
+  symbols: Array<{ line: number; name: string }>,
+  line: number,
+  lines: string[]
+): string | undefined {
+  const ownerLine = symbols.filter((s) => s.line <= line).at(-1)?.line ?? 0;
+  if (ownerLine === 0) return undefined;
+  if (!/=\s*\{\s*$/.test(lines[ownerLine - 1] ?? '')) return undefined;
+  const candidate = members.filter((m) => m.line <= line && m.line > ownerLine).at(-1);
+  return candidate?.name;
+}
+
 export function symbolAt(symbols: Array<{ line: number; name: string }>, line: number, fallback: string): string {
   let best = fallback;
   for (const s of symbols) {
@@ -393,6 +428,7 @@ export function scanFile(file: string, rawContent: string, hints?: ScanHints): F
   if (sites.length === 0) return out;
 
   const symbols = enclosingSymbols(content);
+  const members = objectMembers(content);
   const route = routeFromFilePath(file);
   const fallbackSymbol = (file.split('/').pop() ?? file).replace(/\.[^.]+$/, '');
   const lines = rawContent.split('\n');
@@ -421,10 +457,18 @@ export function scanFile(file: string, rawContent: string, hints?: ScanHints): F
     const method = hint?.method ?? site.method;
 
     const symbol = symbolAt(symbols, site.line, fallbackSymbol);
-    const sid = screenId(route, file, symbol);
+    const member = route ? undefined : memberAt(members, symbols, site.line, lines);
+    const sid = screenId(route, file, member ? `${symbol}.${member}` : symbol);
     const eid = endpointId(method, resolved.path);
 
-    out.screens.push({ id: sid, label: route ?? symbol, route, source: { file, line: 1 } });
+    out.screens.push({
+      id: sid,
+      label: route ?? (member ? `${symbol}.${member}` : symbol),
+      route,
+      source: { file, line: 1 },
+      symbol,
+      member,
+    });
     out.endpoints.push({
       id: eid,
       method,

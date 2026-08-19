@@ -42,6 +42,19 @@ All notable changes to API View are documented here.
 - `skills/be-map-extractor/` — the judgement layer: wire the probe harness into the project's own
   fixtures/auth, and classify each declared-but-never-sent field as bug, conditional, or scanner miss.
 
+### Added — caller hop (screen attribution)
+
+- `src/core/callerGraph.ts` — import graph over the frontend: named/default/namespace imports (type
+  imports excluded), local declarations, and intra-file uses. `scan-fe` now walks a call site in an
+  api module back through hooks and components to the file-based route that renders it, and records
+  the hop count on the screen.
+  Without it the answer to "which screen breaks" was the name of an api module. On a real Next.js
+  app: **13/203 → 254/321 call sites attributed to a real route**.
+  Members are tracked, so `agentsApi.remove` and `agentsApi.list` do not fan out to each other's
+  screens. Confidence only ever drops across a hop, and never claims exact.
+- Import specifiers resolve through `tsconfig`/`jsconfig` path aliases (`@/*`), relative paths,
+  extension guessing and `index.*`.
+
 ### Changed
 
 - `.apimap` fields now carry `kind` (`request`/`response`), `type`, and independent `declared` /

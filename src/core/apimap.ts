@@ -17,6 +17,11 @@ export interface ScreenNode {
   label: string;
   route?: string;
   source: SourceRef;
+  // cm:why Kept alongside label so the caller-hop can re-attribute this call later: label is for
+  // humans, but the hop needs the exact symbol and object member it came from.
+  symbol?: string;
+  member?: string;
+  viaHops?: number;
 }
 
 export interface EndpointNode {

@@ -42,7 +42,8 @@ export function renderImpact(answer: ImpactAnswer, label: string): string {
   lines.push('');
   const order = { exact: 0, inferred: 1, guess: 2 };
   for (const s of [...answer.screens].sort((a, b) => order[a.confidence] - order[b.confidence])) {
-    lines.push(`- **${s.screen.label}** [${s.confidence}] — ${s.source.file}:${s.source.line}`);
+    const via = s.screen.viaHops ? ` · via ${s.screen.viaHops} hop(s) → ${s.screen.source.file}:${s.screen.source.line}` : '';
+    lines.push(`- **${s.screen.label}** [${s.confidence}] — ${s.source.file}:${s.source.line}${via}`);
   }
   return lines.join('\n');
 }
