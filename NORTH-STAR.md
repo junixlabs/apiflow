@@ -58,15 +58,18 @@ server — `src/engine/*` và `src/utils/*` chỉ là shim re-export, không ph�
 retry/backoff, auth theo node, chaining biến, rẽ nhánh có cắt tỉa. Cả 4 loại assertion implement đủ.
 Parser cURL / OpenAPI 3.x / Postman đều thật.
 
-**Mảnh duy nhất ĐÃ SỐNG THẬT:** `skills/api-flow-analyzer/` — bản byte-identical đang chạy ở
-`~/source/dodgeprint/ops-console-frontend/.claude/skills/`, làm Laravel routes → flow.
+**Mảnh duy nhất ĐÃ SỐNG THẬT:** `skills/api-flow-analyzer/` — một bản byte-identical đang chạy
+trong một dự án nội bộ, làm Laravel routes → flow.
 **Dưới định vị bản đồ phụ thuộc, đây là LÕI, không phải mảnh vụn cần cứu** — nó chính là phía trích
 xuất.
 
-**Bảo mật — đã xử lý.** `.claude/` và `.mcp.json` chứa `forge-beta.sidcorp.co` và 7 skill vận hành
-Epodsystem, không tracked và **không ignored**, trên repo public
-(`github.com/junixlabs/apiflow` → HTTP 200). Đã đưa vào `.gitignore`, commit `793f9ef` trên `main`.
-Cả hai chưa từng vào git nên **không cần rewrite history**.
+**Bảo mật — đã xử lý.** `.claude/` và `.mcp.json` trong working tree chứa cấu hình nội bộ (host
+và skill vận hành của một khách hàng). Chúng không tracked nhưng cũng **không ignored**, trên một
+repo public — một `git add -A` là đủ để publish. Đã đưa vào `.gitignore`, commit `793f9ef` trên
+`main`. Cả hai chưa từng vào git nên **không cần rewrite history**.
+
+Không viết tên host hay tên khách vào file này: đây là file public, nên mô tả cơ chế rò rỉ thì đủ,
+nêu đích danh cái cần giấu là tự làm lại đúng việc vừa chặn.
 
 ## 5. North star
 
