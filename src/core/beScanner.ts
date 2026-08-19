@@ -3,7 +3,7 @@ import { normalizePath } from './apimap';
 import type { ShapeType } from './shape';
 import { blankComments } from './feScanner';
 
-export type Stack = 'laravel' | 'node' | 'go' | 'python' | 'generic';
+export type Stack = 'laravel' | 'strapi' | 'node' | 'go' | 'python' | 'generic';
 
 export interface SchemaField {
   path: string;
@@ -37,12 +37,14 @@ export function detectStack(manifests: Record<string, string>): Stack {
   if ('artisan' in manifests || 'composer.json' in manifests) return 'laravel';
   if ('go.mod' in manifests) return 'go';
   const pkg = manifests['package.json'];
-  if (pkg) return 'node';
+  if (pkg) return /@strapi\/strapi/.test(pkg) ? 'strapi' : 'node';
   if ('pyproject.toml' in manifests || 'requirements.txt' in manifests) return 'python';
   return 'generic';
 }
 
-const BE_EXT = /\.(php|[jt]sx?|mjs|cjs|go|py|rb)$/;
+// cm:why schema.json is not source but it is where Strapi declares every field of a content
+// type — excluding it would leave the whole Strapi stack with routes and no shapes.
+const BE_EXT = /(\.(php|[jt]sx?|mjs|cjs|go|py|rb)|content-types\/[^/]+\/schema\.json)$/;
 const BE_SKIP = /(^|\/)(node_modules|vendor|dist|build|storage|__pycache__|\.git|migrations|tests?|spec)(\/|$)/;
 
 export function isBackendFile(file: string): boolean {
@@ -166,6 +168,104 @@ function laravelRuleType(spec: string): ShapeType {
   if (/\bboolean\b/.test(spec)) return 'boolean';
   if (/\barray\b/.test(spec)) return 'array';
   return 'string';
+}
+
+const STRAPI_ROUTE = /\{[^{}]*?\bmethod\s*:\s*(['"`])(GET|POST|PUT|PATCH|DELETE)\1[^{}]*?\bpath\s*:\s*(['"`])([^'"`]+)\3([\s\S]{0,200}?)\}/g;
+const STRAPI_CORE_ROUTER = /createCoreRouter\s*\(\s*(['"`])api::([\w-]+)\.([\w-]+)\1/g;
+
+// cm:why Strapi declares routes as data, not calls — a `{method, path, handler}` object literal.
+// No verb-call pattern matches it, which is why a generic scan finds almost nothing here.
+function scanStrapi(file: string, content: string): BeFileScan {
+  const out: BeFileScan = { schemas: [], routes: [], unresolved: [] };
+
+  if (/content-types\/[^/]+\/schema\.json$/.test(file)) {
+    try {
+      const parsed = JSON.parse(content) as {
+        info?: { singularName?: string; pluralName?: string };
+        attributes?: Record<string, { type?: string; required?: boolean }>;
+      };
+      const name = parsed.info?.singularName;
+      const attributes = parsed.attributes ?? {};
+      if (name && Object.keys(attributes).length > 0) {
+        out.schemas.push({
+          name,
+          source: { file, line: 1 },
+          fields: Object.entries(attributes).map(([path, spec]) => ({
+            path,
+            type: strapiType(spec.type),
+            optional: !spec.required,
+          })),
+        });
+      }
+    } catch {
+      out.unresolved.push({ source: { file, line: 1 }, reason: 'content-type schema is not valid JSON', snippet: '' });
+    }
+    return out;
+  }
+
+  const apiName = /(?:^|\/)src\/api\/([\w-]+)\/routes\//.exec(file)?.[1];
+  const collection = apiName ? `/${pluralize(apiName)}` : null;
+
+  for (const m of content.matchAll(STRAPI_ROUTE)) {
+    // cm:guard Read auth from THIS route object only. A fixed-size lookahead spills into the next
+    // entry in the routes array and marks the previous route public whenever the next one is.
+    const handler = /\bhandler\s*:\s*(['"`])([\w.-]+)\1/.exec(m[0]);
+    // cm:guard Only the CRUD-shaped paths inherit the folder's content type. A custom route like
+    // /agents/me/permissions/check returns something else entirely, and guessing there is worse
+    const path = normalizePath(m[4]);
+    const isCrud = collection !== null && (path === collection || path === `${collection}/{param}`);
+    const schema = isCrud ? (apiName as string) : undefined;
+    // cm:why Strapi routes are authenticated BY DEFAULT; only `auth: false` opens one up.
+    const open = /\bauth\s*:\s*false/.test(m[0]);
+    out.routes.push(
+      route(m[2], m[4], file, lineOf(content, m.index), {
+        handler: handler?.[2],
+        auth: !open,
+        responseSchema: m[2] === 'DELETE' ? undefined : schema,
+        requestSchema: m[2] === 'POST' || m[2] === 'PUT' || m[2] === 'PATCH' ? schema : undefined,
+      })
+    );
+  }
+
+  for (const m of content.matchAll(STRAPI_CORE_ROUTER)) {
+    const singular = m[3];
+    const plural = pluralize(singular);
+    for (const [verb, suffix] of [['GET', ''], ['POST', ''], ['GET', '/{id}'], ['PUT', '/{id}'], ['DELETE', '/{id}']] as const) {
+      out.routes.push(
+        route(verb, `/${plural}${suffix}`, file, lineOf(content, m.index), {
+          handler: `${singular}.core`,
+          auth: true,
+          responseSchema: singular,
+          requestSchema: verb === 'POST' || verb === 'PUT' ? singular : undefined,
+        })
+      );
+    }
+  }
+  return out;
+}
+
+function pluralize(name: string): string {
+  if (/[^aeiou]y$/.test(name)) return `${name.slice(0, -1)}ies`;
+  if (/(s|x|z|ch|sh)$/.test(name)) return `${name}es`;
+  return `${name}s`;
+}
+
+function strapiType(type: string | undefined): ShapeType {
+  switch (type) {
+    case 'string': case 'text': case 'richtext': case 'email': case 'uid':
+    case 'enumeration': case 'date': case 'datetime': case 'time': case 'password':
+      return 'string';
+    case 'integer': case 'biginteger': case 'float': case 'decimal':
+      return 'number';
+    case 'boolean':
+      return 'boolean';
+    case 'component': case 'dynamiczone': case 'relation': case 'media':
+      return 'object';
+    case 'json':
+      return 'unknown';
+    default:
+      return 'unknown';
+  }
 }
 
 const NEST_CONTROLLER = /@Controller\s*\(\s*(['"`])?([^'"`)]*)\1?\s*\)/;
@@ -365,6 +465,7 @@ export function scanBackendFile(file: string, rawContent: string, stack: Stack):
   const content = blankComments(rawContent);
   const byStack: Record<Stack, (f: string, c: string) => BeFileScan> = {
     laravel: scanLaravel,
+    strapi: scanStrapi,
     node: scanNode,
     go: scanGo,
     python: scanPython,
@@ -373,6 +474,7 @@ export function scanBackendFile(file: string, rawContent: string, stack: Stack):
   const primary = /\.php$/.test(file) ? scanLaravel
     : /\.(go)$/.test(file) ? scanGo
     : /\.py$/.test(file) ? scanPython
+    : stack === 'strapi' ? scanStrapi
     : /\.[jt]sx?$|\.mjs$|\.cjs$/.test(file) ? scanNode
     : byStack[stack];
 

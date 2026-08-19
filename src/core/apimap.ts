@@ -299,11 +299,25 @@ export interface FieldAudit {
 
 // cm:why The question nobody could ask before the two halves joined: the backend serializes it,
 // the tests confirm it goes over the wire, and no screen ever touches it.
+export function endpointsWithTracedReads(map: ApiMapFile): Set<string> {
+  const byField = new Map(map.fields.map((f) => [f.id, f.endpointId]));
+  const out = new Set<string>();
+  for (const read of map.reads) {
+    const endpointId = byField.get(read.fieldId);
+    if (endpointId) out.add(endpointId);
+  }
+  return out;
+}
+
+// cm:guard Only endpoints where the frontend side actually traced a read can support this claim.
+// A typed client hides its fields in TS types, so "no screen reads it" there means "not analysed".
 export function unreadResponseFields(map: ApiMapFile): FieldAudit[] {
+  const analysable = endpointsWithTracedReads(map);
   const out: FieldAudit[] = [];
   for (const field of map.fields) {
     if (field.kind !== 'response') continue;
     if (!field.declared && !field.observed) continue;
+    if (!analysable.has(field.endpointId)) continue;
     if (map.reads.some((r) => r.fieldId === field.id)) continue;
     const endpoint = map.endpoints.find((e) => e.id === field.endpointId);
     if (endpoint) out.push({ endpoint, field, readers: [] });

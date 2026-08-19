@@ -100,11 +100,29 @@ describe('findCallSites', () => {
     expect(sites[1].methodExplicit).toBe(true);
   });
 
+  it('finds the call past a generic type argument', () => {
+    const sites = findCallSites("api.get<{ data: Item[]; meta: { total: number } }>('/agents');");
+    expect(sites).toHaveLength(1);
+    expect(sites[0]).toMatchObject({ via: 'api', method: 'GET', definitelyHttp: true });
+  });
+
+  it('ignores a property access that is not a call', () => {
+    expect(findCallSites('const g = obj.get;\nconst n = a < b && c > d;')).toHaveLength(0);
+  });
+
   it('treats a client-shaped receiver as definitely http', () => {
     const sites = findCallSites("api.post('/a');\ncache.get(key);");
     const byVia = new Map(sites.map((s) => [s.via, s.definitelyHttp]));
     expect(byVia.get('api')).toBe(true);
     expect(byVia.get('cache')).toBe(false);
+  });
+});
+
+describe('scanFile — typed client', () => {
+  it('reads the url out of a generic-typed client call', () => {
+    const src = "export const agentsApi = {\n  list: () => api.get<{ data: Agent[] }>('/agents'),\n};";
+    const scan = scanFile('src/lib/api/agents.ts', src);
+    expect(scan.endpoints).toEqual([expect.objectContaining({ method: 'GET', path: '/agents' })]);
   });
 });
 

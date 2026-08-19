@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { shapeOf, mergeShapes } from './shape';
 import { detectStack, indexClasses, isBackendFile, resolveHandlerSchemas, scanBackendFile } from './beScanner';
 import { buildHarness, ingestSamples, reconcileWrappers } from './probeHarness';
-import { createApiMap, endpointId, fieldId, finalizeApiMap, linkMaps, matchEndpointBySuffix, unreadResponseFields, undeliveredFields } from './apimap';
+import { createApiMap, endpointId, endpointsWithTracedReads, fieldId, finalizeApiMap, linkMaps, matchEndpointBySuffix, unreadResponseFields, undeliveredFields } from './apimap';
 import type { ApiMapFile, FieldNode } from './apimap';
 import { lambdaReads } from './feScanner';
 
@@ -189,6 +189,71 @@ async def get_user(id: int):
   });
 });
 
+describe('scanBackendFile — strapi', () => {
+  const routeFile = `const rbac = (p: string) => ({ policies: ['global::is-authenticated'] });
+
+export default {
+  routes: [
+    { method: 'GET', path: '/agents', handler: 'agent.find', config: rbac('agents:read') },
+    { method: 'POST', path: '/agents', handler: 'agent.create', config: rbac('agents:create') },
+    { method: 'DELETE', path: '/agents/:id', handler: 'agent.delete', config: rbac('agents:delete') },
+    { method: 'GET', path: '/agents/me/permissions/check', handler: 'agent.check', config: { auth: false } },
+  ],
+};`;
+
+  it('reads routes declared as data, not as calls', () => {
+    const scan = scanBackendFile('src/api/agent/routes/agent.ts', routeFile, 'strapi');
+    expect(scan.routes.map((r) => `${r.method} ${r.path}`)).toEqual([
+      'GET /agents',
+      'POST /agents',
+      'DELETE /agents/{param}',
+      'GET /agents/me/permissions/check',
+    ]);
+  });
+
+  it('treats a strapi route as authenticated unless auth is explicitly false', () => {
+    const scan = scanBackendFile('src/api/agent/routes/agent.ts', routeFile, 'strapi');
+    expect(scan.routes.filter((r) => r.auth)).toHaveLength(3);
+    expect(scan.routes.find((r) => r.path.endsWith('/check'))?.auth).toBe(false);
+  });
+
+  it('inherits the folder content type only for CRUD-shaped paths', () => {
+    const scan = scanBackendFile('src/api/agent/routes/agent.ts', routeFile, 'strapi');
+    const byPath = new Map(scan.routes.map((r) => [`${r.method} ${r.path}`, r]));
+    expect(byPath.get('GET /agents')?.responseSchema).toBe('agent');
+    expect(byPath.get('POST /agents')?.requestSchema).toBe('agent');
+    expect(byPath.get('GET /agents/me/permissions/check')?.responseSchema).toBeUndefined();
+  });
+
+  it('does not claim a response shape for DELETE', () => {
+    const scan = scanBackendFile('src/api/agent/routes/agent.ts', routeFile, 'strapi');
+    expect(scan.routes.find((r) => r.method === 'DELETE')?.responseSchema).toBeUndefined();
+  });
+
+  it('turns a content-type schema into typed fields', () => {
+    const schema = JSON.stringify({
+      info: { singularName: 'agent', pluralName: 'agents' },
+      attributes: {
+        name: { type: 'string', required: true },
+        seats: { type: 'integer' },
+        tenant: { type: 'relation' },
+      },
+    });
+    const scan = scanBackendFile('src/api/agent/content-types/agent/schema.json', schema, 'strapi');
+    expect(scan.schemas[0].name).toBe('agent');
+    expect(scan.schemas[0].fields).toEqual([
+      { path: 'name', type: 'string', optional: false },
+      { path: 'seats', type: 'number', optional: true },
+      { path: 'tenant', type: 'object', optional: true },
+    ]);
+  });
+
+  it('detects strapi from the manifest rather than calling it plain node', () => {
+    expect(detectStack({ 'package.json': '{"dependencies":{"@strapi/strapi":"5.0.0"}}' })).toBe('strapi');
+    expect(detectStack({ 'package.json': '{"dependencies":{"express":"4"}}' })).toBe('node');
+  });
+});
+
 describe('buildHarness', () => {
   it('emits a test in the project runner, not a live-server script', () => {
     const endpoints = [{ id: 'e', method: 'GET' as const, path: '/api/users' }];
@@ -299,6 +364,13 @@ describe('linkMaps', () => {
   it('reports backend fields no screen reads', () => {
     const joined = linkMaps(fe, baseMap(), 'full');
     expect(unreadResponseFields(joined).map((a) => a.field.path).sort()).toEqual(['id', 'internal_score']);
+  });
+
+  it('claims nothing about an endpoint whose frontend reads were never traced', () => {
+    const blind = { ...fe, fields: [], reads: [] };
+    const joined = linkMaps(blind, baseMap(), 'full');
+    expect(endpointsWithTracedReads(joined).size).toBe(0);
+    expect(unreadResponseFields(joined)).toHaveLength(0);
   });
 
   it('refuses an ambiguous suffix match', () => {

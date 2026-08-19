@@ -2,7 +2,7 @@ import { mkdirSync, readFileSync, realpathSync, writeFileSync } from 'fs';
 import { dirname, resolve } from 'path';
 import { fileURLToPath } from 'url';
 import type { ApiMapFile } from '../core/apimap';
-import { linkMaps, orphanEndpoints, undeliveredFields, unreadResponseFields } from '../core/apimap';
+import { endpointsWithTracedReads, linkMaps, orphanEndpoints, undeliveredFields, unreadResponseFields } from '../core/apimap';
 
 function loadMap(path: string): ApiMapFile {
   const map = JSON.parse(readFileSync(path, 'utf8')) as ApiMapFile;
@@ -16,7 +16,19 @@ export function renderAudit(map: ApiMapFile): string {
   const orphans = orphanEndpoints(map);
   const lines: string[] = [];
 
+  const called = new Set(map.calls.map((c) => c.endpointId));
+  const analysable = endpointsWithTracedReads(map);
+  const blind = [...called].filter((id) => !analysable.has(id)).length;
+
   lines.push(`### Fields the API sends that no screen reads — ${unread.length === 0 ? 'none' : unread.length}`);
+  if (blind > 0) {
+    lines.push(
+      `_Counted over ${analysable.size} of ${called.size} called endpoints. The other ${blind} had no field read traced` +
+        ' at all — typically a typed client, where the fields live in TS types rather than at the call site —' +
+        ' so nothing is claimed about them._'
+    );
+    lines.push('');
+  }
   for (const a of unread.slice(0, 30)) lines.push(`- ${a.endpoint.method} ${a.endpoint.path} → \`${a.field.path}\``);
   if (unread.length > 30) lines.push(`- ... ${unread.length - 30} more`);
   lines.push('');

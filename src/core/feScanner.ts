@@ -193,8 +193,32 @@ interface CallSite {
 // counts as HTTP when the receiver reads like a client OR the argument resolves to a real path.
 const HTTP_RECEIVER = /^(\$?(api|http|client|axios|request|req|fetcher|instance|service|agent|rest|sdk|gql|backend|server))/i;
 
-const MEMBER_CALL = new RegExp(`\\b([A-Za-z_$][\\w$]*)\\s*\\.\\s*(${VERBS.join('|')})\\s*\\(`, 'g');
-const PLAIN_CALL = /\b(fetch|\$fetch|ofetch|useFetch|useSWR|request|axios)\s*\(/g;
+const MEMBER_CALL = new RegExp(`\\b([A-Za-z_$][\\w$]*)\\s*\\.\\s*(${VERBS.join('|')})\\b`, 'g');
+const PLAIN_CALL = /\b(fetch|\$fetch|ofetch|useFetch|useSWR|request|axios)\b/g;
+
+// cm:guard `api.get<{ data: T[] }>('/x')` is the dominant shape in a typed client — the generic
+// sits between the verb and the paren, so the open paren must be found, never assumed adjacent.
+export function openParenAfter(content: string, from: number): number | null {
+  let i = from;
+  while (i < content.length && /\s/.test(content[i])) i++;
+  if (content[i] === '<') {
+    let depth = 0;
+    while (i < content.length) {
+      const ch = content[i];
+      if (ch === '<') depth++;
+      else if (ch === '>') {
+        depth--;
+        if (depth === 0) {
+          i++;
+          break;
+        }
+      } else if (ch === '(' || ch === ')' || ch === '\n') return null;
+      i++;
+    }
+    while (i < content.length && /\s/.test(content[i])) i++;
+  }
+  return content[i] === '(' ? i : null;
+}
 const XHR_OPEN = /\.\s*open\s*\(\s*(['"`])(GET|POST|PUT|PATCH|DELETE|HEAD)\1\s*,/gi;
 
 // cm:guard Bounded by the call's own parentheses, not a fixed character window — a lookahead that
@@ -231,7 +255,8 @@ export function findCallSites(content: string): CallSite[] {
   };
 
   for (const m of content.matchAll(MEMBER_CALL)) {
-    const idx = m.index + m[0].length - 1;
+    const idx = openParenAfter(content, m.index + m[0].length);
+    if (idx === null) continue;
     push({
       line: lineOf(idx),
       via: m[1],
@@ -242,7 +267,8 @@ export function findCallSites(content: string): CallSite[] {
     });
   }
   for (const m of content.matchAll(PLAIN_CALL)) {
-    const idx = m.index + m[0].length - 1;
+    const idx = openParenAfter(content, m.index + m[0].length);
+    if (idx === null) continue;
     const window = callExpression(content, idx);
     const explicit = methodFromContext(window);
     push({
