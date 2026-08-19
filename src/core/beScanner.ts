@@ -57,7 +57,9 @@ function lineOf(content: string, index: number): number {
   return content.slice(0, index).split('\n').length;
 }
 
-const AUTH_HINT = /\b(auth|jwt|passport|requireUser|isAuthenticated|guard|Protected|RequireLogin|sanctum|IsAuthenticated|login_required|permission_classes)\b/i;
+// cm:guard `auth\w*`, not `auth`: the idiom in the wild is `dependencies.authenticate`, and an exact
+// word match silently reports a fully guarded api as wide open.
+const AUTH_HINT = /\b(auth\w*|jwt|passport|requireUser|requirePermission|guard|Protected|RequireLogin|sanctum|login_required|permission_classes)\b/i;
 
 // cm:guard Every extractor below returns a NORMALIZED path via normalizePath, so `:id`, `{id}`,
 // `<int:id>` and `$id` all collapse to the same endpoint id the FE scanner produces.
@@ -320,13 +322,20 @@ function scanNode(file: string, content: string): BeFileScan {
   const mounts = new Map<string, string>();
   for (const m of content.matchAll(EXPRESS_MOUNT)) mounts.set(m[3], m[2]);
 
+  // cm:why Express guards a whole router in one line — `router.use(deps.authenticate)` sits above
+  // every route in the file, so reading only each route's own arguments misses all of them.
+  const guarded = new Set<string>();
+  for (const m of content.matchAll(/\b(\w+)\s*\.\s*use\s*\(\s*(?!['"`])([^)]*)\)/g)) {
+    if (AUTH_HINT.test(m[2])) guarded.add(m[1]);
+  }
+
   for (const m of content.matchAll(EXPRESS_ROUTE)) {
     const tail = m[5] ?? '';
     const block = content.slice(m.index, m.index + 900);
     const schema = /(\w+)\s*\.\s*(?:parse|safeParse)\s*\(/.exec(block);
     out.routes.push(
       route(m[2] === 'all' ? 'UNKNOWN' : m[2], m[4], file, lineOf(content, m.index), {
-        auth: AUTH_HINT.test(tail),
+        auth: AUTH_HINT.test(tail) || guarded.has(m[1]),
         requestSchema: schema?.[1],
         receiver: m[1],
       })

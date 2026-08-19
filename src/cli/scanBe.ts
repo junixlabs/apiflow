@@ -29,18 +29,35 @@ function walk(root: string, dir: string, acc: string[] = []): string[] {
   return acc;
 }
 
-function readManifests(root: string): Record<string, string> {
+function readManifests(root: string, dir = ''): Record<string, string> {
   const out: Record<string, string> = {};
   for (const name of MANIFESTS) {
-    const p = join(root, name);
+    const p = join(root, dir, name);
     if (existsSync(p)) out[name] = readFileSync(p, 'utf8');
   }
   return out;
 }
 
+// cm:guard One stack per repo is wrong for a monorepo: pointing the scan at a root that holds a
+// Strapi backend beside a Next app detects `generic` and silently reports a fraction of the routes.
+function stacksByDirectory(root: string): Array<{ dir: string; stack: Stack }> {
+  const found: Array<{ dir: string; stack: Stack }> = [];
+  const visit = (dir: string, depth: number): void => {
+    const stack = detectStack(readManifests(root, dir));
+    if (stack !== 'generic') found.push({ dir, stack });
+    if (depth === 0) return;
+    for (const entry of readdirSync(join(root, dir), { withFileTypes: true })) {
+      if (entry.isDirectory() && !SKIP_DIRS.has(entry.name)) visit(join(dir, entry.name), depth - 1);
+    }
+  };
+  visit('', 2);
+  return found.sort((a, b) => b.dir.length - a.dir.length);
+}
+
 export interface BeScanResult {
   map: ApiMapFile;
   stack: Stack;
+  stacks: Array<{ dir: string; stack: Stack }>;
   schemasFound: number;
   routesWithRequest: number;
   routesWithResponse: number;
@@ -50,15 +67,16 @@ export interface BeScanResult {
 // already absolute, so running this over them would prepend a prefix that does not exist.
 function mountPrefixes(
   root: string,
-  stack: Stack,
+  stackAt: (file: string) => Stack,
   files: Array<{ file: string; content: string }>
 ): (hit: { source: { file: string; line: number }; path: string; receiver?: string }) => string[] {
-  if (stack !== 'node') return (hit) => [hit.path];
+  if (!files.some(({ file }) => stackAt(file) === 'node')) return (hit) => [hit.path];
   const resolve = buildResolver(root, new Set(files.map((f) => f.file)));
   const graph = buildMountGraph(files, resolve);
   const symbols = new Map(files.map((f) => [f.file, enclosingSymbols(f.content)]));
 
   return ({ source, path, receiver }) => {
+    if (stackAt(source.file) !== 'node') return [path];
     const owner = symbolAt(symbols.get(source.file) ?? [], source.line, ' module');
     const found = receiver ? prefixesFor(graph, source.file, owner, receiver) : [];
     return found.length > 0 ? found.map((prefix) => normalizePath(joinPrefix(prefix, path))) : [path];
@@ -66,7 +84,10 @@ function mountPrefixes(
 }
 
 export function scanBackend(root: string, name: string): BeScanResult {
-  const stack = detectStack(readManifests(root));
+  const stacks = stacksByDirectory(root);
+  const stackAt = (file: string): Stack =>
+    stacks.find(({ dir }) => dir === '' || file.startsWith(`${dir}/`))?.stack ?? 'generic';
+  const stack = stacks[stacks.length - 1]?.stack ?? 'generic';
   const files = walk(root, root).map((file) => ({ file, content: safeRead(join(root, file)) }));
   const classes: ClassIndex = indexClasses(files);
 
@@ -76,7 +97,7 @@ export function scanBackend(root: string, name: string): BeScanResult {
 
   for (const { file, content } of files) {
     if (!content) continue;
-    const scan = scanBackendFile(file, content, stack);
+    const scan = scanBackendFile(file, content, stackAt(file));
     for (const s of scan.schemas) if (!schemas.has(s.name)) schemas.set(s.name, s);
     routes.push(...scan.routes);
     map.unresolved.push(...scan.unresolved);
@@ -84,7 +105,7 @@ export function scanBackend(root: string, name: string): BeScanResult {
 
   let routesWithRequest = 0;
   let routesWithResponse = 0;
-  const mounted = mountPrefixes(root, stack, files);
+  const mounted = mountPrefixes(root, stackAt, files);
 
   for (const raw of routes) {
     const hit = resolveHandlerSchemas(raw, classes);
@@ -137,6 +158,7 @@ export function scanBackend(root: string, name: string): BeScanResult {
   return {
     map: finalizeApiMap(map),
     stack,
+    stacks,
     schemasFound: schemas.size,
     routesWithRequest,
     routesWithResponse,
@@ -162,7 +184,7 @@ export function renderBeReport(result: BeScanResult, outPath: string): string {
   lines.push('## BE Map Scan Results');
   lines.push('');
   lines.push(`**Root**: ${map.metadata.root}`);
-  lines.push(`**Stack**: ${result.stack}`);
+  lines.push(`**Stack**: ${result.stacks.map((s) => (s.dir ? `${s.stack} (${s.dir})` : s.stack)).join(' · ') || 'generic'}`);
   lines.push(`**Written**: ${outPath}`);
   lines.push(`**Endpoints**: ${map.endpoints.length} (${withAuth} behind auth)`);
   lines.push(`**Schemas**: ${result.schemasFound} — request on ${result.routesWithRequest}, response on ${result.routesWithResponse}`);
