@@ -87,7 +87,7 @@ nêu đích danh cái cần giấu là tự làm lại đúng việc vừa chặ
 90 ngày mà **chưa map nổi một FE thật và trả lời một câu hỏi ảnh hưởng thật** → archive repo.
 
 Giữ lại đúng ba mảnh:
-1. `skills/api-flow-analyzer/` — đã sống thật ở dodgeprint.
+1. `skills/api-flow-analyzer/` — đã sống thật trong một dự án nội bộ.
 2. `src/core/{postmanParser,openApiParser,curlParser,curlExporter}.ts` + `src/utils/postmanExporter.ts`
    → `forge/packages/core/src/integrations/postman/` (forge ghi được collection nhưng không có
    parser/generator local).
