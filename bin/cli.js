@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { spawn } from 'child_process';
+import { spawn, spawnSync } from 'child_process';
 import { createServer } from 'http';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
@@ -15,8 +15,24 @@ const projectArg = args.find(a => a.startsWith('--project='));
 const projectDir = projectArg ? projectArg.split('=')[1] : null;
 const port = parseInt(args.find(a => a.startsWith('--port='))?.split('=')[1] || '3000', 10);
 
+// cm:edge protocol -> src/cli/scanFe.ts — subcommands are matched before the flag parsing below,
+// so `apiflow scan-fe <dir>` never falls through to the serve path and never needs dist/.
+const SUBCOMMANDS = {
+  'scan-fe': 'scanFe.ts',
+  'scan-be': 'scanBe.ts',
+  probe: 'probe.ts',
+  link: 'link.ts',
+  impact: 'impact.ts',
+};
+const subcommand = SUBCOMMANDS[args[0]];
+
+if (subcommand) {
+  const script = join(root, 'src', 'cli', subcommand);
+  const child = spawn('npx', ['tsx', script, ...args.slice(1)], { stdio: 'inherit', cwd: root });
+  child.on('exit', (code) => process.exit(code ?? 0));
+}
 // --mcp mode: start MCP server
-if (args.includes('--mcp')) {
+else if (args.includes('--mcp')) {
   const mcpServer = join(root, 'src', 'mcp', 'server.ts');
   const child = spawn('npx', ['tsx', mcpServer], { stdio: 'inherit', cwd: root });
   child.on('exit', (code) => process.exit(code ?? 0));
@@ -29,11 +45,23 @@ if (args.includes('--mcp')) {
   proxy.stdout?.on('data', (d) => { const m = d.toString().trim(); if (m) console.log(m); });
   proxy.stderr?.on('data', (d) => { const m = d.toString().trim(); if (m && !m.includes('ExperimentalWarning')) console.error(m); });
 
-  // Serve pre-built dist/ as static files
+  // cm:edge contract -> package.json — `files` ships a prebuilt dist/ to npm, but dist/ is
+  // gitignored, so a git clone arrives here with nothing to serve and must build on demand.
   if (!existsSync(distDir)) {
-    console.error('dist/ not found. Run `npm run build` first, or use `npm run dev` for development.');
-    proxy.kill();
-    process.exit(1);
+    const canBuild = existsSync(join(root, 'node_modules', 'vite'));
+    if (!canBuild) {
+      console.error('dist/ not found and this install cannot build it (no devDependencies).');
+      console.error('Reinstall the package, or from a source checkout run `npm install`.');
+      proxy.kill();
+      process.exit(1);
+    }
+    console.log('  dist/ not found — building (first run only)...\n');
+    const build = spawnSync('npm', ['run', 'build'], { stdio: 'inherit', cwd: root, shell: process.platform === 'win32' });
+    if (build.status !== 0 || !existsSync(distDir)) {
+      console.error('\nBuild failed. Fix the errors above, or run `npm run dev` for development.');
+      proxy.kill();
+      process.exit(1);
+    }
   }
 
   const mimeTypes = {

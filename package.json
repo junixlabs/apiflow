@@ -34,6 +34,7 @@
     "dist/",
     "proxy/",
     "src/core/",
+    "src/cli/",
     "src/mcp/",
     "skills/",
     "package.json",
@@ -52,7 +53,9 @@
     "start": "node bin/cli.js",
     "prepublishOnly": "npm run build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.27.1",
@@ -87,6 +90,7 @@
     "tailwindcss": "^4.1.8",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.57.0",
-    "vite": "^8.0.1"
+    "vite": "^8.0.1",
+    "vitest": "^4.1.11"
   }
 }
