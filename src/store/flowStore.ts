@@ -27,7 +27,6 @@ interface FlowState {
   addAnnotation: () => void;
   addGroup: () => void;
   addConditionNode: () => void;
-  addLoopNode: () => void;
   deleteNode: (nodeId: string) => void;
   updateNodeData: (nodeId: string, data: Partial<ApiNodeData>) => void;
   setSelectedNodeId: (id: string | null) => void;
@@ -187,28 +186,6 @@ export const useFlowStore = create<FlowState>((set, get) => ({
             label: 'Condition',
             sourceNodeLabel: '',
             condition: { fieldPath: 'status', operator: 'equals', expected: '200' },
-          } as unknown as ApiNodeData,
-        },
-      ],
-      selectedNodeId: id,
-      isDirty: true,
-    }));
-  },
-
-  addLoopNode: () => {
-    get().pushHistory();
-    const id = generateNodeId();
-    const nodeCount = get().nodes.length;
-    set((state) => ({
-      nodes: [
-        ...state.nodes,
-        {
-          id,
-          type: 'loopNode',
-          position: { x: 200 + nodeCount * 280, y: 150 },
-          data: {
-            label: 'Loop',
-            loopConfig: { mode: 'pagination', pageParam: 'page', startPage: 1, maxIterations: 20 },
           } as unknown as ApiNodeData,
         },
       ],

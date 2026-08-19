@@ -228,7 +228,7 @@ export async function coreRunFlow(
   }
 
   // Include both API nodes and condition nodes for execution
-  const executableTypes = new Set(['apiNode', 'conditionNode', 'loopNode']);
+  const executableTypes = new Set(['apiNode', 'conditionNode']);
   const execNodes = nodes.filter((n) => executableTypes.has(n.type ?? ''));
   const execNodeIds = new Set(execNodes.map((n) => n.id));
   const execEdges = edges.filter((e) => execNodeIds.has(e.source) && execNodeIds.has(e.target));
@@ -295,12 +295,6 @@ export async function coreRunFlow(
         return null;
       }
 
-      // Loop node: pass through (full loop execution is future feature)
-      if (node.type === 'loopNode') {
-        callbacks.onNodeStatusChange(nodeId, 'success');
-        return null;
-      }
-
       // API node: run normally
       return coreRunSingleNode(node, variables, sendRequest, callbacks, signal, nodeResults, execNodes);
     });
@@ -334,7 +328,7 @@ export function coreInitSteppingMode(
   nodes: CoreApiNode[],
   edges: CoreFlowEdge[]
 ): { levels: string[][]; hasCycle: boolean } {
-  const executableTypes = new Set(['apiNode', 'conditionNode', 'loopNode']);
+  const executableTypes = new Set(['apiNode', 'conditionNode']);
   const execNodes = nodes.filter((n) => executableTypes.has(n.type ?? ''));
   const execNodeIds = new Set(execNodes.map((n) => n.id));
   const execEdges = edges.filter((e) => execNodeIds.has(e.source) && execNodeIds.has(e.target));
@@ -353,7 +347,7 @@ export async function coreRunStepLevel(
   nodeResults: Map<string, ExecutionResult>,
   skippedNodes: Set<string>
 ): Promise<void> {
-  const executableTypes = new Set(['apiNode', 'conditionNode', 'loopNode']);
+  const executableTypes = new Set(['apiNode', 'conditionNode']);
   const execNodes = nodes.filter((n) => executableTypes.has(n.type ?? ''));
   const nodeMap = new Map(execNodes.map((n) => [n.id, n]));
 

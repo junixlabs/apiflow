@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import {
   Workflow, Save, FolderOpen, Plus, Undo2, Redo2, Play, ChevronDown,
   Download, Upload, Image, FileImage, FileJson, Terminal, Square, LayoutDashboard,
-  BookOpen, GitBranch, Repeat,
+  BookOpen, GitBranch,
 } from 'lucide-react';
 import { useFlowStore } from '../../store/flowStore';
 import { useExecutionStore } from '../../store/executionStore';
@@ -82,7 +82,6 @@ export function Toolbar({ onShowLibrary, onShowDashboard, showImportCurl, onShow
   const addAnnotation = useFlowStore((s) => s.addAnnotation);
   const addGroup = useFlowStore((s) => s.addGroup);
   const addConditionNode = useFlowStore((s) => s.addConditionNode);
-  const addLoopNode = useFlowStore((s) => s.addLoopNode);
   const exportFlowFn = useFlowStore((s) => s.exportFlow);
   const loadFlowFn = useFlowStore((s) => s.loadFlow);
   const setClean = useFlowStore((s) => s.setClean);
@@ -307,16 +306,6 @@ export function Toolbar({ onShowLibrary, onShowDashboard, showImportCurl, onShow
                 >
                   <GitBranch className="w-3 h-3 text-method-put" />
                   Condition
-                </button>
-                <button
-                  onClick={() => {
-                    addLoopNode();
-                    setShowAddMenu(false);
-                  }}
-                  className="w-full text-left px-3 py-1.5 text-xs text-canvas-text hover:bg-surface-hover flex items-center gap-2"
-                >
-                  <Repeat className="w-3 h-3 text-purple-400" />
-                  Loop
                 </button>
               </div>
             )}

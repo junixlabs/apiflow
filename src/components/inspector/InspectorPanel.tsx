@@ -9,7 +9,6 @@ import { runSingleNode } from '../../engine/executor';
 import { generateCurl } from '../../utils/curlExporter';
 import { ConfigTab } from './ConfigTab';
 import { ConditionConfigTab } from './ConditionConfigTab';
-import { LoopConfigTab } from './LoopConfigTab';
 import { RequestTab } from './RequestTab';
 import { ResponseTab } from './ResponseTab';
 import { DiffTab } from './DiffTab';
@@ -108,27 +107,6 @@ export function InspectorPanel() {
         </div>
         <div className="flex-1 overflow-auto p-3">
           <ConditionConfigTab nodeId={selectedNode.id} data={selectedNode.data as unknown as { label: string; sourceNodeLabel?: string; condition?: { fieldPath: string; operator: string; expected: string } }} />
-        </div>
-      </div>
-    );
-  }
-
-  // Loop node inspector
-  if (selectedNode.type === 'loopNode') {
-    return (
-      <div style={{ width }} className="shrink-0 border-l border-canvas-border bg-surface flex flex-col relative">
-        <ResizeHandle onMouseDown={handleMouseDown} isDragging={isDragging} />
-        <div className="flex items-center justify-between px-3 py-2 border-b border-canvas-border">
-          <span className="text-sm font-medium truncate">{(selectedNode.data as Record<string, unknown>).label as string || 'Loop'}</span>
-          <button
-            onClick={() => deleteNode(selectedNode.id)}
-            className="px-2 py-1 text-xs text-method-delete/70 hover:text-method-delete hover:bg-method-delete/10 rounded"
-          >
-            Delete
-          </button>
-        </div>
-        <div className="flex-1 overflow-auto p-3">
-          <LoopConfigTab nodeId={selectedNode.id} data={selectedNode.data as unknown as { label: string; loopConfig?: { mode: string; pageParam: string; startPage: number; maxIterations: number } }} />
         </div>
       </div>
     );

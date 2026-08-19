@@ -178,17 +178,3 @@ export interface ConditionNodeData {
   condition: ConditionRule;
   [key: string]: unknown;
 }
-
-// Loop node
-export interface LoopNodeConfig {
-  mode: 'pagination';
-  pageParam: string;       // e.g. "page"
-  startPage: number;
-  maxIterations: number;   // safety limit
-}
-
-export interface LoopNodeData {
-  label: string;
-  loopConfig: LoopNodeConfig;
-  [key: string]: unknown;
-}

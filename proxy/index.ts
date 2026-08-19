@@ -13,12 +13,6 @@ const RECENT_FILE = path.join(os.homedir(), '.apiview', 'recent.json');
 
 // --- Helpers ---
 
-function slugify(name: string): string {
-  return name
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '');
-}
 
 function sanitizeName(name: string): boolean {
   return !name.includes('..') && !name.includes('/') && !name.includes('\\');

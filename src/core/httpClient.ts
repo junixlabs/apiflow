@@ -14,7 +14,7 @@ export async function sendRequestViaProxy(
       body: JSON.stringify(request),
       signal,
     });
-    return res.json();
+    return (await res.json()) as ProxyResponse | ProxyErrorResponse;
   } catch (err) {
     const isAbort = err instanceof Error && err.name === 'AbortError';
     if (isAbort && signal?.aborted) {

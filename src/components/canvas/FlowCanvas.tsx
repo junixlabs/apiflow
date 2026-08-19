@@ -14,7 +14,6 @@ import { ApiNode } from './ApiNode';
 import { AnnotationNode } from './AnnotationNode';
 import { GroupNode } from './GroupNode';
 import { ConditionNode } from './ConditionNode';
-import { LoopNode } from './LoopNode';
 import { ConnectionLine } from './ConnectionLine';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -23,7 +22,6 @@ const nodeTypes: NodeTypes = {
   annotationNode: AnnotationNode as any,
   groupNode: GroupNode as any,
   conditionNode: ConditionNode as any,
-  loopNode: LoopNode as any,
 };
 
 const edgeTypes: EdgeTypes = {
@@ -107,7 +105,6 @@ export function FlowCanvas() {
             if (node.type === 'annotationNode') return '#94a3b8';
             if (node.type === 'groupNode') return '#334155';
             if (node.type === 'conditionNode') return '#eab308';
-            if (node.type === 'loopNode') return '#a855f7';
             return '#3b82f6';
           }}
           maskColor="rgba(0,0,0,0.1)"

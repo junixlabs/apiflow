@@ -28,7 +28,7 @@ export type {
 export type { AssertionType, Assertion, AssertionResult } from '../core/types';
 
 // Flow logic types
-export type { ConditionRule, ConditionNodeData, LoopNodeConfig, LoopNodeData, RetryConfig } from '../core/types';
+export type { ConditionRule, ConditionNodeData, RetryConfig } from '../core/types';
 
 // UI-specific types that wrap @xyflow/react
 export type ApiNode = Node<ApiNodeData>;
