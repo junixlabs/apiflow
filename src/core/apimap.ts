@@ -33,6 +33,9 @@ export interface EndpointNode {
   handler?: string;
   auth?: boolean;
   probed?: boolean;
+  // cm:why Set only by `link`, and only on a pair it actually matched — `handler` looked like the
+  // same signal but an inline arrow route has none, so it read every Express endpoint as unlinked.
+  linked?: true;
 }
 
 export type FieldKind = 'request' | 'response';
@@ -115,6 +118,27 @@ export function fieldId(endpoint: string, path: string, kind: FieldKind = 'respo
   return kind === 'response' ? `fl_${endpoint}_${slug(path)}` : `fq_${endpoint}_${slug(path)}`;
 }
 
+// cm:guard Brace-counted, not `[^}]*` — `${fmt({a:1})}` closes on the INNER brace and leaves a fake
+// `/${fmt(` endpoint; a trailing `${…}` after a non-`/` is a query string and drops out entirely.
+export function stripInterpolations(input: string): string {
+  let out = '';
+  for (let i = 0; i < input.length; i++) {
+    if (input[i] === '$' && input[i + 1] === '{') {
+      let depth = 0;
+      let j = i + 1;
+      for (; j < input.length; j++) {
+        if (input[j] === '{') depth++;
+        else if (input[j] === '}' && --depth === 0) break;
+      }
+      out += j >= input.length - 1 && out.at(-1) !== '/' ? '' : '{param}';
+      i = j;
+      continue;
+    }
+    out += input[i];
+  }
+  return out;
+}
+
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 // cm:guard Collapsing `/users/42` and `/users/43` onto one endpoint is what makes the map answer
@@ -123,7 +147,7 @@ export function normalizePath(raw: string): string {
   let p = raw.trim();
   p = p.replace(/^[a-z][a-z0-9+.-]*:\/\/[^/]+/i, '');
   p = p.replace(/[?#].*$/, '');
-  p = p.replace(/\$\{[^}]*\}/g, '{param}');
+  p = stripInterpolations(p);
   p = p.replace(/'\s*\+\s*[^+]+\s*\+\s*'/g, '{param}');
   if (!p.startsWith('/')) p = `/${p}`;
   p = p
@@ -245,11 +269,18 @@ function mergeField(into: FieldNode, from: FieldNode): FieldNode {
 // when both normalize to the same string — matchEndpointBySuffix covers the prefix mismatch.
 export function linkMaps(fe: ApiMapFile, be: ApiMapFile, name: string): ApiMapFile {
   const rewrite = new Map<string, string>();
+  const linked = new Set<string>();
   for (const beEndpoint of be.endpoints) {
     const direct = fe.endpoints.find((e) => e.id === beEndpoint.id);
-    if (direct) continue;
+    if (direct) {
+      linked.add(beEndpoint.id);
+      continue;
+    }
     const suffix = matchEndpointBySuffix(fe.endpoints, beEndpoint);
-    if (suffix) rewrite.set(suffix.id, beEndpoint.id);
+    if (suffix) {
+      rewrite.set(suffix.id, beEndpoint.id);
+      linked.add(beEndpoint.id);
+    }
   }
 
   const remapId = (id: string): string => rewrite.get(id) ?? id;
@@ -261,7 +292,7 @@ export function linkMaps(fe: ApiMapFile, be: ApiMapFile, name: string): ApiMapFi
   const merged = createApiMap(name, `${fe.metadata.root} + ${be.metadata.root}`, 'apiflow link/1');
   merged.screens.push(...fe.screens, ...be.screens);
   merged.endpoints.push(
-    ...be.endpoints,
+    ...be.endpoints.map((e) => (linked.has(e.id) ? { ...e, linked: true as const } : e)),
     ...fe.endpoints.filter((e) => !rewrite.has(e.id) && !be.endpoints.some((b) => b.id === e.id))
   );
   merged.calls.push(...fe.calls.map((c) => ({ ...c, endpointId: remapId(c.endpointId) })), ...be.calls);
@@ -346,6 +377,8 @@ export function undeliveredFields(map: ApiMapFile): FieldAudit[] {
     }));
 }
 
+// cm:guard Only endpoints the backend scan actually saw (`source`) can be orphans — an endpoint
+// known solely from a frontend call has no server side to be dead, and would always list as one.
 export function orphanEndpoints(map: ApiMapFile): EndpointNode[] {
-  return map.endpoints.filter((e) => e.handler && !map.calls.some((c) => c.endpointId === e.id));
+  return map.endpoints.filter((e) => e.source && !map.calls.some((c) => c.endpointId === e.id));
 }

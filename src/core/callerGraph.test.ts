@@ -153,3 +153,62 @@ describe('stripJsonComments', () => {
     expect(JSON.parse(out)).toEqual({ a: 1, b: '// not a comment' });
   });
 });
+
+describe('instance aliases', () => {
+  const CLIENT = `export class ApiClient {
+  async listCompanies() { return http.get('/companies'); }
+  async removeCompany(id) { return http.delete('/companies/' + id); }
+}
+
+export const apiClient = new ApiClient();`;
+
+  const LIST = `import { apiClient } from '@/lib/client';
+export function useCompanies() { return apiClient.listCompanies(); }`;
+
+  const REMOVE = `import { apiClient } from '@/lib/client';
+export function useRemoveCompany() { return apiClient.removeCompany('1'); }`;
+
+  const LIST_PAGE = `import { useCompanies } from '@/hooks/list';
+export default function Page() { return useCompanies(); }`;
+
+  const REMOVE_PAGE = `import { useRemoveCompany } from '@/hooks/remove';
+export default function Page() { return useRemoveCompany(); }`;
+
+  const files: Record<string, string> = {
+    'src/lib/client.ts': CLIENT,
+    'src/hooks/list.ts': LIST,
+    'src/hooks/remove.ts': REMOVE,
+    'src/app/companies/page.tsx': LIST_PAGE,
+    'src/app/trash/page.tsx': REMOVE_PAGE,
+  };
+  const resolveAlias: ResolveImport = (_from, spec) =>
+    ({ '@/lib/client': 'src/lib/client.ts', '@/hooks/list': 'src/hooks/list.ts', '@/hooks/remove': 'src/hooks/remove.ts' })[spec] ?? null;
+
+  const clientGraph = buildCallerGraph(
+    Object.entries(files).map(([file, content]) => ({
+      file,
+      parsed: parseModule(content),
+      route: file.startsWith('src/app/') ? `/${file.split('/')[2]}` : undefined,
+    })),
+    resolveAlias
+  );
+
+  const at = (file: string, line: number) => {
+    const content = files[file] ?? '';
+    const symbols = enclosingSymbols(content);
+    return {
+      symbol: symbolAt(symbols, line, file),
+      member: memberAt(objectMembers(content), symbols, line, content.split('\n')),
+    };
+  };
+
+  it('carries the method across `new ApiClient()` instead of fanning out', () => {
+    const list = attributeToScreens({ file: 'src/lib/client.ts', symbol: 'ApiClient', member: 'listCompanies' }, clientGraph, at);
+    expect(list.map((a) => a.route)).toEqual(['/companies']);
+  });
+
+  it('keeps the second method on its own screen', () => {
+    const remove = attributeToScreens({ file: 'src/lib/client.ts', symbol: 'ApiClient', member: 'removeCompany' }, clientGraph, at);
+    expect(remove.map((a) => a.route)).toEqual(['/trash']);
+  });
+});

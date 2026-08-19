@@ -2,9 +2,12 @@ import { readdirSync, readFileSync, mkdirSync, writeFileSync, statSync, existsSy
 import { join, relative, resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import type { ApiMapFile, FieldNode } from '../core/apimap';
-import { createApiMap, endpointId, fieldId, finalizeApiMap } from '../core/apimap';
+import { createApiMap, endpointId, fieldId, finalizeApiMap, normalizePath } from '../core/apimap';
 import type { ClassIndex, SchemaDef, Stack } from '../core/beScanner';
 import { detectStack, indexClasses, isBackendFile, resolveHandlerSchemas, scanBackendFile } from '../core/beScanner';
+import { enclosingSymbols, symbolAt } from '../core/feScanner';
+import { buildMountGraph, joinPrefix, prefixesFor } from '../core/mountGraph';
+import { buildResolver } from './scanFe';
 
 const GENERATOR = 'apiflow scan-be/1';
 const MANIFESTS = ['artisan', 'composer.json', 'package.json', 'go.mod', 'pyproject.toml', 'requirements.txt'];
@@ -43,6 +46,25 @@ export interface BeScanResult {
   routesWithResponse: number;
 }
 
+// cm:guard Only the node stack mounts routers under a runtime prefix — Laravel and Strapi paths are
+// already absolute, so running this over them would prepend a prefix that does not exist.
+function mountPrefixes(
+  root: string,
+  stack: Stack,
+  files: Array<{ file: string; content: string }>
+): (hit: { source: { file: string; line: number }; path: string; receiver?: string }) => string[] {
+  if (stack !== 'node') return (hit) => [hit.path];
+  const resolve = buildResolver(root, new Set(files.map((f) => f.file)));
+  const graph = buildMountGraph(files, resolve);
+  const symbols = new Map(files.map((f) => [f.file, enclosingSymbols(f.content)]));
+
+  return ({ source, path, receiver }) => {
+    const owner = symbolAt(symbols.get(source.file) ?? [], source.line, ' module');
+    const found = receiver ? prefixesFor(graph, source.file, owner, receiver) : [];
+    return found.length > 0 ? found.map((prefix) => normalizePath(joinPrefix(prefix, path))) : [path];
+  };
+}
+
 export function scanBackend(root: string, name: string): BeScanResult {
   const stack = detectStack(readManifests(root));
   const files = walk(root, root).map((file) => ({ file, content: safeRead(join(root, file)) }));
@@ -62,48 +84,53 @@ export function scanBackend(root: string, name: string): BeScanResult {
 
   let routesWithRequest = 0;
   let routesWithResponse = 0;
+  const mounted = mountPrefixes(root, stack, files);
 
   for (const raw of routes) {
     const hit = resolveHandlerSchemas(raw, classes);
-    const eid = endpointId(hit.method, hit.path);
-    map.endpoints.push({
-      id: eid,
-      method: hit.method,
-      path: hit.path,
-      source: hit.source,
-      handler: hit.handler,
-      auth: hit.auth,
-    });
-
     const request = hit.requestSchema ? schemas.get(hit.requestSchema) : undefined;
     const response = hit.responseSchema ? schemas.get(hit.responseSchema) : undefined;
     if (request) routesWithRequest++;
     if (response) routesWithResponse++;
 
-    for (const [schema, kind] of [[request, 'request'], [response, 'response']] as const) {
-      if (!schema) continue;
-      for (const field of schema.fields) {
-        map.fields.push({
-          id: fieldId(eid, field.path, kind),
-          endpointId: eid,
-          path: field.path,
-          kind,
-          type: field.type,
-          optional: field.optional,
-          declared: true,
-          source: schema.source,
-        } satisfies FieldNode);
-      }
-    }
-
-    // cm:why An endpoint whose two shapes are unknown is exactly what the probe stage exists to
-    // fill — recording it here is what makes the probe list finite instead of "every route".
-    if (!request && !response && hit.method !== 'UNKNOWN') {
-      map.unresolved.push({
+    // cm:guard One router mounted at two prefixes really does serve both — the fields must follow
+    // every copy, or the second path lands in the map as a schema-less endpoint that never was.
+    for (const path of mounted(hit)) {
+      const eid = endpointId(hit.method, path);
+      map.endpoints.push({
+        id: eid,
+        method: hit.method,
+        path,
         source: hit.source,
-        reason: `${hit.method} ${hit.path} — no request or response schema found in code`,
-        snippet: hit.handler ?? '(no named handler)',
+        handler: hit.handler,
+        auth: hit.auth,
       });
+
+      for (const [schema, kind] of [[request, 'request'], [response, 'response']] as const) {
+        if (!schema) continue;
+        for (const field of schema.fields) {
+          map.fields.push({
+            id: fieldId(eid, field.path, kind),
+            endpointId: eid,
+            path: field.path,
+            kind,
+            type: field.type,
+            optional: field.optional,
+            declared: true,
+            source: schema.source,
+          } satisfies FieldNode);
+        }
+      }
+
+      // cm:why An endpoint whose two shapes are unknown is exactly what the probe stage exists to
+      // fill — recording it here is what makes the probe list finite instead of "every route".
+      if (!request && !response && hit.method !== 'UNKNOWN') {
+        map.unresolved.push({
+          source: hit.source,
+          reason: `${hit.method} ${path} — no request or response schema found in code`,
+          snippet: hit.handler ?? '(no named handler)',
+        });
+      }
     }
   }
 

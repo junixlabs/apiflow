@@ -70,9 +70,7 @@ function main(): void {
   mkdirSync(dirname(outPath), { recursive: true });
   writeFileSync(outPath, `${JSON.stringify(joined, null, 2)}\n`);
 
-  const matched = joined.endpoints.filter(
-    (e) => joined.calls.some((c) => c.endpointId === e.id) && e.handler !== undefined
-  ).length;
+  const matched = joined.endpoints.filter((e) => e.linked).length;
 
   console.log('## Linked map');
   console.log('');

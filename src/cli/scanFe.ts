@@ -1,4 +1,4 @@
-import { readdirSync, readFileSync, mkdirSync, writeFileSync, statSync, realpathSync, existsSync } from 'fs';
+import { readdirSync, readFileSync, mkdirSync, writeFileSync, statSync, realpathSync } from 'fs';
 import { join, relative, resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import type { ApiMapFile, Confidence, ScreenNode } from '../core/apimap';
@@ -7,6 +7,7 @@ import type { ScanHints } from '../core/feScanner';
 import { enclosingSymbols, isScannableFile, memberAt, objectMembers, routeFromFilePath, scanFile, symbolAt } from '../core/feScanner';
 import type { ModuleNode, ResolveImport } from '../core/callerGraph';
 import { attributeToScreens, buildCallerGraph, parseModule, stripJsonComments } from '../core/callerGraph';
+import { findHttpWrappers } from '../core/wrappers';
 
 const GENERATOR = 'apiflow scan-fe/1';
 
@@ -30,28 +31,58 @@ function walk(root: string, dir: string, acc: string[] = []): string[] {
 
 const EXTENSIONS = ['.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs', '.vue', '.svelte', '.astro'];
 
-// cm:why Alias imports (`@/lib/api/agents`) are the norm in Next/Vite apps; without reading the
-// tsconfig paths every consumer edge through an alias is invisible and the hop finds nothing.
-export function buildResolver(root: string, files: Set<string>): ResolveImport {
-  const aliases: Array<[string, string[]]> = [];
-  for (const name of ['tsconfig.json', 'jsconfig.json']) {
-    const path = join(root, name);
-    if (!existsSync(path)) continue;
+const CONFIG_NAMES = new Set(['tsconfig.json', 'jsconfig.json']);
+
+function walkConfigs(root: string, dir: string, acc: string[] = []): string[] {
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    const full = join(dir, entry.name);
+    if (entry.isDirectory()) {
+      if (!SKIP_DIRS.has(entry.name)) walkConfigs(root, full, acc);
+    } else if (CONFIG_NAMES.has(entry.name)) acc.push(normalizePosix(relative(root, full)));
+  }
+  return acc;
+}
+
+// cm:guard A monorepo root has no tsconfig — the aliases live in `frontend/tsconfig.json`, which is
+// not a scannable source file, so it must be found on disk or `@/*` stays silently unresolvable.
+function collectAliasConfigs(root: string): AliasConfig[] {
+  const configs: AliasConfig[] = [];
+  for (const rel of walkConfigs(root, root)) {
+    const dir = rel.includes('/') ? rel.slice(0, rel.lastIndexOf('/')) : '';
+    let config: { compilerOptions?: { baseUrl?: string; paths?: Record<string, string[]> } };
     try {
-      const config = JSON.parse(stripJsonComments(readFileSync(path, 'utf8'))) as {
-        compilerOptions?: { baseUrl?: string; paths?: Record<string, string[]> };
-      };
-      const baseUrl = config.compilerOptions?.baseUrl ?? '.';
-      for (const [pattern, targets] of Object.entries(config.compilerOptions?.paths ?? {})) {
-        aliases.push([pattern, targets.map((t) => normalizePosix(join(baseUrl, t)))]);
-      }
+      config = JSON.parse(stripJsonComments(readFileSync(join(root, rel), 'utf8')));
     } catch {
       continue;
     }
+    const baseUrl = config.compilerOptions?.baseUrl ?? '.';
+    const aliases: Array<[string, string[]]> = [];
+    for (const [pattern, targets] of Object.entries(config.compilerOptions?.paths ?? {})) {
+      aliases.push([pattern, targets.map((t) => normalizePosix(join(dir, baseUrl, t)))]);
+    }
+    if (aliases.length > 0) configs.push({ dir, aliases });
   }
+  return configs.sort((a, b) => b.dir.length - a.dir.length);
+}
 
+interface AliasConfig {
+  dir: string;
+  aliases: Array<[string, string[]]>;
+}
+
+// cm:why Alias imports (`@/lib/api/agents`) are the norm in Next/Vite apps; without reading the
+// tsconfig paths every consumer edge through an alias is invisible and the hop finds nothing.
+export function buildResolver(root: string, files: Set<string>): ResolveImport {
+  const configs = collectAliasConfigs(root);
+
+  // cm:guard NodeNext ESM writes `./http/router.js` for a file that is `router.ts` on disk — without
+  // this rewrite every import in an ESM TypeScript backend resolves to nothing.
   const candidate = (base: string): string | null => {
     if (files.has(base)) return base;
+    const transpiled = base.replace(/\.(js|mjs|cjs|jsx)$/, '');
+    if (transpiled !== base) {
+      for (const ext of EXTENSIONS) if (files.has(`${transpiled}${ext}`)) return `${transpiled}${ext}`;
+    }
     for (const ext of EXTENSIONS) if (files.has(`${base}${ext}`)) return `${base}${ext}`;
     for (const ext of EXTENSIONS) if (files.has(`${base}/index${ext}`)) return `${base}/index${ext}`;
     return null;
@@ -61,13 +92,18 @@ export function buildResolver(root: string, files: Set<string>): ResolveImport {
     if (specifier.startsWith('.')) {
       return candidate(normalizePosix(join(dirname(fromFile), specifier)));
     }
-    for (const [pattern, targets] of aliases) {
-      const prefix = pattern.replace(/\*$/, '');
-      if (!pattern.endsWith('*') || !specifier.startsWith(prefix)) continue;
-      const rest = specifier.slice(prefix.length);
-      for (const target of targets) {
-        const hit = candidate(normalizePosix(target.replace(/\*$/, '') + rest));
-        if (hit) return hit;
+    // cm:why Nearest config wins: two packages may both map `@/*`, and resolving a frontend import
+    // against the backend's alias would wire a screen to the wrong module entirely.
+    for (const config of configs) {
+      if (config.dir && !fromFile.startsWith(`${config.dir}/`)) continue;
+      for (const [pattern, targets] of config.aliases) {
+        const prefix = pattern.replace(/\*$/, '');
+        if (!pattern.endsWith('*') || !specifier.startsWith(prefix)) continue;
+        const rest = specifier.slice(prefix.length);
+        for (const target of targets) {
+          const hit = candidate(normalizePosix(target.replace(/\*$/, '') + rest));
+          if (hit) return hit;
+        }
       }
     }
     return null;
@@ -78,18 +114,29 @@ function normalizePosix(p: string): string {
   return p.split('\\').join('/').replace(/^\.\//, '');
 }
 
+export const lastScanStats = { serverFilesSkipped: 0, wrappers: 0 };
+
 export function scanDirectory(root: string, name: string, hints?: ScanHints): ApiMapFile {
   const map = createApiMap(name, root, GENERATOR);
   const sources = new Map<string, string>();
+  lastScanStats.serverFilesSkipped = 0;
   for (const rel of walk(root, root)) {
-    let content: string;
     try {
-      content = readFileSync(join(root, rel), 'utf8');
+      sources.set(rel, readFileSync(join(root, rel), 'utf8'));
     } catch {
       continue;
     }
-    sources.set(rel, content);
-    const scan = scanFile(rel, content, hints);
+  }
+
+  // cm:why Wrappers are a whole-project fact — `fetchPage` is declared in the transport base class
+  // and called from a different file, so no per-file scan can see that it is an http call at all.
+  const wrappers = [...findHttpWrappers([...sources].map(([file, content]) => ({ file, content })))].sort();
+  lastScanStats.wrappers = wrappers.length;
+  const withWrappers: ScanHints = { ...hints, wrappers };
+
+  for (const [rel, content] of sources) {
+    const scan = scanFile(rel, content, withWrappers);
+    if (scan.serverFile) lastScanStats.serverFilesSkipped++;
     map.screens.push(...scan.screens);
     map.endpoints.push(...scan.endpoints);
     map.fields.push(...scan.fields);
@@ -215,6 +262,10 @@ export function renderReport(map: ApiMapFile, outPath: string): string {
     `**Attributed to a route**: ${lastHopStats.reattributed} call sites walked back to a screen · ` +
       `${lastHopStats.stillModuleLevel} stopped at module level`
   );
+  if (lastScanStats.wrappers > 0) lines.push(`**Client wrappers followed**: ${lastScanStats.wrappers}`);
+  if (lastScanStats.serverFilesSkipped > 0) {
+    lines.push(`**Server files skipped**: ${lastScanStats.serverFilesSkipped} (route registrations, not calls)`);
+  }
   lines.push('');
   lines.push(`### Unresolved — ${map.unresolved.length === 0 ? 'none' : map.unresolved.length}`);
   for (const u of map.unresolved.slice(0, 50)) {

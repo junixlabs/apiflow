@@ -1,0 +1,399 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>apiflow map view — mockup</title>
+<style>
+  :root {
+    --bg: #f6f8fb; --surface: #ffffff; --surface-2: #f1f5f9; --surface-3: #e8eef6;
+    --ink: #0f172a; --muted: #64748b; --line: #dde5ee;
+    --exact: #059669; --inferred: #2563eb; --guess: #d97706; --dead: #dc2626; --agent: #7c3aed;
+    --shadow: 0 1px 2px rgba(15,23,42,.05), 0 8px 24px rgba(15,23,42,.06);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0a1020; --surface: #111a2c; --surface-2: #0e1626; --surface-3: #16233a;
+      --ink: #e6edf6; --muted: #8fa2bb; --line: #223148;
+      --exact: #34d399; --inferred: #60a5fa; --guess: #fbbf24; --dead: #f87171; --agent: #a78bfa;
+      --shadow: 0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.35);
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font: 14px/1.55 ui-sans-serif, -apple-system, "Segoe UI", Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .page { max-width: 1400px; margin: 0 auto; padding: 32px 20px 80px; }
+  .banner {
+    background: var(--surface-2); border: 1px dashed var(--line); border-radius: 10px;
+    padding: 12px 16px; margin-bottom: 22px; font-size: 13px; color: var(--muted);
+  }
+  .banner b { color: var(--ink); }
+  h1 { font-size: 22px; margin: 0 0 6px; letter-spacing: -.01em; font-weight: 650; }
+  .sub { color: var(--muted); margin: 0 0 24px; font-size: 14px; }
+
+  .app {
+    display: grid; grid-template-columns: 268px 1fr 330px; gap: 0;
+    border: 1px solid var(--line); border-radius: 14px; overflow: hidden;
+    background: var(--surface); box-shadow: var(--shadow); min-height: 620px;
+  }
+  @media (max-width: 1100px) { .app { grid-template-columns: 1fr; } }
+
+  .bar {
+    grid-column: 1 / -1; display: flex; align-items: center; gap: 14px;
+    padding: 10px 14px; border-bottom: 1px solid var(--line); background: var(--surface-2);
+    flex-wrap: wrap;
+  }
+  .brand { font-weight: 650; letter-spacing: -.01em; }
+  .path { color: var(--muted); font-size: 12.5px; }
+  .chip {
+    font-size: 11.5px; padding: 3px 9px; border-radius: 999px; border: 1px solid var(--line);
+    background: var(--surface); color: var(--muted); cursor: default; white-space: nowrap;
+  }
+  .chip.on { border-color: currentColor; }
+  .chip.c-exact { color: var(--exact); } .chip.c-inferred { color: var(--inferred); }
+  .chip.c-guess { color: var(--guess); }
+  .spacer { flex: 1; }
+  .search {
+    display: flex; align-items: center; gap: 8px; background: var(--surface);
+    border: 1px solid var(--line); border-radius: 8px; padding: 5px 10px; min-width: 220px; color: var(--muted);
+    font-size: 13px;
+  }
+
+  aside { border-right: 1px solid var(--line); padding: 12px 0; overflow-y: auto; max-height: 620px; }
+  aside h3 {
+    font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted);
+    margin: 12px 14px 6px; font-weight: 650;
+  }
+  .row {
+    display: flex; align-items: center; gap: 8px; padding: 6px 14px; cursor: pointer;
+    font-size: 13px; border-left: 2px solid transparent;
+  }
+  .row:hover { background: var(--surface-2); }
+  .row.sel { background: var(--surface-3); border-left-color: var(--inferred); font-weight: 600; }
+  .verb { font-size: 10px; font-weight: 700; width: 42px; letter-spacing: .03em; }
+  .v-get { color: var(--exact); } .v-post { color: var(--inferred); }
+  .v-put { color: var(--guess); } .v-delete { color: var(--dead); }
+  .row .n { color: var(--muted); font-size: 11.5px; margin-left: auto; font-variant-numeric: tabular-nums; }
+  .lock { color: var(--muted); font-size: 11px; }
+
+  main { position: relative; background: var(--surface); min-height: 560px; }
+  main svg { display: block; width: 100%; height: auto; }
+  .hint {
+    position: absolute; left: 16px; bottom: 14px; font-size: 12px; color: var(--muted);
+    background: var(--surface-2); border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px;
+  }
+
+  section.detail { border-left: 1px solid var(--line); padding: 14px; overflow-y: auto; max-height: 620px; }
+  section.detail h2 { font-size: 15px; margin: 0 0 2px; letter-spacing: -.01em; }
+  .meta { color: var(--muted); font-size: 12px; margin-bottom: 14px; }
+  .detail h4 {
+    font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted);
+    margin: 16px 0 7px; font-weight: 650; display: flex; justify-content: space-between;
+  }
+  .item {
+    padding: 7px 9px; border: 1px solid var(--line); border-radius: 8px; margin-bottom: 6px;
+    background: var(--surface-2); font-size: 12.5px;
+  }
+  .item .top { display: flex; align-items: center; gap: 7px; }
+  .item .src { color: var(--muted); font-size: 11px; margin-top: 3px; }
+  .badge { font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 4px; letter-spacing: .02em; }
+  .b-exact { color: var(--exact); background: color-mix(in srgb, var(--exact) 14%, transparent); }
+  .b-inferred { color: var(--inferred); background: color-mix(in srgb, var(--inferred) 14%, transparent); }
+  .b-guess { color: var(--guess); background: color-mix(in srgb, var(--guess) 16%, transparent); }
+  .b-dead { color: var(--dead); background: color-mix(in srgb, var(--dead) 14%, transparent); }
+  .hops { color: var(--muted); font-size: 11px; margin-left: auto; }
+  .field { display: flex; align-items: center; gap: 8px; padding: 4px 2px; font-size: 12.5px; border-bottom: 1px solid var(--line); }
+  .field:last-child { border-bottom: 0; }
+  .field .ty { color: var(--muted); font-size: 11px; }
+  .field .flags { margin-left: auto; display: flex; gap: 4px; }
+  .warn {
+    border: 1px solid color-mix(in srgb, var(--guess) 40%, var(--line)); background: color-mix(in srgb, var(--guess) 7%, transparent);
+    border-radius: 8px; padding: 9px 10px; font-size: 12px; color: var(--ink); margin-top: 8px;
+  }
+  code, .mono { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: .92em; }
+
+  .notes { margin-top: 34px; display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 900px) { .notes { grid-template-columns: 1fr; } }
+  .note {
+    background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px;
+    box-shadow: var(--shadow);
+  }
+  .note h3 { font-size: 13px; margin: 0 0 8px; letter-spacing: -.01em; }
+  .note p, .note li { font-size: 13px; color: var(--muted); margin: 0 0 8px; }
+  .note li { margin-bottom: 5px; }
+  .note ul { margin: 0; padding-left: 18px; }
+  .note b { color: var(--ink); }
+  .q { color: var(--agent); font-weight: 650; }
+</style>
+</head>
+<body>
+<div class="page">
+
+<div class="banner">
+  <b>MOCKUP — chưa phải phần mềm chạy được.</b> Bố cục và cách đọc thôi; số liệu là <b>thật</b>,
+  lấy từ bản đồ sid-desk đã nối (99 màn · 448 endpoint · 2 826 field · 373 cạnh).
+  Bấm vào endpoint ở cột trái để đổi trạng thái.
+</div>
+
+<h1>Map view — đọc bản đồ phụ thuộc</h1>
+<p class="sub">
+  Không vẽ cả bản đồ. Chọn một node, bung theo bậc. Mọi khẳng định đều kèm mức tin cậy và <code>file:line</code>.
+</p>
+
+<div class="app">
+  <div class="bar">
+    <span class="brand">apiflow</span>
+    <span class="path mono">sid-desk.apimap</span>
+    <span class="chip c-exact on">exact 23</span>
+    <span class="chip c-inferred on">inferred 335</span>
+    <span class="chip c-guess on">guess 15</span>
+    <span class="spacer"></span>
+    <span class="search mono">⌕ &nbsp;lọc endpoint / màn / field…</span>
+    <span class="chip">⚠ 33 call dừng ở module</span>
+  </div>
+
+  <aside>
+    <h3>Endpoint · 448</h3>
+    <div class="row" data-k="refresh"><span class="verb v-post">POST</span><span>/auth/refresh-token</span><span class="n">32</span></div>
+    <div class="row" data-k="me"><span class="verb v-get">GET</span><span>/auth/me</span><span class="lock">🔒</span><span class="n">22</span></div>
+    <div class="row sel" data-k="agents"><span class="verb v-get">GET</span><span>/agents</span><span class="lock">🔒</span><span class="n">8</span></div>
+    <div class="row" data-k="departments"><span class="verb v-get">GET</span><span>/departments</span><span class="lock">🔒</span><span class="n">7</span></div>
+    <div class="row" data-k="deptcreate"><span class="verb v-post">POST</span><span>/departments</span><span class="lock">🔒</span><span class="n">0</span></div>
+    <div class="row" data-k="broken"><span class="verb v-get">GET</span><span>/${params</span><span class="n">24</span></div>
+    <h3>Màn hình · 99</h3>
+    <div class="row"><span>/admin/agents</span><span class="n">14</span></div>
+    <div class="row"><span>/chat/{param}</span><span class="n">31</span></div>
+    <div class="row"><span>/tickets</span><span class="n">27</span></div>
+    <h3>Cảnh báo</h3>
+    <div class="row"><span style="color:var(--dead)">252 endpoint không màn nào gọi</span></div>
+    <div class="row"><span style="color:var(--guess)">0 field đã đo thật</span></div>
+  </aside>
+
+  <main>
+    <svg viewBox="0 0 700 560" role="img" aria-label="đồ thị: endpoint ở giữa, màn hình bung ra hai bên">
+      <defs>
+        <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+          <path d="M0,0 L10,5 L0,10 z" fill="currentColor"/>
+        </marker>
+      </defs>
+
+      <g id="g-agents">
+        <g color="var(--inferred)" opacity=".55">
+          <path d="M300 274 C 240 274, 210 96, 168 96" stroke="currentColor" stroke-width="1.4" fill="none" marker-end="url(#ar)"/>
+          <path d="M300 278 C 240 278, 210 160, 168 160" stroke="currentColor" stroke-width="1.4" fill="none" marker-end="url(#ar)"/>
+          <path d="M300 282 C 240 282, 210 224, 168 224" stroke="currentColor" stroke-width="1.4" fill="none" marker-end="url(#ar)"/>
+          <path d="M300 290 C 240 290, 210 300, 168 300" stroke="currentColor" stroke-width="1.4" fill="none" marker-end="url(#ar)"/>
+          <path d="M300 296 C 240 296, 210 372, 168 372" stroke="currentColor" stroke-width="1.4" fill="none" marker-end="url(#ar)"/>
+          <path d="M300 302 C 240 302, 210 444, 168 444" stroke="currentColor" stroke-width="1.4" fill="none" marker-end="url(#ar)"/>
+        </g>
+        <g color="var(--exact)" opacity=".7">
+          <path d="M300 268 C 250 268, 220 40, 168 40" stroke="currentColor" stroke-width="1.6" fill="none" marker-end="url(#ar)"/>
+        </g>
+
+        <g font-size="11.5" fill="var(--ink)">
+          <rect x="14" y="24" width="154" height="32" rx="7" fill="var(--surface-2)" stroke="var(--exact)"/>
+          <text x="26" y="44">usersApi.list</text>
+          <rect x="14" y="80" width="154" height="32" rx="7" fill="var(--surface-2)" stroke="var(--line)"/>
+          <text x="26" y="100">/admin/agents</text>
+          <rect x="14" y="144" width="154" height="32" rx="7" fill="var(--surface-2)" stroke="var(--line)"/>
+          <text x="26" y="164">/admin/qc-monitor</text>
+          <rect x="14" y="208" width="154" height="32" rx="7" fill="var(--surface-2)" stroke="var(--line)"/>
+          <text x="26" y="228">/chat/layout</text>
+          <rect x="14" y="284" width="154" height="32" rx="7" fill="var(--surface-2)" stroke="var(--line)"/>
+          <text x="26" y="304">/chat/{param}</text>
+          <rect x="14" y="356" width="154" height="32" rx="7" fill="var(--surface-2)" stroke="var(--line)"/>
+          <text x="26" y="376">/chat</text>
+          <rect x="14" y="428" width="154" height="32" rx="7" fill="var(--surface-2)" stroke="var(--line)"/>
+          <text x="26" y="448">/departments/{param}</text>
+        </g>
+        <g font-size="10" fill="var(--muted)">
+          <text x="180" y="44">exact</text>
+          <text x="180" y="100">2 hop</text>
+          <text x="180" y="164">3 hop</text>
+          <text x="180" y="228">4 hop</text>
+          <text x="180" y="304">5 hop</text>
+          <text x="180" y="376">5 hop</text>
+          <text x="180" y="448">3 hop</text>
+        </g>
+
+        <rect x="300" y="248" width="150" height="60" rx="10" fill="var(--surface-3)" stroke="var(--inferred)" stroke-width="2"/>
+        <text x="316" y="272" font-size="10.5" font-weight="700" fill="var(--exact)">GET 🔒</text>
+        <text x="316" y="292" font-size="13" font-weight="650" fill="var(--ink)">/agents</text>
+
+        <g color="var(--muted)" opacity=".5">
+          <path d="M454 278 L 520 278" stroke="currentColor" stroke-width="1.4" fill="none" marker-end="url(#ar)"/>
+        </g>
+        <rect x="524" y="246" width="160" height="64" rx="10" fill="var(--surface-2)" stroke="var(--line)" stroke-dasharray="4 3"/>
+        <text x="538" y="268" font-size="11" fill="var(--muted)">agent.find</text>
+        <text x="538" y="286" font-size="10.5" fill="var(--muted)">src/api/agent/routes/</text>
+        <text x="538" y="301" font-size="10.5" fill="var(--guess)">0 field đã đo</text>
+      </g>
+
+      <g id="g-departments" style="display:none">
+        <g color="var(--inferred)" opacity=".55">
+          <path d="M300 274 C 240 274, 210 96, 168 96" stroke="currentColor" stroke-width="1.4" fill="none" marker-end="url(#ar)"/>
+          <path d="M300 278 C 240 278, 210 160, 168 160" stroke="currentColor" stroke-width="1.4" fill="none" marker-end="url(#ar)"/>
+          <path d="M300 282 C 240 282, 210 224, 168 224" stroke="currentColor" stroke-width="1.4" fill="none" marker-end="url(#ar)"/>
+          <path d="M300 290 C 240 290, 210 300, 168 300" stroke="currentColor" stroke-width="1.4" fill="none" marker-end="url(#ar)"/>
+          <path d="M300 296 C 240 296, 210 372, 168 372" stroke="currentColor" stroke-width="1.4" fill="none" marker-end="url(#ar)"/>
+          <path d="M300 302 C 240 302, 210 444, 168 444" stroke="currentColor" stroke-width="1.4" fill="none" marker-end="url(#ar)"/>
+        </g>
+        <g font-size="11.5" fill="var(--ink)">
+          <rect x="14" y="80" width="154" height="32" rx="7" fill="var(--surface-2)" stroke="var(--line)"/>
+          <text x="26" y="100">/admin/settings</text>
+          <rect x="14" y="144" width="154" height="32" rx="7" fill="var(--surface-2)" stroke="var(--line)"/>
+          <text x="26" y="164">/admin/email-accounts</text>
+          <rect x="14" y="208" width="154" height="32" rx="7" fill="var(--surface-2)" stroke="var(--line)"/>
+          <text x="26" y="228">/tickets</text>
+          <rect x="14" y="284" width="154" height="32" rx="7" fill="var(--surface-2)" stroke="var(--line)"/>
+          <text x="26" y="304">/tickets/{param}</text>
+          <rect x="14" y="356" width="154" height="32" rx="7" fill="var(--surface-2)" stroke="var(--line)"/>
+          <text x="26" y="376">/chat</text>
+          <rect x="14" y="428" width="154" height="32" rx="7" fill="var(--surface-2)" stroke="var(--line)"/>
+          <text x="26" y="448">/chat/{param}</text>
+        </g>
+        <g font-size="10" fill="var(--muted)">
+          <text x="180" y="100">3 hop</text><text x="180" y="164">3 hop</text><text x="180" y="228">2 hop</text>
+          <text x="180" y="304">4 hop</text><text x="180" y="376">5 hop</text><text x="180" y="448">5 hop</text>
+        </g>
+        <rect x="300" y="248" width="150" height="60" rx="10" fill="var(--surface-3)" stroke="var(--inferred)" stroke-width="2"/>
+        <text x="316" y="272" font-size="10.5" font-weight="700" fill="var(--exact)">GET 🔒</text>
+        <text x="316" y="292" font-size="13" font-weight="650" fill="var(--ink)">/departments</text>
+
+        <g color="var(--muted)" opacity=".5">
+          <path d="M454 278 L 520 278" stroke="currentColor" stroke-width="1.4" fill="none" marker-end="url(#ar)"/>
+        </g>
+        <rect x="524" y="230" width="164" height="96" rx="10" fill="var(--surface-2)" stroke="var(--line)"/>
+        <text x="538" y="252" font-size="11" fill="var(--muted)">department.find</text>
+        <text x="538" y="272" font-size="11" fill="var(--ink)">9 field khai báo</text>
+        <text x="538" y="290" font-size="10.5" fill="var(--guess)">0 đã đo bằng probe</text>
+        <text x="538" y="312" font-size="10.5" fill="var(--muted)">name · brand · tenant …</text>
+      </g>
+
+      <g id="g-broken" style="display:none">
+        <rect x="180" y="200" width="360" height="150" rx="12" fill="var(--surface-2)" stroke="var(--dead)" stroke-width="1.6"/>
+        <text x="204" y="234" font-size="12" font-weight="700" fill="var(--dead)">ENDPOINT RÁC — 24 caller</text>
+        <text x="204" y="262" font-size="12.5" fill="var(--ink)" class="mono">GET /${params</text>
+        <text x="204" y="288" font-size="11.5" fill="var(--muted)">normalizePath không gỡ được `${…}` lồng ngoặc,</text>
+        <text x="204" y="306" font-size="11.5" fill="var(--muted)">nên một template url vỡ thành endpoint riêng.</text>
+        <text x="204" y="332" font-size="11.5" fill="var(--inferred)">→ view làm lộ ra thứ báo cáo text giấu mất.</text>
+      </g>
+    </svg>
+    <div class="hint">Chỉ vẽ node được chọn + 1 bậc. Bấm một màn để lấy nó làm tâm.</div>
+  </main>
+
+  <section class="detail">
+    <div id="d-agents">
+      <h2>GET /agents</h2>
+      <div class="meta">🔒 cần auth · <span class="mono">agent.find</span> · src/api/agent/routes/agent.ts</div>
+
+      <h4>Màn hình vỡ nếu đổi <span>8</span></h4>
+      <div class="item">
+        <div class="top"><b>usersApi.list</b><span class="badge b-exact">exact</span></div>
+        <div class="src mono">src/lib/api/users.ts:5 — chưa truy ngược được tới màn</div>
+      </div>
+      <div class="item">
+        <div class="top"><b>/admin/agents</b><span class="badge b-inferred">inferred</span><span class="hops">2 hop</span></div>
+        <div class="src mono">…/admin/agents/page.tsx:13 ← agents-page-content.tsx:50 ← useAgents()</div>
+      </div>
+      <div class="item">
+        <div class="top"><b>/admin/qc-monitor</b><span class="badge b-inferred">inferred</span><span class="hops">3 hop</span></div>
+        <div class="src mono">…/admin/qc-monitor/page.tsx:100</div>
+      </div>
+      <div class="item">
+        <div class="top"><b>/chat/{param}</b><span class="badge b-inferred">inferred</span><span class="hops">5 hop</span></div>
+        <div class="src mono">…/chat/[id]/page.tsx:9</div>
+      </div>
+
+      <h4>Field response <span>0</span></h4>
+      <div class="warn">
+        Không có field nào. Route <code>/agents</code> là route tuỳ biến nên không thừa hưởng content type,
+        và <b>probe chưa chạy</b>. Chưa biết API thật sự trả gì.
+      </div>
+    </div>
+
+    <div id="d-departments" style="display:none">
+      <h2>GET /departments</h2>
+      <div class="meta">🔒 cần auth · <span class="mono">department.find</span> · content type <span class="mono">department</span></div>
+
+      <h4>Màn hình vỡ nếu đổi <span>7</span></h4>
+      <div class="item">
+        <div class="top"><b>/tickets</b><span class="badge b-inferred">inferred</span><span class="hops">2 hop</span></div>
+        <div class="src mono">…/tickets/page.tsx:8</div>
+      </div>
+      <div class="item">
+        <div class="top"><b>/admin/settings</b><span class="badge b-inferred">inferred</span><span class="hops">3 hop</span></div>
+        <div class="src mono">…/admin/settings/page.tsx:6</div>
+      </div>
+
+      <h4>Field response <span>9</span></h4>
+      <div class="field"><span class="mono">name</span><span class="ty">string</span><span class="flags"><span class="badge b-inferred">declared</span></span></div>
+      <div class="field"><span class="mono">description</span><span class="ty">string?</span><span class="flags"><span class="badge b-inferred">declared</span></span></div>
+      <div class="field"><span class="mono">isActive</span><span class="ty">boolean?</span><span class="flags"><span class="badge b-inferred">declared</span></span></div>
+      <div class="field"><span class="mono">autoAssignEnabled</span><span class="ty">boolean?</span><span class="flags"><span class="badge b-inferred">declared</span></span></div>
+      <div class="field"><span class="mono">maxOpenTicketsPerAgent</span><span class="ty">number?</span><span class="flags"><span class="badge b-inferred">declared</span></span></div>
+      <div class="field"><span class="mono">lastAssignedIndex</span><span class="ty">number?</span><span class="flags"><span class="badge b-inferred">declared</span></span></div>
+      <div class="field"><span class="mono">brand</span><span class="ty">object?</span><span class="flags"><span class="badge b-inferred">declared</span></span></div>
+      <div class="field"><span class="mono">tenant</span><span class="ty">object?</span><span class="flags"><span class="badge b-inferred">declared</span></span></div>
+      <div class="warn">
+        Cả 9 field mới là <b>declared</b> — đọc từ <code>content-types/department/schema.json</code>.
+        Chạy <code>probe</code> thì mỗi field sẽ có thêm cờ <b>observed</b>, và field nào khai mà không gửi sẽ đỏ lên.
+      </div>
+    </div>
+
+    <div id="d-broken" style="display:none">
+      <h2 style="color:var(--dead)">GET /${params</h2>
+      <div class="meta">24 caller · không có handler backend nào khớp</div>
+      <div class="warn">
+        Đây là <b>lỗi của scanner</b>, không phải endpoint thật: <code>normalizePath</code> chưa gỡ được
+        <code>${…}</code> có ngoặc lồng. Một url template vỡ thành endpoint riêng và gom 24 caller.
+      </div>
+      <h4>Vì sao đáng để nó hiện ra</h4>
+      <div class="item">Báo cáo text xếp nó lẫn giữa 448 dòng. Trên view, một node 24 caller mà không nối được sang phía backend thì đập vào mắt ngay.</div>
+    </div>
+  </section>
+</div>
+
+<div class="notes">
+  <div class="note">
+    <h3>Bốn quyết định trong bố cục này</h3>
+    <ul>
+      <li><b>Không vẽ cả bản đồ.</b> 448 endpoint × 99 màn là chỗ graph DOM chết — đúng lý do jsoncrack phải để <code>NODE_LIMIT</code>. Chọn một node, bung 1 bậc, muốn sâu hơn thì lấy node khác làm tâm.</li>
+      <li><b>Mức tin cậy là công dân hạng nhất</b>, không phải chú thích. Ở thanh trên lọc được, ở từng cạnh hiện badge. Nếu không thì <code>inferred</code> bị đọc như sự thật.</li>
+      <li><b>Luôn có <code>file:line</code> và số hop.</b> Câu trả lời phải kiểm chứng được bằng tay trong 30 giây, nếu không nó chỉ là lời khẳng định.</li>
+      <li><b>Chỗ chưa biết phải hiện ra</b>, không được ẩn: “0 field đã đo”, “33 call dừng ở module”, “252 endpoint không ai gọi”.</li>
+    </ul>
+  </div>
+  <div class="note">
+    <h3>Ba câu hỏi cần anh chốt</h3>
+    <ul>
+      <li><span class="q">1.</span> Tâm của đồ thị nên là <b>endpoint</b> (như mockup) hay <b>màn hình</b>? Endpoint hợp với “tôi sắp sửa API”; màn hình hợp với “màn này ăn những gì”. Làm cả hai được, nhưng nên có một cái mặc định.</li>
+      <li><span class="q">2.</span> <b>Field</b> nên là node trên đồ thị, hay chỉ nằm ở panel phải như hiện tại? Thành node thì thấy được đường màn → field, nhưng 2 826 field sẽ làm ngập đồ thị.</li>
+      <li><span class="q">3.</span> Ba cảnh báo (endpoint không ai gọi · field khai mà không gửi · call dừng ở module) nên là <b>một tab riêng</b>, hay chỉ tô màu trong danh sách? Chúng là thứ người ta mở tool để tìm, nhưng cũng dễ gây nhiễu.</li>
+    </ul>
+  </div>
+</div>
+
+</div>
+<script>
+  const keys = ['agents', 'departments', 'broken'];
+  const map = { refresh: 'agents', me: 'agents', deptcreate: 'departments' };
+  document.querySelectorAll('.row[data-k]').forEach((row) => {
+    row.addEventListener('click', () => {
+      document.querySelectorAll('.row').forEach((r) => r.classList.remove('sel'));
+      row.classList.add('sel');
+      const k = map[row.dataset.k] ?? row.dataset.k;
+      keys.forEach((key) => {
+        const g = document.getElementById('g-' + key);
+        const d = document.getElementById('d-' + key);
+        if (g) g.style.display = key === k ? '' : 'none';
+        if (d) d.style.display = key === k ? '' : 'none';
+      });
+    });
+  });
+</script>
+</body>
+</html>

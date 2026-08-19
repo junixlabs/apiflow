@@ -1,16 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-  blankComments,
-  findCallSites,
-  firstArgument,
-  isScannableFile,
-  resolveUrl,
-  routeFromFilePath,
-  scanFile,
-  stripCallSegments,
-  symbolAt,
-  enclosingSymbols,
-} from './feScanner';
+import { blankComments, enclosingSymbols, findCallSites, firstArgument, isScannableFile, isServerFile, memberAt, objectMembers, resolveUrl, routeFromFilePath, scanFile, stripCallSegments, symbolAt } from './feScanner';
 
 describe('firstArgument', () => {
   const at = (src: string) => src.indexOf('(');
@@ -205,5 +194,69 @@ describe('scanFile', () => {
     const scan = scanFile('src/C.tsx', "function C() {\n  // fetch('/api/ghost');\n}");
     expect(scan.calls).toHaveLength(0);
     expect(scan.unresolved).toHaveLength(0);
+  });
+});
+
+describe('server code is not a screen', () => {
+  const SERVER = `import express from 'express';
+const app = express();
+app.get('/api/health', (_req, res) => res.json({ ok: true }));
+app.post('/api/auth/login', async (req, res) => res.json({}));`;
+
+  it('scans nothing out of a file that builds a server', () => {
+    const scan = scanFile('server/index.ts', SERVER);
+    expect(scan.serverFile).toBe(true);
+    expect(scan.endpoints).toEqual([]);
+    expect(scan.calls).toEqual([]);
+  });
+
+  it('skips a registration in a file that only receives the router', () => {
+    const registrar = `export function registerRoutes(router: Router) {
+  router.get('/import-template', requirePermission('read'), asyncHandler(async (req, res) => send(res)));
+}`;
+    expect(isServerFile(registrar)).toBe(false);
+    expect(scanFile('routes.ts', registrar).endpoints).toEqual([]);
+  });
+
+  it('keeps a client call whose options object carries a callback', () => {
+    const client = `export const upload = (file: File) =>
+  api.post('/files', file, { onUploadProgress: (e) => report(e) });`;
+    expect(scanFile('lib/api.ts', client).endpoints.map((e) => `${e.method} ${e.path}`)).toEqual(['POST /files']);
+  });
+
+  it('keeps a fetcher passed to useSWR', () => {
+    const swr = `export const useUsers = () => useSWR('/api/users', (url) => fetch(url).then((r) => r.json()));`;
+    expect(scanFile('hooks/users.ts', swr).endpoints.some((e) => e.path === '/api/users')).toBe(true);
+  });
+});
+
+describe('typed api client classes', () => {
+  const CLIENT = `export class ApiClient {
+  async listCompanies(filters: Filters): Promise<CompanyList> {
+    return this.get('/companies');
+  }
+  private async removeCompany(id: string): Promise<void> {
+    return this.delete(\`/companies/\${id}\`);
+  }
+}`;
+
+  it('attributes a call to the method that makes it, not to the class', () => {
+    const members = objectMembers(CLIENT);
+    const symbols = enclosingSymbols(CLIENT);
+    const lines = CLIENT.split('\n');
+    expect(memberAt(members, symbols, 3, lines)).toBe('listCompanies');
+    expect(memberAt(members, symbols, 6, lines)).toBe('removeCompany');
+  });
+
+  it('never reports a control-flow keyword as a member', () => {
+    const src = `export const api = {
+  list: async () => {
+    if (ready) {
+      return http.get('/x');
+    }
+  },
+};`;
+    const lines = src.split('\n');
+    expect(memberAt(objectMembers(src), enclosingSymbols(src), 4, lines)).toBe('list');
   });
 });

@@ -177,13 +177,14 @@ export function attributeToScreens(
         if (current.member !== undefined && usage.member !== undefined && usage.member !== current.member) continue;
         const enclosing = symbolAt(current.file, usage.line);
         if (enclosing.symbol === current.symbol) continue;
-        const ambiguousLocal = current.member !== undefined && usage.member === undefined;
+        // cm:guard `export const apiClient = new ApiClient()` aliases the WHOLE object, so the
+        // member must travel with it — dropping it here fans one method out to every consumer.
         next.push({
           file: current.file,
           symbol: enclosing.symbol,
-          member: enclosing.member,
+          member: usage.member === undefined ? current.member : enclosing.member,
           hops: current.hops,
-          precise: current.precise && !ambiguousLocal,
+          precise: current.precise,
         });
       }
 
@@ -201,9 +202,8 @@ export function attributeToScreens(
           const memberMatch = current.member === undefined || usage.member === undefined || usage.member === current.member;
           if (!memberMatch) continue;
           // cm:why A component has no member — using it means using everything it calls, so that is
-          // still precise. Only naming a member on one side and not the other actually widens.
-          const ambiguous = current.member !== undefined && usage.member === undefined;
-          const precise = current.precise && !ambiguous;
+          // still precise. Reaching a route while a member is still unconsumed is what widens.
+          const precise = current.precise && !(module.route !== undefined && current.member !== undefined && usage.member === undefined);
           const enclosing = symbolAt(consumer.file, usage.line);
 
           if (module.route) {
@@ -219,7 +219,7 @@ export function attributeToScreens(
             next.push({
               file: consumer.file,
               symbol: enclosing.symbol,
-              member: enclosing.member,
+              member: usage.member === undefined ? current.member : enclosing.member,
               hops: current.hops + 1,
               precise,
             });

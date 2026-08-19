@@ -7,9 +7,11 @@ import type { EndpointNode } from './apimap';
 export interface ScanHints {
   resolve?: Array<{ file: string; line: number; url: string; method?: MapMethod; note?: string }>;
   ignore?: Array<{ file: string; line: number }>;
+  wrappers?: string[];
 }
 
 export interface FileScan {
+  serverFile?: true;
   screens: ScreenNode[];
   endpoints: EndpointNode[];
   fields: FieldNode[];
@@ -47,8 +49,12 @@ export function enclosingSymbols(content: string): Array<{ line: number; name: s
 const MEMBER_PATTERNS: RegExp[] = [
   /^\s*([A-Za-z_$][\w$]*)\s*:\s*(?:async\s+)?(?:\([^)]*\)|[A-Za-z_$][\w$]*)\s*=>/,
   /^\s*([A-Za-z_$][\w$]*)\s*:\s*(?:async\s+)?function\b/,
-  /^\s*(?:async\s+)?([A-Za-z_$][\w$]*)\s*\([^)]*\)\s*\{/,
+  /^\s*(?:public\s+|private\s+|protected\s+)?(?:async\s+)?([A-Za-z_$][\w$]*)\s*\([^)]*\)\s*(?::\s*[^{;]+)?\{/,
 ];
+
+// cm:guard `if (…) {`, `for (…) {`, `catch (…) {` all match the method shape. Without this list a
+// control-flow keyword becomes a member and the caller-hop attributes calls to "if".
+const NOT_A_MEMBER = new Set(['if', 'for', 'while', 'switch', 'catch', 'function', 'return', 'do', 'with']);
 
 export function objectMembers(content: string): Array<{ line: number; name: string }> {
   const out: Array<{ line: number; name: string }> = [];
@@ -56,7 +62,7 @@ export function objectMembers(content: string): Array<{ line: number; name: stri
     for (const re of MEMBER_PATTERNS) {
       const m = re.exec(text);
       if (m) {
-        out.push({ line: i + 1, name: m[1] });
+        if (!NOT_A_MEMBER.has(m[1])) out.push({ line: i + 1, name: m[1] });
         return;
       }
     }
@@ -74,7 +80,10 @@ export function memberAt(
 ): string | undefined {
   const ownerLine = symbols.filter((s) => s.line <= line).at(-1)?.line ?? 0;
   if (ownerLine === 0) return undefined;
-  if (!/=\s*\{\s*$/.test(lines[ownerLine - 1] ?? '')) return undefined;
+  // cm:why A class is a member holder too — `export class ApiClient { async listCompanies() {} }`
+  // is the single most common shape for a typed api client, and missing it fans out to every screen.
+  const declaration = lines[ownerLine - 1] ?? '';
+  if (!/=\s*\{\s*$/.test(declaration) && !/\bclass\s+[A-Za-z_$][\w$]*/.test(declaration)) return undefined;
   const candidate = members.filter((m) => m.line <= line && m.line > ownerLine).at(-1);
   return candidate?.name;
 }
@@ -222,11 +231,58 @@ interface CallSite {
   argIdx: number;
   methodExplicit: boolean;
   definitelyHttp: boolean;
+  memberCall?: true;
 }
 
 // cm:guard `<ident>.get(...)` is Map.get far more often than it is an HTTP GET. A member call only
 // counts as HTTP when the receiver reads like a client OR the argument resolves to a real path.
 const HTTP_RECEIVER = /^(\$?(api|http|client|axios|request|req|fetcher|instance|service|agent|rest|sdk|gql|backend|server))/i;
+
+// cm:guard A file that BUILDS an http server is not a screen: `app.get('/x', h)` registers a route,
+// it does not call one. Without this the map inverts direction and claims the FE calls its own api.
+const SERVER_CONSTRUCTION = /\b(?:express|fastify|polka|restify)\s*\(\s*\)|\bRouter\s*\(\s*\)|\bnew\s+(?:Hono|Koa|Elysia)\b|@nestjs\/|\bcreateServer\s*\(/;
+
+export function isServerFile(content: string): boolean {
+  return SERVER_CONSTRUCTION.test(content);
+}
+
+// cm:guard Splits at depth 0 only — `api.get(url, {onUploadProgress: (e) => …})` must NOT read as a
+// route handler, so a nested arrow inside an options object has to stay invisible here.
+function topLevelArgs(window: string): string[] {
+  const args: string[] = [];
+  let depth = 0;
+  let quote: string | null = null;
+  let start = 1;
+  for (let i = 1; i < window.length; i++) {
+    const ch = window[i];
+    if (quote) {
+      if (ch === '\\') i++;
+      else if (ch === quote) quote = null;
+      continue;
+    }
+    if (ch === "'" || ch === '"' || ch === '`') { quote = ch; continue; }
+    if ('([{'.includes(ch)) depth++;
+    else if (')]}'.includes(ch)) {
+      if (depth === 0) { args.push(window.slice(start, i)); break; }
+      depth--;
+    } else if (ch === ',' && depth === 0) { args.push(window.slice(start, i)); start = i + 1; }
+  }
+  return args;
+}
+
+// cm:guard An options object is NOT a handler: `api.get(url, {onUploadProgress: (e) => …})` carries
+// an arrow too, so anything starting with `{` is excluded before the body is searched for one.
+function handlerShaped(arg: string): boolean {
+  const trimmed = arg.trim();
+  if (trimmed.startsWith('{') || trimmed.startsWith('[')) return false;
+  return /=>|\bfunction\b/.test(trimmed);
+}
+
+// cm:why Catches `registerRoutes(app)` files that never construct the server themselves — the
+// handler passed alongside the path is the tell, and no http client takes a function there.
+export function registersRoute(content: string, argIdx: number): boolean {
+  return topLevelArgs(callExpression(content, argIdx)).slice(1).some(handlerShaped);
+}
 
 const MEMBER_CALL = new RegExp(`\\b([A-Za-z_$][\\w$]*)\\s*\\.\\s*(${VERBS.join('|')})\\b`, 'g');
 const PLAIN_CALL = /\b(fetch|\$fetch|ofetch|useFetch|useSWR|request|axios)\b/g;
@@ -282,7 +338,7 @@ function methodFromContext(window: string): MapMethod | null {
   return m ? (m[2].toUpperCase() as MapMethod) : null;
 }
 
-export function findCallSites(content: string): CallSite[] {
+export function findCallSites(content: string, wrappers: readonly string[] = []): CallSite[] {
   const sites: CallSite[] = [];
   const lineOf = (idx: number) => content.slice(0, idx).split('\n').length;
   const push = (s: CallSite) => {
@@ -299,6 +355,7 @@ export function findCallSites(content: string): CallSite[] {
       argIdx: idx,
       methodExplicit: true,
       definitelyHttp: HTTP_RECEIVER.test(m[1]),
+      memberCall: true,
     });
   }
   for (const m of content.matchAll(PLAIN_CALL)) {
@@ -315,6 +372,27 @@ export function findCallSites(content: string): CallSite[] {
       definitelyHttp: true,
     });
   }
+  // cm:guard `definitelyHttp` only when the receiver is `this` or a client-shaped name: a wrapper
+  // called `send` also exists on mailers and sockets, and those must not fill the Unresolved list.
+  for (const name of wrappers) {
+    const re = new RegExp(`(?:\\b(\\w+)\\s*\\.\\s*)?\\b(${name})\\b`, 'g');
+    for (const m of content.matchAll(re)) {
+      const idx = openParenAfter(content, m.index + m[0].length);
+      if (idx === null) continue;
+      const receiver = m[1];
+      const explicit = methodFromContext(callExpression(content, idx));
+      push({
+        line: lineOf(idx),
+        via: receiver ? `${receiver}.${name}` : name,
+        method: explicit ?? 'GET',
+        argIdx: idx,
+        methodExplicit: explicit !== null,
+        definitelyHttp: receiver === undefined || receiver === 'this' || HTTP_RECEIVER.test(receiver),
+        memberCall: receiver !== undefined ? true : undefined,
+      });
+    }
+  }
+
   for (const m of content.matchAll(XHR_OPEN)) {
     const idx = m.index + m[0].length - 1;
     push({
@@ -424,7 +502,8 @@ export function indexHints(hints: ScanHints | undefined): {
 export function scanFile(file: string, rawContent: string, hints?: ScanHints): FileScan {
   const out: FileScan = { screens: [], endpoints: [], fields: [], calls: [], reads: [], unresolved: [] };
   const content = blankComments(rawContent);
-  const sites = findCallSites(content);
+  if (isServerFile(content)) return { ...out, serverFile: true };
+  const sites = findCallSites(content, hints?.wrappers ?? []);
   if (sites.length === 0) return out;
 
   const symbols = enclosingSymbols(content);
@@ -440,6 +519,12 @@ export function scanFile(file: string, rawContent: string, hints?: ScanHints): F
     const source = { file, line: site.line };
 
     if (index.ignore.has(hintKey(file, site.line))) continue;
+    // cm:guard Only member calls: `useSWR('/x', fetcher)` passes a function too, and treating that
+    // as a registration would drop a real screen-to-endpoint edge instead of a fake one.
+    if (site.memberCall && registersRoute(content, site.argIdx)) {
+      if (site.definitelyHttp) out.unresolved.push({ source, reason: 'reads as a route registration, not a call', snippet });
+      continue;
+    }
     const hint = index.resolve.get(hintKey(file, site.line));
 
     if (!arg && !hint) {

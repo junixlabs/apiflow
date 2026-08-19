@@ -114,3 +114,17 @@ describe('impact queries', () => {
     expect(byId.get('sc_detail')).toBe('guess');
   });
 });
+
+describe('normalizePath with template literals', () => {
+  it('collapses a nested interpolation to one param', () => {
+    expect(normalizePath('/reports/${fmt({ id: row.id })}/rows')).toBe('/reports/{param}/rows');
+  });
+
+  it('collapses two interpolations separately', () => {
+    expect(normalizePath('/a/${x}/b/${y}')).toBe('/a/{param}/b/{param}');
+  });
+
+  it('leaves a plain path untouched', () => {
+    expect(normalizePath('/agents/list')).toBe('/agents/list');
+  });
+});

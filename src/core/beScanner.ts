@@ -24,6 +24,7 @@ export interface RouteHit {
   auth?: boolean;
   requestSchema?: string;
   responseSchema?: string;
+  receiver?: string;
   source: SourceRef;
 }
 
@@ -270,7 +271,9 @@ function strapiType(type: string | undefined): ShapeType {
 
 const NEST_CONTROLLER = /@Controller\s*\(\s*(['"`])?([^'"`)]*)\1?\s*\)/;
 const NEST_METHOD = /@(Get|Post|Put|Patch|Delete|Options)\s*\(\s*(?:(['"`])([^'"`]*)\2)?\s*\)[\s\S]{0,600}?\b(\w+)\s*\(/g;
-const EXPRESS_ROUTE = /\b(?:app|router|api|server|r)\s*\.\s*(get|post|put|patch|delete|options|all)\s*\(\s*(['"`])([^'"`]*)\2\s*,([^)]*)/g;
+// cm:guard The path must start with `/`: dropping that lets `cache.get("user")` and every other
+// Map/Redis read register as an HTTP route, and the receiver is needed to find its mount prefix.
+const EXPRESS_ROUTE = /\b(\w+)\s*\.\s*(get|post|put|patch|delete|options|all)\s*\(\s*(['"`])(\/[^'"`]*)\3\s*,([^)]*)/g;
 const EXPRESS_MOUNT = /\.\s*use\s*\(\s*(['"`])(\/[^'"`]*)\1\s*,\s*(\w+)/g;
 const ZOD_OBJECT = /(?:const|let|var)\s+(\w+)\s*=\s*z\s*\.\s*object\s*\(\s*\{([\s\S]*?)\n\s*\}\s*\)/g;
 const CLASS_VALIDATOR = /class\s+(\w+)\s*\{([\s\S]*?)\n\}/g;
@@ -318,13 +321,14 @@ function scanNode(file: string, content: string): BeFileScan {
   for (const m of content.matchAll(EXPRESS_MOUNT)) mounts.set(m[3], m[2]);
 
   for (const m of content.matchAll(EXPRESS_ROUTE)) {
-    const tail = m[4] ?? '';
+    const tail = m[5] ?? '';
     const block = content.slice(m.index, m.index + 900);
     const schema = /(\w+)\s*\.\s*(?:parse|safeParse)\s*\(/.exec(block);
     out.routes.push(
-      route(m[1] === 'all' ? 'UNKNOWN' : m[1], m[3], file, lineOf(content, m.index), {
+      route(m[2] === 'all' ? 'UNKNOWN' : m[2], m[4], file, lineOf(content, m.index), {
         auth: AUTH_HINT.test(tail),
         requestSchema: schema?.[1],
+        receiver: m[1],
       })
     );
   }
