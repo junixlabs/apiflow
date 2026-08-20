@@ -139,3 +139,33 @@ describe('summary', () => {
     expect(summarize(map).confidence).toEqual({ exact: 1, inferred: 0, guess: 1 });
   });
 });
+
+describe('one-sided scans', () => {
+  const feOnlyMap = mapWith({
+    endpoints: [
+      { id: 'e1', method: 'GET', path: '/a' },
+      { id: 'e2', method: 'GET', path: '/b' },
+    ],
+    screens: [{ id: 's1', label: '/x', route: '/x', source: { file: 'x.tsx', line: 1 } }],
+    calls: [{ screenId: 's1', endpointId: 'e1', via: 'axios', confidence: 'exact', source: { file: 'x.tsx', line: 2 } }],
+  });
+
+  const beOnlyMap = mapWith({
+    endpoints: [{ id: 'e1', method: 'GET', path: '/a', source: { file: 'api.php', line: 1 } }],
+  });
+
+  // cm:why This is the defect the hub shipped with: a FE-only scan called every endpoint
+  // "FE gọi mà API không khai", turning a missing half of the scan into a finding about the API.
+  it('never claims the API is missing an endpoint when the BE was never scanned', () => {
+    const sum = summarize(feOnlyMap);
+    expect(sum).toMatchObject({ feOnly: 0, unpaired: 2, hasBe: false, hasFe: true });
+    expect(endpointState(feOnlyMap, 'e1')).toBe('unpaired');
+    expect(endpointState(feOnlyMap, 'e2')).toBe('unpaired');
+  });
+
+  it('never claims an endpoint is uncalled when the FE was never scanned', () => {
+    const sum = summarize(beOnlyMap);
+    expect(sum).toMatchObject({ uncalled: 0, unpaired: 1, hasBe: true, hasFe: false });
+    expect(endpointState(beOnlyMap, 'e1')).toBe('unpaired');
+  });
+});

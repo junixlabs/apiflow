@@ -25,6 +25,8 @@ const SUBCOMMANDS = {
   impact: 'impact.ts',
   view: 'view.ts',
   project: 'project.ts',
+  ui: 'ui.ts',
+  hub: 'hub.ts',
 };
 const subcommand = SUBCOMMANDS[args[0]];
 
@@ -32,6 +34,10 @@ if (subcommand) {
   const script = join(root, 'src', 'cli', subcommand);
   const child = spawn('npx', ['tsx', script, ...args.slice(1)], { stdio: 'inherit', cwd: root });
   child.on('exit', (code) => process.exit(code ?? 0));
+  // cm:guard Forwards the signal: `apiflow ui` is long-running, and without this, killing this
+  // wrapper leaves the tsx child holding the port with no parent left to stop it.
+  process.on('SIGINT', () => { child.kill('SIGINT'); });
+  process.on('SIGTERM', () => { child.kill('SIGTERM'); });
 }
 // --mcp mode: start MCP server
 else if (args.includes('--mcp')) {

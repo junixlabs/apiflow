@@ -22,5 +22,5 @@
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true
   },
-  "include": ["vite.config.ts", "src/cli", "src/mcp", "src/workspace", "src/server", "proxy"]
+  "include": ["vite.config.ts", "src/cli", "src/mcp", "src/workspace", "src/server", "src/view", "proxy"]
 }

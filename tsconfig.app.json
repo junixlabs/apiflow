@@ -25,5 +25,5 @@
     "noUncheckedSideEffectImports": true
   },
   "include": ["src"],
-  "exclude": ["src/mcp", "src/cli", "src/workspace", "src/server"]
+  "exclude": ["src/mcp", "src/cli", "src/workspace", "src/server", "src/view"]
 }

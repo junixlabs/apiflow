@@ -12,15 +12,27 @@ export interface ProjectSummary {
   both: number;
   uncalled: number;
   feOnly: number;
+  unpaired: number;
+  hasFe: boolean;
+  hasBe: boolean;
   confidence: Record<Confidence, number>;
 }
 
-// cm:edge contract -> src/cli/viewGraph.ts — the browser pane re-implements these three states as
-// `stateOf` because it cannot import node code; the two must keep agreeing on what a colour means.
-export function endpointState(map: ApiMapFile, endpointId: string): 'both' | 'uncalled' | 'feOnly' {
+export type EndpointState = 'both' | 'uncalled' | 'feOnly' | 'unpaired';
+
+// cm:guard Never says feOnly on a map with no backend side, nor uncalled on one with no frontend
+// side: on a FE-only scan EVERY endpoint lacks a `source`, and calling that "API không khai" turns
+// a missing half of the scan into a fabricated finding about the API.
+// cm:edge contract -> src/cli/viewGraph.ts — the browser pane re-implements this as `stateOf`
+// because it cannot import node code; the two must keep agreeing on what a colour means.
+export function endpointState(map: ApiMapFile, endpointId: string): EndpointState {
+  const hasBe = map.endpoints.some((e) => e.source !== undefined);
+  const hasFe = map.calls.length > 0;
   const endpoint = map.endpoints.find((e) => e.id === endpointId);
-  if (!endpoint?.source) return 'feOnly';
-  return map.calls.some((c) => c.endpointId === endpointId) ? 'both' : 'uncalled';
+  const called = map.calls.some((c) => c.endpointId === endpointId);
+  if (endpoint?.source === undefined) return hasBe ? 'feOnly' : 'unpaired';
+  if (called) return 'both';
+  return hasFe ? 'uncalled' : 'unpaired';
 }
 
 export function summarize(map: ApiMapFile): ProjectSummary {
@@ -28,13 +40,19 @@ export function summarize(map: ApiMapFile): ProjectSummary {
   for (const call of map.calls) confidence[call.confidence]++;
 
   const called = new Set(map.calls.map((c) => c.endpointId));
+  const hasBe = map.endpoints.some((e) => e.source !== undefined);
+  const hasFe = map.calls.length > 0;
   let both = 0;
   let uncalled = 0;
   let feOnly = 0;
+  let unpaired = 0;
   for (const e of map.endpoints) {
-    if (!e.source) feOnly++;
-    else if (called.has(e.id)) both++;
-    else uncalled++;
+    if (e.source === undefined) {
+      if (hasBe) feOnly++;
+      else unpaired++;
+    } else if (called.has(e.id)) both++;
+    else if (hasFe) uncalled++;
+    else unpaired++;
   }
 
   return {
@@ -49,6 +67,9 @@ export function summarize(map: ApiMapFile): ProjectSummary {
     both,
     uncalled,
     feOnly,
+    unpaired,
+    hasFe,
+    hasBe,
     confidence,
   };
 }

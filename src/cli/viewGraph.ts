@@ -28,6 +28,8 @@ export const GRAPH_STYLE = `
 .cell.s-both { background:var(--exact); }
 .cell.s-uncalled { background:var(--surface-3); border-color:var(--line); }
 .cell.s-feonly { background:var(--dead); }
+.cell.s-unpaired { background:repeating-linear-gradient(135deg,var(--surface-3) 0 3px,var(--surface) 3px 6px);
+  border-color:var(--line); }
 .cell.open { box-shadow:inset 0 0 0 2px var(--bg); }
 .pick { display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin:0 0 12px; }
 .pick select { font:inherit; padding:5px 8px; border-radius:8px; border:1px solid var(--line);
@@ -61,17 +63,22 @@ svg.bip.dim g.lit rect.node { opacity:1; }
 export const GRAPH_SCRIPT = String.raw`
 const MAX_ROWS = 90;
 
+// cm:edge contract -> src/workspace/summary.ts — same four states as endpointState there; on a
+// one-sided scan EVERY endpoint looks feOnly, and painting that red invents a defect out of a gap.
+const HAS_BE = MAP.endpoints.some((e) => e.source !== undefined);
+const HAS_FE = MAP.calls.length > 0;
+
 const stateOf = (e) => {
-  const called = callersOf(e.id).length > 0;
-  if (!e.source) return 'feonly';
-  if (!called) return 'uncalled';
-  return 'both';
+  if (e.source === undefined) return HAS_BE ? 'feonly' : 'unpaired';
+  if (callersOf(e.id).length > 0) return 'both';
+  return HAS_FE ? 'uncalled' : 'unpaired';
 };
 
 const STATE_LABEL = {
   both: 'màn gọi + API có',
   uncalled: 'API có, không màn nào gọi',
   feonly: 'FE gọi, API không khai',
+  unpaired: 'chưa đối chiếu được — thiếu một trong hai phía',
 };
 
 function renderCoverage() {
@@ -272,6 +279,7 @@ export const GRAPH_PANES = `
         <span><span class="swatch" style="background:var(--exact)"></span>có màn gọi &amp; API khai</span>
         <span><span class="swatch" style="background:var(--surface-3);border-color:var(--line)"></span>API khai, không màn nào gọi</span>
         <span><span class="swatch" style="background:var(--dead)"></span>FE gọi nhưng API không khai</span>
+        <span><span class="swatch" style="background:repeating-linear-gradient(135deg,var(--surface-3) 0 3px,var(--surface) 3px 6px)"></span>chưa đối chiếu được</span>
         <span><b>viền trong</b> = không thấy cổng auth</span>
         <span>bấm một ô để xem vòng ảnh hưởng</span>
       </div>
