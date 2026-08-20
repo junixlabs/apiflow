@@ -13,6 +13,7 @@ export interface Usage {
 
 export interface ParsedModule {
   exports: string[];
+  defaultExport?: string;
   imports: ImportBinding[];
   usages: Usage[];
   // cm:why `useAgents()` and `agentsApi` live in the SAME file: the call site is inside agentsApi,
@@ -26,7 +27,13 @@ const IMPORT = /import\s+(type\s+)?([\s\S]*?)\s+from\s+(['"])([^'"]+)\3/g;
 const REEXPORT = /export\s+(?:\*|\{[^}]*\})\s*(?:as\s+\w+\s*)?from\s+(['"])([^'"]+)\1/g;
 const EXPORT_NAMED = /export\s+(?:async\s+)?(?:const|let|var|function|class)\s+([A-Za-z_$][\w$]*)/g;
 const EXPORT_LIST = /export\s*\{([^}]*)\}(?!\s*from)/g;
+const IDENTIFIER = /^[A-Za-z_$][\w$]*$/;
 const DECLARATION = /(?:^|\n)\s*(?:export\s+)?(?:default\s+)?(?:async\s+)?(?:const|let|var|function|class)\s+([A-Za-z_$][\w$]*)/g;
+// cm:guard `const Account = lazy(() => import('modules/account-info'))` is how a React SPA mounts a
+// screen. Reading only static imports leaves the route table and the caller graph blind to all of it.
+const LAZY_IMPORT =
+  /(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*(?:React\s*\.\s*)?lazy\s*\(\s*(?:async\s*)?\(\s*\)\s*=>\s*import\s*\(\s*(['"])([^'"]+)\2/g;
+const DYNAMIC_IMPORT = /(?<!\.)\bimport\s*\(\s*(['"])([^'"]+)\1/g;
 
 // cm:why Type-only imports are dropped here: a screen that imports only a type from an api module
 // does not call it, and counting those turns every shared type into a fake dependency edge.
@@ -63,6 +70,18 @@ export function parseModule(content: string): ParsedModule {
     }
   }
 
+  const lazyLocals = new Set<string>();
+  for (const m of content.matchAll(LAZY_IMPORT)) {
+    lazyLocals.add(m[1]);
+    imports.push({ imported: 'default', local: m[1], from: m[3], line: lineOf(m.index) });
+  }
+  // cm:why A dynamic import with no name still couples the two files — recorded as `*` so a consumer
+  // edge exists without claiming to know which symbol travelled across it.
+  for (const m of content.matchAll(DYNAMIC_IMPORT)) {
+    if (imports.some((i) => i.from === m[2])) continue;
+    imports.push({ imported: '*', local: '*', from: m[2], line: lineOf(m.index) });
+  }
+
   for (const m of content.matchAll(REEXPORT)) reexports.push(m[2]);
   for (const m of content.matchAll(EXPORT_NAMED)) exports.add(m[1]);
   for (const m of content.matchAll(EXPORT_LIST)) {
@@ -74,9 +93,16 @@ export function parseModule(content: string): ParsedModule {
     }
   }
   if (/export\s+default\b/.test(content)) exports.add('default');
+  // cm:why `export default addUserBank` is the only export of most api modules; not recording the
+  // NAME it exports forces every chain through that file to widen to ANY and lose its precision.
+  const defaultExport = (/export\s+default\s+(?:async\s+)?(?:function|class)\s+([A-Za-z_$][\w$]*)/.exec(content)
+    ?? /export\s+default\s+([A-Za-z_$][\w$]*)\s*;?[ \t]*(?:\/\/[^\n]*)?$/m.exec(content))?.[1];
+  if (defaultExport !== undefined) exports.add(defaultExport);
 
   const usages: Usage[] = [];
-  const locals = new Set(imports.map((i) => i.local));
+  // cm:guard An anonymous `import('./x')` binds the local name `*`, which is not an identifier —
+  // interpolating it builds the regex `\b*\b` and throws "Nothing to repeat" mid-scan.
+  const locals = new Set(imports.map((i) => i.local).filter((l) => IDENTIFIER.test(l)));
   for (const local of locals) {
     const re = new RegExp(`\\b${local}\\b(?:\\s*\\.\\s*([A-Za-z_$][\\w$]*))?`, 'g');
     for (const m of content.matchAll(re)) {
@@ -99,7 +125,7 @@ export function parseModule(content: string): ParsedModule {
     }
   }
 
-  return { exports: [...exports], imports, usages, localUsages, declarations: [...declarations], reexports };
+  return { exports: [...exports], defaultExport, imports, usages, localUsages, declarations: [...declarations], reexports };
 }
 
 export interface ModuleNode {
@@ -146,7 +172,11 @@ export interface Attribution {
   line: number;
 }
 
-const MAX_FAN_OUT = 40;
+export const MAX_FAN_OUT = 40;
+
+// cm:why Stands for "whichever binding this module exposes" — the alternative is dropping the chain
+// at every default export, which is most of a React codebase.
+const ANY = '*';
 
 // cm:guard Over-approximating is safe here, under-approximating is not: a missed consumer means a
 // screen breaks with no warning. Every widening below is deliberate, and marked imprecise instead.
@@ -192,7 +222,13 @@ export function attributeToScreens(
         const module = graph.modules.get(consumer.file);
         if (!module) continue;
         const matchesSymbol =
-          consumer.imported === '*' || consumer.imported === current.symbol || consumer.local === current.symbol;
+          current.symbol === ANY ||
+          consumer.imported === '*' ||
+          consumer.imported === current.symbol ||
+          consumer.local === current.symbol ||
+          // cm:why An importer may rename a default (`import addBank from`), so the binding matches
+          // by what the exporting file calls it, not by the name that happens to arrive.
+          (consumer.imported === 'default' && here?.parsed.defaultExport === current.symbol);
         if (!matchesSymbol) continue;
 
         for (const usage of module.parsed.usages) {
@@ -216,12 +252,15 @@ export function attributeToScreens(
               line: usage.line,
             });
           } else {
+            // cm:guard The symbol INSIDE a file is not the name its consumers import — a default
+            // export renames it. Widening to ANY keeps the chain alive; `precise` records the cost.
+            const exported = module.parsed.exports.includes(enclosing.symbol);
             next.push({
               file: consumer.file,
-              symbol: enclosing.symbol,
+              symbol: exported ? enclosing.symbol : ANY,
               member: usage.member === undefined ? current.member : enclosing.member,
               hops: current.hops + 1,
-              precise,
+              precise: precise && exported,
             });
           }
         }

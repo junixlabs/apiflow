@@ -212,3 +212,17 @@ export default function Page() { return useRemoveCompany(); }`;
     expect(remove.map((a) => a.route)).toEqual(['/trash']);
   });
 });
+
+describe('anonymous dynamic import', () => {
+  it('does not turn the `*` binding into a regex', () => {
+    const parsed = parseModule("if (flag) import('./late-feature');\nconst x = 1;\n");
+    expect(parsed.imports.some((i) => i.local === '*')).toBe(true);
+    expect(parsed.usages.every((u) => u.symbol !== '*')).toBe(true);
+  });
+
+  it('records the name a default export carries', () => {
+    const parsed = parseModule('const addUserBank = async (p: P): Promise<R> => {};\nexport default addUserBank;\n');
+    expect(parsed.defaultExport).toBe('addUserBank');
+    expect(parsed.exports).toContain('addUserBank');
+  });
+});
