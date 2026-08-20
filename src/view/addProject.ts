@@ -163,8 +163,9 @@ document.addEventListener('click', (ev) => {
         window.alert(result.data.message || 'không bỏ được');
         return;
       }
-      const card = rm.closest('.card');
-      if (card) card.remove();
+      // cm:edge contract -> src/view/hub.ts HUB_SCRIPT — the hub keeps the rail row and the detail
+      // pane as two separate elements, so it does the removing; this file must not know that layout.
+      document.dispatchEvent(new CustomEvent('apiflow:project-removed', { detail: { id: id } }));
     })
     .catch((err) => { rm.disabled = false; window.alert('không gọi được server: ' + err.message); });
 });

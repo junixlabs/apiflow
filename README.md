@@ -122,8 +122,8 @@ while leaving the scanned maps on disk. These are the only routes that accept a 
 so they answer on the loopback interface only and reject anything a cross-site page sends.
 
 A map records the directory it was scanned from. Move a project's root without re-scanning and the
-card says so, naming the directory the numbers actually came from — the map is not deleted, because
-it is still a true measurement of a different repo.
+project's own pane says so, naming the directory the numbers actually came from — the map is not
+deleted, because it is still a true measurement of a different repo.
 
 `project add` records the roots under `~/.apiflow/` — nothing is written inside the repos being
 read. `apiflow ui` serves the project list on `127.0.0.1` and opens one project into eight panes:
@@ -143,14 +143,20 @@ Alerts and Unresolved are separate counts on purpose. An alert is something the 
 finds dangerous — a method mismatch, an endpoint with no auth, a route no screen calls. An
 unresolved is something it could not understand, and it is listed with the line it gave up on.
 
-Once the list is long enough to scroll, the toolbar above the cards searches name, id and both roots,
-filters by side (`cả hai phía` / `chỉ FE` / `chỉ BE`), by `chưa scan`, or down to the maps whose root
-has moved, and orders by name, scan age, endpoints, unresolved, or `đáng để mắt`. The count says how
-many are hidden rather than only how many are left, and the totals strip recomputes itself from the
-cards on screen and relabels itself while a filter is on.
+The project list is a rail down the left and one project's detail on the right, the same shape as a
+project page. `Toàn workspace` at the top of the rail totals every project and lists what is worth
+looking at across all of them, each line linking straight into the pane of the project that carries
+it — a big number that points nowhere is the thing that section replaced. Selecting a project writes
+the hash, so `/#adminhub` is a link you can send and a reload comes back to where you were.
 
-For a repo with no server to run, `apiflow hub <dir>` writes the same project list as a single
-self-contained HTML file — including the search, the filters and the ordering, which run in the page.
+The rail searches name, id and both roots, filters by side (`cả hai phía` / `chỉ FE` / `chỉ BE`), by
+`chưa scan`, or down to the maps whose root has moved, and orders by name, scan age, endpoints,
+unresolved, or `đáng để mắt trước`. The count says how many are hidden rather than only how many are
+left. Only the ordering is remembered between visits; a filter is not, because a hidden project is
+the kind of thing that should not survive a reload.
+
+For a repo with no server to run, `apiflow hub <dir>` writes the same page as a single self-contained
+HTML file — same rail, same panes, same search, filter and ordering, all running in the page itself.
 
 ## Features
 

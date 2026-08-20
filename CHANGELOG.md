@@ -162,6 +162,32 @@ All notable changes to API View are documented here.
 - Clearing the last remaining side is refused, and so is a blank name — the old value is kept and the
   refusal is shown rather than the edit being silently dropped.
 
+### Changed — the hub is a rail and a detail pane, not a wall of cards
+
+- `/` is now the same shape as a project page: the project list is a rail down the left, one project's
+  detail fills the right. Cards in a grid row stretched to the tallest of them, so one project with
+  three maps and five buttons left a hole beside the two next to it — and every card had to repeat the
+  name, the id, both roots, the revisions and five buttons to be readable on its own.
+- Selecting a project writes the hash, so `/#adminhub` is a link, a reload comes back to the same
+  project, and Back walks the selection. Every switch goes through the hash, so the address bar can
+  never name one project while the pane shows another.
+- `Toàn workspace` sits at the top of the rail: the six workspace totals, and under them one ranked
+  list of what is worth looking at across every project — a stale root first, then endpoints with no
+  auth gate, then FE paths the API does not declare, down to the unresolved calls. Each line links
+  into the pane of the project that carries it. The old strip of big red numbers pointed nowhere: it
+  said 40 endpoints had no auth gate without saying which project to open.
+- The coverage bar carries its own numbers underneath it, so the two paragraphs of legend and caveat
+  that used to explain the page are gone. Segments that are zero are left out instead of printed as 0.
+- One primary action per pane (`Mở bản đồ →`), the rest beside it, and `Bỏ khỏi workspace` kept in the
+  muted style it had — a project with no map still gets `Scan FE` where the map link would be.
+- The rail keeps the search, the side/state filter and the six orderings; the filter is now two small
+  selects instead of six chips, because a 300px rail cannot hold a chip row. Only the ordering is
+  remembered between visits.
+- A marker set before first paint decides whether the unselected panes are hidden, so the page shows
+  every project stacked when the script does not run rather than an empty column.
+- The totals no longer recompute themselves from the visible cards: the workspace pane says
+  `Toàn workspace` and means it, and the rail count is what reports how many rows a filter hid.
+
 ### Added — sorting and filtering the project list
 
 - A toolbar over the cards: free-text search across name, id and both roots; chips for `cả hai phía`
