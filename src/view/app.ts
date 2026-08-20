@@ -4,7 +4,7 @@ import { alertCounts, alerts as computeAlerts } from '../workspace/alerts';
 import { endpointReliability, summarize } from '../workspace/summary';
 import type { MapDiff } from '../workspace/diff';
 import { APP_STYLE } from './appStyle';
-import { PANES_HTML, PANES_SCRIPT, PANES_SCRIPT_2, PANES_SCRIPT_3, PANES_STYLE } from './panes';
+import { PANES_HTML, PANES_SCRIPT, PANES_SCRIPT_2, PANES_SCRIPT_3, PANES_SCRIPT_4, PANES_STYLE } from './panes';
 import { BRAND_STYLE, FAVICON, MARK, STYLE } from './theme';
 
 export interface AppPayload {
@@ -16,11 +16,14 @@ export interface AppPayload {
   diff?: MapDiff;
 }
 
-export type Section = 'overview' | 'endpoints' | 'impact' | 'screens' | 'unresolved' | 'alerts' | 'compare';
+export type Section =
+  | 'overview' | 'endpoints' | 'cover' | 'graph' | 'impact' | 'screens' | 'unresolved' | 'alerts' | 'compare';
 
 export const SECTIONS: Array<{ id: Section; label: string }> = [
   { id: 'overview', label: 'Tổng quan' },
   { id: 'endpoints', label: 'Endpoints' },
+  { id: 'cover', label: 'Bản đồ phủ' },
+  { id: 'graph', label: 'Vòng ảnh hưởng' },
   { id: 'impact', label: 'Ảnh hưởng' },
   { id: 'screens', label: 'Màn hình' },
   { id: 'unresolved', label: 'Unresolved' },
@@ -66,6 +69,8 @@ function rail(payload: AppPayload, counts: { alerts: number; high: number }, unr
   <nav>
     ${link('overview', 'Tổng quan')}
     ${link('endpoints', 'Endpoints', payload.map.endpoints.length)}
+    ${link('cover', 'Bản đồ phủ')}
+    ${link('graph', 'Vòng ảnh hưởng')}
     ${link('impact', 'Ảnh hưởng')}
     ${link('screens', 'Màn hình', payload.map.screens.length)}
     <div class="sep"></div>
@@ -194,7 +199,7 @@ ${PANES_HTML}
 <script type="application/json" id="reliability">${embedJson(reliability)}</script>
 <script type="application/json" id="project">${embedJson(payload.projectId ?? null)}</script>
 <script type="application/json" id="diff">${embedJson(payload.diff ?? null)}</script>
-<script>${PANES_SCRIPT}${PANES_SCRIPT_2}${PANES_SCRIPT_3}</script>
+<script>${PANES_SCRIPT}${PANES_SCRIPT_2}${PANES_SCRIPT_4}${PANES_SCRIPT_3}</script>
 </body>
 </html>
 `;

@@ -117,10 +117,14 @@ npx @junixlabs/apiflow ui
 ```
 
 `project add` records the roots under `~/.apiflow/` — nothing is written inside the repos being
-read. `apiflow ui` serves the project list on `127.0.0.1` and opens one project into six panes:
-endpoints, impact, screens, unresolved, alerts, and a comparison of the last two scans. The scan
-button re-runs a scanner and streams its output; the map is only replaced when the scan finishes
-cleanly.
+read. `apiflow ui` serves the project list on `127.0.0.1` and opens one project into eight panes:
+endpoints, a coverage map of every endpoint as one cell, the impact ring (screens on the left,
+endpoints on the right, one curve per call), impact for a single endpoint, screens, unresolved,
+alerts, and a comparison of the last two scans. The scan button re-runs a scanner and streams its
+output; the map is only replaced when the scan finishes cleanly.
+
+`apiflow view <file.apimap>` writes that same app to a single self-contained HTML file — same panes,
+no server, and no control that would need one.
 
 Alerts and Unresolved are separate counts on purpose. An alert is something the tool understood and
 finds dangerous — a method mismatch, an endpoint with no auth, a route no screen calls. An

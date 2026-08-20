@@ -1,7 +1,7 @@
 import { mkdirSync, realpathSync, writeFileSync } from 'fs';
 import { dirname, join, resolve } from 'path';
 import { fileURLToPath } from 'url';
-import { renderViewer } from './view';
+import { renderApp } from '../view/app';
 import { renderHub } from '../view/hub';
 import { workspaceRoot } from '../workspace/registry';
 import { bestKind, hubProjects } from '../workspace/hubData';
@@ -22,7 +22,7 @@ function main(): void {
     if (map === null) continue;
     const file = join(out, `${project.id}.html`);
     mkdirSync(dirname(file), { recursive: true });
-    writeFileSync(file, renderViewer(map, mapPath(project.id, kind)));
+    writeFileSync(file, renderApp({ map, sourcePath: mapPath(project.id, kind), live: false }));
     written.push(file);
   }
 

@@ -1,4 +1,47 @@
 export const PANES_STYLE = `
+.legend { display:flex; gap:16px; flex-wrap:wrap; align-items:center; margin:0 0 14px;
+  font-size:12px; color:var(--muted); }
+.legend b { color:var(--ink); font-weight:600; }
+.swatch { display:inline-block; width:11px; height:11px; border-radius:3px; margin-right:6px;
+  vertical-align:-1px; border:1px solid rgba(0,0,0,.12); }
+.blocks { display:grid; grid-template-columns:repeat(auto-fill,minmax(228px,1fr)); gap:14px; }
+.block { border:1px solid var(--line); border-radius:10px; padding:9px 11px 11px; background:var(--surface-2); }
+.block h3 { margin:0 0 7px; font:600 12px/1.3 ui-monospace,monospace; word-break:break-all; }
+.block h3 span { color:var(--muted); font-weight:400; }
+.cells { display:flex; flex-wrap:wrap; gap:3px; }
+.cell { width:13px; height:13px; border-radius:3px; cursor:pointer; border:1px solid transparent; }
+.cell:hover, .cell.sel { outline:2px solid var(--ink); outline-offset:1px; }
+.cell.s-both { background:var(--exact); }
+.cell.s-uncalled { background:var(--surface-3); border-color:var(--line); }
+.cell.s-feonly { background:var(--dead); }
+.cell.s-unpaired { background:repeating-linear-gradient(135deg,var(--surface-3) 0 3px,var(--surface) 3px 6px);
+  border-color:var(--line); }
+.cell.open { box-shadow:inset 0 0 0 2px var(--surface); }
+.pick { display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin:0 0 12px; font-size:12.5px; }
+.pick .hint { color:var(--muted); }
+.pick .spacer { flex:1; }
+svg.bip { width:100%; height:auto; display:block; }
+svg.bip text { font:11.5px ui-monospace,monospace; fill:var(--ink); }
+svg.bip text.head { font:600 11px ui-sans-serif,sans-serif; fill:var(--muted);
+  letter-spacing:.08em; text-transform:uppercase; }
+svg.bip .node { fill:var(--surface-3); stroke:var(--line); }
+svg.bip .node.screen { fill:var(--inferred); stroke:none; }
+svg.bip .node.ep { fill:var(--exact); stroke:none; }
+svg.bip .node.ep.dead { fill:var(--dead); }
+svg.bip .edge { fill:none; stroke-width:1.2; opacity:.5; }
+svg.bip .edge.c-exact { stroke:var(--exact); }
+svg.bip .edge.c-inferred { stroke:var(--inferred); }
+svg.bip .edge.c-guess { stroke:var(--guess); stroke-dasharray:3 3; }
+svg.bip g.row { cursor:pointer; }
+svg.bip g.row:hover text { font-weight:700; }
+svg.bip.dim .edge { opacity:.08; }
+svg.bip.dim .edge.lit { opacity:.95; stroke-width:2; }
+svg.bip.dim text { opacity:.35; }
+svg.bip.dim g.lit text { opacity:1; font-weight:700; }
+svg.bip.dim rect.node { opacity:.25; }
+svg.bip.dim g.lit rect.node { opacity:1; }
+.wide { color:var(--guess); font-size:12.5px; margin:10px 0 0; }
+
 .toolrow { display:flex; gap:9px; align-items:center; flex-wrap:wrap; margin:0 0 12px; }
 .toolrow .search { display:flex; align-items:center; gap:7px; background:var(--surface);
   border:1px solid var(--line); border-radius:8px; padding:5px 9px; min-width:240px; }
@@ -96,6 +139,41 @@ export const PANES_HTML = `
       <div class="body" id="insp-body"></div>
     </div>
   </div>
+</section>
+
+<section class="pane" id="pane-cover" hidden>
+  <div class="toolrow">
+    <label class="search">🔎<input id="cv-q" placeholder="tìm theo method hoặc path" autocomplete="off"></label>
+    <select class="facet" id="cv-recon"></select>
+    <span class="stat" id="cv-count"></span>
+  </div>
+  <div class="legend">
+    <span><span class="swatch" style="background:var(--exact)"></span>màn gọi &amp; API khai</span>
+    <span><span class="swatch" style="background:var(--surface-3);border-color:var(--line)"></span>API khai, không màn nào gọi</span>
+    <span><span class="swatch" style="background:var(--dead)"></span>FE gọi, API không khai</span>
+    <span><span class="swatch" style="background:repeating-linear-gradient(135deg,var(--surface-3) 0 3px,var(--surface) 3px 6px)"></span>chưa đối chiếu được</span>
+    <span><b>viền trong</b> = không thấy cổng auth</span>
+    <span>bấm một ô để xem vòng ảnh hưởng của nó</span>
+  </div>
+  <div class="blocks" id="blocks"></div>
+</section>
+
+<section class="pane" id="pane-graph" hidden>
+  <div class="pick">
+    <span class="hint">đang xem</span><b id="scope-label">—</b>
+    <span class="spacer"></span>
+    <span class="hint">trỏ vào một hàng để soi riêng nhánh đó</span>
+  </div>
+  <div class="legend">
+    <span><span class="swatch" style="background:var(--inferred)"></span>màn</span>
+    <span><span class="swatch" style="background:var(--exact)"></span>endpoint API có khai</span>
+    <span><span class="swatch" style="background:var(--dead)"></span>endpoint API không khai</span>
+    <span style="color:var(--exact)">── exact</span>
+    <span style="color:var(--inferred)">── inferred</span>
+    <span style="color:var(--guess)">╌╌ guess</span>
+  </div>
+  <div id="bip"></div>
+  <p class="wide" id="graph-note"></p>
 </section>
 
 <section class="pane" id="pane-impact" hidden>
@@ -202,7 +280,7 @@ const RECON_CLS = { both: 'd-both', uncalled: 'd-uncalled', feonly: 'd-feonly', 
 const state = {
   section: 'overview', q: '', method: '', auth: '', recon: '', conf: '',
   endpoint: null, insp: 'overview', screen: null, impQ: '',
-  alertKind: '', alertSev: '', unQ: '', scQ: '',
+  alertKind: '', alertSev: '', unQ: '', scQ: '', cvQ: '', cvRecon: '', group: null,
 };
 
 const el = (id) => document.getElementById(id);
@@ -841,6 +919,8 @@ function render() {
   if (state.section === 'screens') renderScreens();
   if (state.section === 'unresolved') renderUnresolved();
   if (state.section === 'alerts') renderAlerts();
+  if (state.section === 'cover') renderCover();
+  if (state.section === 'graph') renderGraph();
   if (state.section === 'compare') renderCompare();
 }
 
@@ -861,6 +941,7 @@ bind('q', 'q');
 bind('imp-q', 'impQ');
 bind('sc-q', 'scQ');
 bind('un-q', 'unQ');
+bind('cv-q', 'cvQ');
 
 const PROJECT = JSON.parse(el('project')?.textContent || 'null');
 
@@ -921,4 +1002,229 @@ if (PROJECT) {
 const fromHash = location.hash.replace('#', '');
 if (fromHash) state.section = fromHash;
 render();
+`;
+
+export const PANES_SCRIPT_4 = String.raw`
+const MAX_ROWS = 90;
+const groupOf = (path) => path.split('/').slice(0, 4).join('/') || '/';
+
+function coverVisible() {
+  const q = state.cvQ.toLowerCase();
+  return MAP.endpoints.filter((e) => {
+    if (q && !(e.method + ' ' + e.path).toLowerCase().includes(q)) return false;
+    if (state.cvRecon && reconOf(e) !== state.cvRecon) return false;
+    return true;
+  });
+}
+
+function renderCover() {
+  const visible = coverVisible();
+  fillFacet('cv-recon', 'trạng thái: tất cả',
+    Object.keys(RECON_LABEL).map((k) => [k, RECON_LABEL[k]]), state.cvRecon,
+    (v) => { state.cvRecon = v; render(); });
+  el('cv-count').textContent = visible.length + ' / ' + MAP.endpoints.length + ' endpoint';
+
+  const box = el('blocks');
+  box.textContent = '';
+  const groups = new Map();
+  for (const e of visible) {
+    const g = groupOf(e.path);
+    if (!groups.has(g)) groups.set(g, []);
+    groups.get(g).push(e);
+  }
+  const sorted = [...groups].sort((a, b) => b[1].length - a[1].length || a[0].localeCompare(b[0]));
+  for (const [name, list] of sorted) {
+    const block = h('div', 'block');
+    const title = h('h3', null, name + ' ');
+    title.appendChild(h('span', null, String(list.length)));
+    block.appendChild(title);
+    const cells = h('div', 'cells');
+    for (const e of list.sort((a, b) => (a.path + a.method).localeCompare(b.path + b.method))) {
+      const st = reconOf(e);
+      const callers = (callsByEndpoint.get(e.id) || []).length;
+      const cell = h('div', 'cell s-' + st + (e.auth === false ? ' open' : '')
+        + (state.endpoint === e.id ? ' sel' : ''));
+      cell.title = e.method + ' ' + e.path + '\n' + RECON_LABEL[st] + '\nmàn gọi: ' + callers
+        + (e.auth === false ? '\nkhông thấy cổng auth nào' : '');
+      cell.onclick = () => {
+        state.endpoint = e.id;
+        state.group = groupOf(e.path);
+        state.section = 'graph';
+        location.hash = 'graph';
+        render();
+      };
+      cells.appendChild(cell);
+    }
+    block.appendChild(cells);
+    box.appendChild(block);
+  }
+  if (sorted.length === 0) box.appendChild(h('p', 'empty', 'Không endpoint nào khớp bộ lọc.'));
+}
+
+// cm:why Falls back to the biggest group rather than drawing everything: a bipartite of 1000
+// endpoints is a grey smear, and a picture nobody can read is not a smaller answer, it is no answer.
+function scopeForGraph() {
+  if (state.endpoint) {
+    const e = endpoints.get(state.endpoint);
+    if (e) return { eps: [e], label: e.method + ' ' + e.path, one: true };
+  }
+  const visible = coverVisible();
+  if (state.group) {
+    const eps = visible.filter((e) => groupOf(e.path) === state.group);
+    if (eps.length > 0) return { eps, label: state.group, one: false };
+  }
+  const counts = new Map();
+  for (const e of visible) counts.set(groupOf(e.path), (counts.get(groupOf(e.path)) || 0) + 1);
+  const top = [...counts].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))[0];
+  if (!top) return { eps: [], label: '', one: false };
+  return { eps: visible.filter((e) => groupOf(e.path) === top[0]), label: top[0], one: false };
+}
+
+const svgEl = (tag, attrs) => {
+  const node = document.createElementNS('http://www.w3.org/2000/svg', tag);
+  for (const k in attrs) node.setAttribute(k, attrs[k]);
+  return node;
+};
+const clip = (text, n) => (text.length > n ? text.slice(0, n - 1) + '…' : text);
+
+function renderGraph() {
+  const host = el('bip');
+  host.textContent = '';
+  const note = el('graph-note');
+  note.textContent = '';
+  const scope = scopeForGraph();
+
+  const label = el('scope-label');
+  label.textContent = scope.label || '—';
+  if (scope.one) {
+    const wider = h('a', 'link', ' — xem cả nhóm ' + groupOf(scope.eps[0].path));
+    wider.href = '#graph';
+    wider.onclick = (ev) => {
+      ev.preventDefault();
+      state.endpoint = null;
+      render();
+    };
+    label.appendChild(wider);
+  }
+
+  const edges = [];
+  for (const e of scope.eps) {
+    for (const c of callsByEndpoint.get(e.id) || []) {
+      if (!screens.get(c.screenId)) continue;
+      edges.push({ ep: e.id, screen: c.screenId, confidence: c.confidence });
+    }
+  }
+  if (edges.length === 0) {
+    note.textContent = 'Không lời gọi nào tới ' + (scope.label || 'nhóm này')
+      + '. Đó không phải bằng chứng là không ai gọi — xem pane Unresolved.';
+    return;
+  }
+
+  const screenIds = [...new Set(edges.map((x) => x.screen))];
+  const epIds = [...new Set(edges.map((x) => x.ep))];
+  // cm:guard Reports the cut instead of silently drawing the first 90 — a diagram that looks
+  // complete but is not answers the question wrongly, which is worse than not drawing it.
+  if (screenIds.length > MAX_ROWS) {
+    note.textContent = scope.label + ' được ' + screenIds.length + ' màn gọi — quá rộng để vẽ.'
+      + ' Bấm một ô ở Bản đồ phủ để thu về một endpoint.';
+    return;
+  }
+
+  const labelOf = (id) => {
+    const sc = screens.get(id);
+    if (!sc) return id;
+    return sc.route || (sc.label + ' (chưa gắn route)');
+  };
+  screenIds.sort((a, b) => labelOf(a).localeCompare(labelOf(b)));
+  epIds.sort((a, b) => {
+    const x = endpoints.get(a);
+    const y = endpoints.get(b);
+    return (x.path + x.method).localeCompare(y.path + y.method);
+  });
+
+  const rows = Math.max(screenIds.length, epIds.length);
+  const rowH = rows > 40 ? 15 : rows > 24 ? 19 : 24;
+  const top = 34;
+  const span = rows * rowH;
+  const W = 1180;
+  const xs = 300;
+  const xe = 640;
+
+  const svg = svgEl('svg', { class: 'bip', viewBox: '0 0 ' + W + ' ' + (top + span + 16), role: 'img' });
+  const head = (x, anchor, text) => {
+    const t = svgEl('text', { x: x, y: 16, class: 'head', 'text-anchor': anchor });
+    t.textContent = text;
+    svg.appendChild(t);
+  };
+  head(xs, 'end', 'màn (' + screenIds.length + ')');
+  head(xe, 'start', 'endpoint (' + epIds.length + ')');
+
+  // cm:why Each column is spread over the SAME vertical extent — laying both out at a fixed row
+  // pitch stacks the shorter side in a clump at the top and the fan of edges stops being readable.
+  const yS = {};
+  const yE = {};
+  const spread = (ids, out) => ids.forEach((id, i) => { out[id] = top + ((i + 0.5) * span) / ids.length; });
+  spread(screenIds, yS);
+  spread(epIds, yE);
+
+  const edgeEls = [];
+  for (const edge of edges) {
+    const y1 = yS[edge.screen];
+    const y2 = yE[edge.ep];
+    const mid = (xs + xe) / 2;
+    const path = svgEl('path', {
+      class: 'edge c-' + edge.confidence,
+      d: 'M ' + (xs + 8) + ' ' + y1 + ' C ' + mid + ' ' + y1 + ', ' + mid + ' ' + y2
+        + ', ' + (xe - 8) + ' ' + y2,
+    });
+    path.dataset.screen = edge.screen;
+    path.dataset.ep = edge.ep;
+    svg.appendChild(path);
+    edgeEls.push(path);
+  }
+
+  const rowsByKey = {};
+  const addRow = (id, y, side, text, cls) => {
+    const g = svgEl('g', { class: 'row' });
+    g.appendChild(svgEl('rect', {
+      class: 'node ' + cls, x: side === 'left' ? xs : xe - 6, y: y - 4, width: 6, height: 8, rx: 2,
+    }));
+    const text2 = svgEl('text', {
+      x: side === 'left' ? xs - 8 : xe + 8, y: y + 4,
+      'text-anchor': side === 'left' ? 'end' : 'start',
+    });
+    text2.textContent = text;
+    g.appendChild(text2);
+    g.onmouseenter = () => {
+      svg.classList.add('dim');
+      for (const e of edgeEls) {
+        const lit = side === 'left' ? e.dataset.screen === id : e.dataset.ep === id;
+        e.classList.toggle('lit', lit);
+        if (lit) {
+          const other = side === 'left' ? e.dataset.ep : e.dataset.screen;
+          if (rowsByKey[other]) rowsByKey[other].classList.add('lit');
+        }
+      }
+      g.classList.add('lit');
+    };
+    g.onmouseleave = () => {
+      svg.classList.remove('dim');
+      for (const e of edgeEls) e.classList.remove('lit');
+      for (const k in rowsByKey) rowsByKey[k].classList.remove('lit');
+    };
+    rowsByKey[id] = g;
+    svg.appendChild(g);
+  };
+
+  for (const id of screenIds) addRow(id, yS[id], 'left', clip(labelOf(id), 40), 'screen');
+  for (const id of epIds) {
+    const e = endpoints.get(id);
+    addRow(id, yE[id], 'right', clip(e.method + ' ' + e.path, 62), 'ep' + (e.source ? '' : ' dead'));
+  }
+
+  host.appendChild(svg);
+  const guesses = edges.filter((x) => x.confidence === 'guess').length;
+  note.textContent = edges.length + ' cạnh · ' + guesses + ' ở mức guess'
+    + (guesses > 0 ? ' (nét đứt cam — chuỗi đi qua re-export, không chắc đúng màn)' : '');
+}
 `;

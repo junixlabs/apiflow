@@ -23,7 +23,7 @@ export type EndpointState = 'both' | 'uncalled' | 'feOnly' | 'unpaired';
 // cm:guard Never says feOnly on a map with no backend side, nor uncalled on one with no frontend
 // side: on a FE-only scan EVERY endpoint lacks a `source`, and calling that "API không khai" turns
 // a missing half of the scan into a fabricated finding about the API.
-// cm:edge contract -> src/cli/viewGraph.ts — the browser pane re-implements this as `stateOf`
+// cm:edge contract -> src/view/panes.ts — the browser pane re-implements this as `reconOf`
 // because it cannot import node code; the two must keep agreeing on what a colour means.
 export function endpointState(map: ApiMapFile, endpointId: string): EndpointState {
   const hasBe = map.endpoints.some((e) => e.source !== undefined);
@@ -83,7 +83,7 @@ export interface Reliability {
 
 // cm:guard Distribution of EVIDENCE, never a health score. One call at `exact` is not stronger than
 // twenty calls at 90% exact, so `calls` travels with the split and any reader must show both.
-// cm:edge contract -> src/cli/viewGraph.ts — the per-row micro-bar renders exactly this split.
+// cm:edge contract -> src/view/panes.ts — the per-row micro-bar renders exactly this split.
 export function endpointReliability(map: ApiMapFile): Map<string, Reliability> {
   const out = new Map<string, Reliability>();
   for (const call of map.calls) {

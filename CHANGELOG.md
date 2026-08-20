@@ -66,9 +66,13 @@ All notable changes to API View are documented here.
   every project; `/p/<id>` opens one.
 - `apiflow hub <dir>` — the same project list as a self-contained HTML file, for a repo that has no
   server to run.
-- The project view has six panes over one map: endpoints (facet-filtered, with a 5-tab inspector),
-  impact (an endpoint to the chain of hooks and components to the screens that break), screens (the
-  reverse direction), unresolved (grouped by reason), alerts, and compare.
+- The project view has eight panes over one map: endpoints (facet-filtered, with a 5-tab inspector),
+  a coverage map that puts every endpoint on screen as one cell coloured by reconciliation state, the
+  impact ring (screens against endpoints, one curve per call, hover a row to isolate its branch),
+  impact for a single endpoint (the chain of hooks and components out to the screens that break),
+  screens (the reverse direction), unresolved (grouped by reason), alerts, and compare.
+- `apiflow view` and `apiflow hub` render that same app, with `live: false`. There is one renderer,
+  not two: the first week of having two grew a served page with panes the written file never got.
 - `src/workspace/alerts.ts` — method mismatch, FE calling a path the API does not declare, an open
   auth gate, an endpoint no screen calls. Severity is graded by the *confidence* of the call that
   found it, so a `guess` never shouts.
