@@ -24,7 +24,15 @@ describe('renderViewer', () => {
   const html = renderViewer(mapWith('demo-api'), '/tmp/demo.apimap');
 
   it('needs no network to open', () => {
-    expect(html).not.toMatch(/https?:\/\//);
+    // cm:why Checks FETCHABLE positions, not the substring "http": the SVG namespace URI is a name,
+    // never a request, so a blanket match would forbid drawing anything and prove nothing.
+    expect(html).not.toMatch(/(?:src|href)\s*=\s*["']?https?:\/\//i);
+    expect(html).not.toMatch(/url\(\s*["']?https?:\/\//i);
+    expect(html).not.toMatch(/\b(?:fetch|importScripts|XMLHttpRequest|EventSource|WebSocket)\s*\(/);
+    expect(html).not.toMatch(/\bimport\s*\(\s*["']https?:/);
+    for (const url of html.match(/https?:\/\/[^\s"'<>)]+/g) ?? []) {
+      expect(url).toBe('http://www.w3.org/2000/svg');
+    }
   });
 
   it('carries the map inline and names it in the title', () => {
@@ -34,5 +42,20 @@ describe('renderViewer', () => {
 
   it('escapes a map name that contains markup', () => {
     expect(renderViewer(mapWith('<b>x</b>'), '/tmp/x.apimap')).toContain('&lt;b&gt;x&lt;/b&gt;');
+  });
+});
+
+describe('visual panes', () => {
+  const html = renderViewer(mapWith('demo-api'), '/tmp/demo.apimap');
+
+  it('ships all three panes and their mount points', () => {
+    for (const id of ['pane-list', 'pane-cover', 'pane-graph', 'blocks', 'bip', 'scope-label', 'graph-note']) {
+      expect(html).toContain(`id="${id}"`);
+    }
+  });
+
+  it('refuses to draw a graph too wide to read instead of cutting it', () => {
+    expect(html).toContain('quá rộng để vẽ');
+    expect(html).toContain('MAX_ROWS');
   });
 });

@@ -2,6 +2,7 @@ import { mkdirSync, readFileSync, realpathSync, writeFileSync } from 'fs';
 import { dirname, resolve } from 'path';
 import { fileURLToPath } from 'url';
 import type { ApiMapFile } from '../core/apimap';
+import { GRAPH_PANES, GRAPH_SCRIPT, GRAPH_STYLE, GRAPH_TABS, TAB_SCRIPT } from './viewGraph';
 
 // cm:guard `</script>` inside a field name or a snippet would close the tag and turn the payload into
 // markup. Escaping `<` is what keeps a scanned repo from injecting into the page it is rendered on.
@@ -87,7 +88,7 @@ const SCRIPT = String.raw`
 const MAP = JSON.parse(document.getElementById('apimap').textContent);
 const byId = (list) => Object.fromEntries(list.map((x) => [x.id, x]));
 const screens = byId(MAP.screens);
-const state = { group: null, endpoint: null, q: '', only: null };
+const state = { group: null, endpoint: null, q: '', only: null, pane: 'list' };
 
 const groupOf = (path) => path.split('/').slice(0, 4).join('/') || '/';
 
@@ -215,6 +216,8 @@ function render() {
   renderGroups(visible);
   renderList(visible);
   renderInspector();
+  if (state.pane === 'cover') renderCoverage();
+  if (state.pane === 'graph') renderGraph();
   for (const chip of document.querySelectorAll('[data-only]')) {
     chip.classList.toggle('on', state.only === chip.dataset.only);
   }
@@ -255,7 +258,7 @@ export function renderViewer(map: ApiMapFile, sourcePath: string): string {
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>apiflow — ${escapeHtml(map.metadata.name)}</title>
-<style>${STYLE}</style>
+<style>${STYLE}${GRAPH_STYLE}</style>
 </head>
 <body>
 <div class="page">
@@ -263,23 +266,27 @@ export function renderViewer(map: ApiMapFile, sourcePath: string): string {
   <p class="sub">
     <code>${escapeHtml(sourcePath)}</code> · gốc <code>${escapeHtml(map.metadata.root)}</code> · ${escapeHtml(map.metadata.generator)}
   </p>
+${GRAPH_TABS}
+  <div class="bar toolbar">
+    <span class="brand">apiflow</span>
+    <span class="stat" id="shown">${counts.endpoints} endpoint</span>
+    <span class="stat">· ${counts.screens} màn · ${counts.calls} lời gọi · ${counts.fields} field</span>
+    <span class="spacer"></span>
+    <span class="chip" data-only="auth">có auth ${counts.auth}</span>
+    <span class="chip" data-only="open">không auth ${counts.open}</span>
+    <span class="chip" data-only="murky">cổng không rõ ${counts.murky}</span>
+    <span class="chip" data-only="unknown">chưa biết shape</span>
+    <span class="chip" data-only="called">có màn gọi</span>
+    <label class="search">🔎<input id="q" placeholder="tìm theo method hoặc path" autocomplete="off"></label>
+  </div>
+  <div class="pane on" id="pane-list">
   <div class="app">
-    <div class="bar">
-      <span class="brand">apiflow</span>
-      <span class="stat" id="shown">${counts.endpoints} endpoint</span>
-      <span class="stat">· ${counts.screens} màn · ${counts.calls} lời gọi · ${counts.fields} field</span>
-      <span class="spacer"></span>
-      <span class="chip" data-only="auth">có auth ${counts.auth}</span>
-      <span class="chip" data-only="open">không auth ${counts.open}</span>
-      <span class="chip" data-only="murky">cổng không rõ ${counts.murky}</span>
-      <span class="chip" data-only="unknown">chưa biết shape</span>
-      <span class="chip" data-only="called">có màn gọi</span>
-      <label class="search">🔎<input id="q" placeholder="tìm theo method hoặc path" autocomplete="off"></label>
-    </div>
     <div class="side"><h2>Nhóm tài nguyên</h2><div id="groups"></div></div>
     <div class="list" id="list"></div>
     <div class="insp" id="insp"></div>
   </div>
+  </div>
+${GRAPH_PANES}
   <p class="note">
     Mỗi dòng là <b>ứng viên, không phải phán quyết</b>. “không auth” nghĩa là không thấy cổng chặn nào
     trong code — vẫn có thể bị chặn ở nơi khác. “chưa biết shape” nghĩa là code không khai, chưa chạy
@@ -287,7 +294,7 @@ export function renderViewer(map: ApiMapFile, sourcePath: string): string {
   </p>
 </div>
 <script type="application/json" id="apimap">${embedJson(map)}</script>
-<script>${SCRIPT}</script>
+<script>${SCRIPT}${GRAPH_SCRIPT}${TAB_SCRIPT}</script>
 </body>
 </html>
 `;
