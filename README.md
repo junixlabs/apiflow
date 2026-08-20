@@ -143,8 +143,9 @@ Alerts and Unresolved are separate counts on purpose. An alert is something the 
 finds dangerous — a method mismatch, an endpoint with no auth, a route no screen calls. An
 unresolved is something it could not understand, and it is listed with the line it gave up on.
 
-The project list is a rail down the left and one project's detail on the right, the same shape as a
-project page. `Toàn workspace` at the top of the rail totals every project and lists what is worth
+The project list is a rail down the left and one project's detail on the right — literally the same
+shell as a project page: same rail width, same header, same tiles, same panels, brand top-left as the
+way back to the workspace, `+ Thêm project` and the light/dark control at the foot of the rail. `Toàn workspace` at the top of the rail totals every project and lists what is worth
 looking at across all of them, each line linking straight into the pane of the project that carries
 it — a big number that points nowhere is the thing that section replaced. Selecting a project writes
 the hash, so `/#adminhub` is a link you can send and a reload comes back to where you were.

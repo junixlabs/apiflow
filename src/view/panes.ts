@@ -47,15 +47,6 @@ svg.bip.dim g.lit rect.node { opacity:1; }
 @media (max-width:1400px) { .grid3 { grid-template-columns:196px minmax(0,1fr); } }
 @media (max-width:1000px) { .grid3 { grid-template-columns:1fr; } }
 
-.kpistrip { display:grid; grid-template-columns:repeat(6,minmax(0,1fr)); gap:10px; margin:0 0 14px; }
-@media (max-width:1250px) { .kpistrip { grid-template-columns:repeat(3,minmax(0,1fr)); } }
-.kpistrip .k1 { border:1px solid var(--line); border-radius:10px; background:var(--surface); padding:8px 11px 9px; }
-.kpistrip .k1 .lab { font-size:9.5px; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); }
-.kpistrip .k1 .val { font:650 20px/1.25 ui-sans-serif,sans-serif; letter-spacing:-.02em; margin-top:1px; }
-.kpistrip .k1 .dlt { font-size:10.5px; color:var(--muted); }
-.kpistrip .k1 .dlt.up { color:var(--exact); } .kpistrip .k1 .dlt.down { color:var(--dead); }
-.kpistrip .k1.alarm .val { color:var(--dead); }
-.kpistrip .k1 .spark { display:block; margin-top:3px; }
 
 .facets { border:1px solid var(--line); border-radius:12px; background:var(--surface);
   padding:11px 0 6px; position:sticky; top:14px; max-height:80vh; overflow:auto; }

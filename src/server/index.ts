@@ -74,6 +74,7 @@ export function buildApp(): Express {
       projectId: project.id,
       sourcePath: mapPath(project.id, kind),
       live: true,
+      homeHref: '/',
       kind,
       projectName: project.name,
       hints: findProject(project.id)?.hints,

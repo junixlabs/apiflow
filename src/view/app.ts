@@ -18,6 +18,7 @@ export interface AppPayload {
   live: boolean;
   kind?: string;
   projectName?: string;
+  homeHref?: string;
   hints?: string;
   sides?: SideInfo[];
   now?: number;
@@ -117,12 +118,13 @@ function header(payload: AppPayload, name: string): string {
         data-name="${escapeHtml(payload.projectName ?? payload.map.metadata.name)}"
         data-fe="${escapeHtml(root('fe'))}" data-be="${escapeHtml(root('be'))}"
         data-hints="${escapeHtml(payload.hints ?? '')}">Sửa gốc</button>`;
+  // cm:why `+ Thêm project` is a workspace action, so it lives at the foot of the rail on this page and
+  // on the hub alike. In this row it read as one of the things you can do TO the project you opened.
   const scanBtns = payload.live
     ? `<div class="btnrow">
         ${payload.projectId === undefined ? '' : `<button class="btn primary" id="scan-fe">Scan lại FE</button>
         <button class="btn" id="scan-be">Scan lại BE</button>`}
         ${editBtn}
-        <button class="btn" id="add-open">+ Thêm project</button>
       </div>`
     : '';
   return `  <div class="phead">
@@ -144,8 +146,14 @@ function header(payload: AppPayload, name: string): string {
 function rail(payload: AppPayload, counts: { alerts: number; high: number }, unresolved: number): string {
   const link = (id: Section, label: string, n?: number, tone = '') =>
     `<a href="#${id}" data-section="${id}" class="${tone}">${icon(id)}<span class="lbl">${label}</span>${n === undefined ? '' : `<span class="n">${n}</span>`}</a>`;
+  // cm:why The brand is the way back to the workspace, and it is a plain heading when there is nowhere
+  // to go: `apiflow view` writes a file with no hub beside it, and a dead link there is worse than none.
+  const brand = `<span class="mark">${MARK}</span><h1 style="font-size:16px">apiflow</h1>`;
+  // cm:guard Same element either way, so the two pages start at the same height: a link only on one
+  // of them shifted the whole rail by 16px, which is exactly the kind of drift nobody can name.
   return `<div class="rail">
-  <div class="brandbar"><span class="mark">${MARK}</span><h1 style="font-size:16px">apiflow</h1></div>
+  <div class="brandbar">${payload.homeHref === undefined ? `<span class="home">${brand}</span>`
+    : `<a class="home" href="${escapeHtml(payload.homeHref)}" title="về danh sách project">${brand}</a>`}</div>
   <nav>
     ${link('overview', 'Tổng quan')}
     ${link('endpoints', 'Endpoints', payload.map.endpoints.length)}
@@ -159,6 +167,7 @@ function rail(payload: AppPayload, counts: { alerts: number; high: number }, unr
     ${link('compare', 'So sánh')}
   </nav>
   <div class="railfoot">
+    ${payload.live ? '<button class="btn" id="add-open">+ Thêm project</button>' : ''}
     <button class="thbtn" id="theme-btn" type="button" title="đổi nền sáng / tối" style="width:100%">
       <span class="sw2"></span><span id="theme-label">theo hệ điều hành</span>
     </button>
@@ -236,7 +245,10 @@ export function renderApp(payload: AppPayload): string {
   const list = computeAlerts(payload.map);
   const counts = alertCounts(list);
   const reliability = [...endpointReliability(payload.map)].map(([id, r]) => [id, r.exact, r.inferred, r.guess] as const);
-  const name = payload.map.metadata.name;
+  // cm:guard Titled by the PROJECT when one backs the page, not by the map: the rail on the hub calls
+  // it `adminhub`, and landing on a page headed `adminhub-ui+adminhub-api` reads as a different thing.
+  // The map's own name still shows up in the generator line under the roots.
+  const name = payload.projectName ?? payload.map.metadata.name;
 
   return `<!doctype html>
 <html lang="vi">

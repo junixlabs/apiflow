@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { createApiMap, endpointId, finalizeApiMap } from '../core/apimap';
 import { embedJson, renderApp, SECTIONS } from './app';
+import { renderHub } from './hub';
 
 function mapWith(name: string) {
   const map = createApiMap(name, '/repo', 'apiflow scan-be/1');
@@ -139,6 +140,63 @@ describe('live extras', () => {
     expect(bare).toContain('id="add-open"');
     expect(bare).toContain('id="add-dlg"');
     expect(bare).not.toContain('id="scan-fe"');
+  });
+});
+
+describe('one shell for both pages', () => {
+  const project = renderApp({
+    map: mapWith('demo-api'), sourcePath: '/tmp/demo.apimap', live: true, projectId: 'demo', homeHref: '/',
+  });
+  const hub = renderHub(
+    [{ id: 'demo', name: 'Demo', fe: '/repo/web', maps: [] }],
+    { workspace: '/w', linkTo: () => null, live: true },
+    Date.parse('2026-08-20T10:00:00Z')
+  );
+
+  // cm:guard The hub and a project page are one design or they are two products. These are the
+  // structures that carry that: drift here is exactly what a reader feels as "another app".
+  it('lays both pages out in the same shell', () => {
+    for (const cls of ['class="app-shell"', 'class="rail"', 'class="main"', 'class="phead"',
+      'class="pident"', 'class="pmeta"', 'class="btnrow"', 'class="railfoot"']) {
+      expect(project, cls).toContain(cls);
+      expect(hub, cls).toContain(cls);
+    }
+  });
+
+  it('styles both pages from the one shell stylesheet', () => {
+    // cm:why Asserts a rule only APP_STYLE defines. Two pages that merely look alike drift the first
+    // time one of them grows its own copy of the rail.
+    for (const rule of ['.app-shell { display:grid; grid-template-columns:248px 1fr',
+      '.rail .railfoot', '.kpistrip .k1', '.watch a']) {
+      expect(project, rule).toContain(rule);
+      expect(hub, rule).toContain(rule);
+    }
+  });
+
+  it('puts the brand at the top of the rail on both, and makes it the way home', () => {
+    expect(hub).toContain('<div class="brandbar">');
+    expect(project).toContain('<div class="brandbar">');
+    expect(project).toContain('<a class="home" href="/"');
+    // cm:guard The hub IS home, so its brand is not a link — but it keeps the same element, or the
+    // two rails start at different heights.
+    expect(hub).toContain('<span class="home">');
+    expect(hub).not.toContain('<a class="home"');
+  });
+
+  it('leaves the offline file without a home link, because there is no hub beside it', () => {
+    const file = renderApp({ map: mapWith('demo-api'), sourcePath: '/tmp/demo.apimap', live: false });
+    expect(file).not.toContain('<a class="home"');
+    expect(file).toContain('<span class="home">');
+  });
+
+  // cm:guard `+ Thêm project` is a workspace action: in the header button row it read as one of the
+  // things you can do TO the project you opened.
+  it('keeps the workspace action at the foot of the rail on both, not in the header row', () => {
+    for (const page of [project, hub]) {
+      const foot = page.slice(page.indexOf('class="railfoot"'));
+      expect(foot).toContain('id="add-open"');
+      expect(page.slice(0, page.indexOf('class="railfoot"'))).not.toContain('id="add-open"');
+    }
   });
 });
 

@@ -28,7 +28,8 @@ function main(): void {
     const file = join(out, `${project.id}.html`);
     mkdirSync(dirname(file), { recursive: true });
     writeFileSync(file, renderApp({
-      map, sourcePath: mapPath(project.id, kind), live: false, kind,
+      map, sourcePath: mapPath(project.id, kind), live: false, kind, homeHref: './index.html',
+      projectName: project.name,
       sides: sidesOf(project.id), now, series: mapSeries(project.id, kind), epHistory: endpointHistory(project.id, kind),
     }));
     written.push(file);

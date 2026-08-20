@@ -90,18 +90,23 @@ describe('hub shell', () => {
 });
 
 describe('hub numbers', () => {
-  // cm:why The bar carries its own numbers instead of pointing at a legend elsewhere on the page.
-  it('labels each segment of the coverage bar with its own count', () => {
+  // cm:guard The reconciliation bar and its legend are the same four buckets, the same wording and the
+  // same class names as the project page's own overview — a reader must not have to re-learn the bar.
+  it('labels the coverage bar the way the project page labels it', () => {
     const html = hub([{ id: 'beta', name: 'Beta', fe: '/r', maps: [map({ both: 8, uncalled: 2, feOnly: 1, unpaired: 1 })] }]);
-    expect(html).toContain('có màn gọi');
+    expect(html).toContain('class="recon"');
+    expect(html).toContain('class="legend4"');
+    expect(html).toContain('khớp cả hai phía');
     expect(html).toContain('<b>8</b>');
     expect(html).not.toContain('Thanh màu trong mỗi thẻ');
   });
 
-  it('leaves out the segments that are zero rather than printing 0', () => {
+  it('keeps all four buckets in the legend so the grid does not move between projects', () => {
     const html = hub([{ id: 'b', name: 'B', fe: '/r', maps: [map({ both: 8, uncalled: 0, feOnly: 0, unpaired: 0 })] }]);
-    expect(html).toContain('<b>8</b> có màn gọi');
-    expect(html).not.toContain('<b>0</b>');
+    for (const label of ['khớp cả hai phía', 'API khai, không màn nào gọi', 'FE gọi, API không khai',
+      'chưa đối chiếu được']) {
+      expect(html, label).toContain(label);
+    }
   });
 
   it('sends each finding to the pane that shows it', () => {
@@ -112,8 +117,9 @@ describe('hub numbers', () => {
 
   it('keeps a finding unlinked when the project has no map page to open', () => {
     const html = hub([{ id: 'b', name: 'B', fe: '/r', maps: [map({ unresolved: 5 })] }], { linkTo: () => null });
-    expect(html).toContain('<span class="flag warn">5 unresolved</span>');
+    expect(html).toContain('<div class="warn"><span class="num">5</span>');
     expect(html).not.toContain('href="null');
+    expect(html).not.toContain('Mở bản đồ');
   });
 
   // cm:guard A stale map outranks every real finding: those numbers were measured on a repo the
@@ -123,8 +129,8 @@ describe('hub numbers', () => {
       { id: 'open', name: 'Open', be: '/r', maps: [map({ hasFe: false, hasBe: true, open: 40 })] },
       { id: 'moved', name: 'Moved', fe: '/r', maps: [map({ scannedFrom: '/old' })] },
     ]);
-    const todo = html.slice(html.indexOf('class="todo"'));
-    expect(todo.indexOf('gốc cũ')).toBeLessThan(todo.indexOf('không thấy cổng chặn'));
+    const todo = html.slice(html.indexOf('class="watch"'));
+    expect(todo.indexOf('gốc cũ')).toBeLessThan(todo.indexOf('không thấy cổng auth nào'));
   });
 
   it('says how many findings it did not print', () => {

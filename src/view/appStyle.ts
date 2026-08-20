@@ -1,24 +1,61 @@
 // cm:edge lockstep -> src/view/theme.ts — tokens live there; this file only lays out the app shell.
+// cm:edge contract -> src/view/hub.ts — the hub renders itself into this same shell (.app-shell,
+// .rail, .main, .phead, .panel, .kpistrip, .watch), so a rule renamed here restyles two pages.
+// cm:guard Nav item rules are scoped to `.rail nav a`, never `.rail a`: the brand is a link too, and
+// the unscoped selector handed it the padding of a nav item — 16px of drift between the two pages.
 export const APP_STYLE = `
-.app-shell { display:grid; grid-template-columns:210px 1fr; min-height:100vh; }
+.app-shell { display:grid; grid-template-columns:248px 1fr; min-height:100vh; }
 @media (max-width:900px) { .app-shell { grid-template-columns:1fr; } }
 .rail { border-right:1px solid var(--line); background:var(--surface-2); padding:16px 0 24px; }
 .rail .brandbar { padding:0 16px 16px; margin:0; }
+.rail .brandbar .home { display:flex; align-items:center; gap:9px; text-decoration:none; color:inherit; }
+.rail .brandbar a.home:hover { color:var(--brand); }
 .rail nav { display:flex; flex-direction:column; }
-.rail a { display:flex; align-items:center; gap:9px; padding:8px 16px; text-decoration:none;
+.rail nav a { display:flex; align-items:center; gap:9px; padding:8px 16px; text-decoration:none;
   color:var(--muted); font-size:13px; border-left:2px solid transparent; }
-.rail a:hover { background:var(--surface-3); color:var(--ink); }
-.rail a.on { color:var(--ink); font-weight:600; border-left-color:var(--brand); background:var(--surface); }
-.rail a .ico { flex:none; opacity:.7; }
-.rail a.on .ico { opacity:1; color:var(--brand); }
-.rail a .lbl { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.rail a .n { margin-left:auto; font:11px ui-monospace,monospace; color:var(--muted); }
-.rail a.warn .n { color:var(--guess); }
-.rail a.bad .n { color:var(--dead); }
+.rail nav a:hover { background:var(--surface-3); color:var(--ink); }
+.rail nav a.on { color:var(--ink); font-weight:600; border-left-color:var(--brand); background:var(--surface); }
+.rail nav a .ico { flex:none; opacity:.7; }
+.rail nav a.on .ico { opacity:1; color:var(--brand); }
+.rail nav a .lbl { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.rail nav a .n { margin-left:auto; font:11px ui-monospace,monospace; color:var(--muted); }
+.rail nav a.warn .n { color:var(--guess); }
+.rail nav a.bad .n { color:var(--dead); }
 .rail .sep { height:1px; background:var(--line); margin:12px 16px; }
 .rail { display:flex; flex-direction:column; }
-.rail .railfoot { margin-top:auto; padding:14px 16px 0; border-top:1px solid var(--line); }
-.rail .foot { margin:9px 0 0; font-size:10.5px; color:var(--muted); word-break:break-all; line-height:1.5; }
+.rail .railfoot { margin-top:auto; padding:14px 16px 0; border-top:1px solid var(--line);
+  display:flex; flex-direction:column; gap:9px; }
+.rail .railfoot .btn { width:100%; }
+.rail .foot { margin:0; font-size:10.5px; color:var(--muted); word-break:break-all; line-height:1.5; }
+
+.rail .railhead { padding:0 12px 11px; margin:0 0 8px; border-bottom:1px solid var(--line);
+  display:flex; flex-direction:column; gap:7px; }
+.rail .railhead .search { min-width:0; }
+.rail .railhead .search input { font:12.5px inherit; }
+.rail .railhead .two { display:flex; gap:6px; }
+.rail .railhead select { flex:1 1 0; min-width:0; border:1px solid var(--line); border-radius:7px;
+  background:var(--surface); color:var(--ink-2); font:11.5px inherit; padding:5px 6px; }
+.rail .railhead .cnt { font-size:11px; color:var(--muted); }
+.rail .railitems { flex:1 1 auto; overflow:auto; }
+.rail .ri { display:block; width:100%; text-align:left; font:inherit; color:var(--muted);
+  cursor:pointer; background:transparent; border:0; border-left:2px solid transparent;
+  padding:8px 16px; }
+.rail .ri:hover { background:var(--surface-3); color:var(--ink); }
+.rail .ri.on { color:var(--ink); border-left-color:var(--brand); background:var(--surface); }
+.rail .ri .l1 { display:flex; align-items:center; gap:7px; min-width:0; }
+.rail .ri .nm { font-size:13px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.rail .ri.on .nm { font-weight:600; }
+.rail .ri .sides { margin-left:auto; flex:none; font:600 9px/1 ui-sans-serif,sans-serif;
+  letter-spacing:.07em; border:1px solid var(--line-2); border-radius:999px; padding:3px 6px; }
+.rail .ri .l2, .rail .ri .l3 { margin-top:5px; display:flex; align-items:center; gap:7px;
+  font-size:11px; color:var(--muted); white-space:nowrap; min-width:0; }
+.rail .ri .l2 .num { overflow:hidden; text-overflow:ellipsis; }
+.rail .ri .l3 .bad { color:var(--dead); font-weight:620; }
+.rail .ri .l3 .warn { color:var(--guess); }
+.rail .ri.allrow { padding-bottom:11px; margin-bottom:7px; border-bottom:1px solid var(--line); }
+.micro { display:flex; width:50px; height:5px; border-radius:999px; overflow:hidden;
+  background:var(--surface-3); flex:none; }
+.micro i { display:block; }
 
 .main { min-width:0; padding:18px 24px 60px; display:flex; flex-direction:column; }
 .phead { display:grid; grid-template-columns:auto 1fr auto; align-items:start; gap:8px 20px;
@@ -40,6 +77,16 @@ export const APP_STYLE = `
 .side-row .dim { color:var(--muted); font-size:11px; }
 .side-row.gen { margin-top:2px; }
 .btnrow { display:flex; gap:8px; align-items:center; }
+
+.kpistrip { display:grid; grid-template-columns:repeat(6,minmax(0,1fr)); gap:10px; margin:0 0 14px; }
+@media (max-width:1250px) { .kpistrip { grid-template-columns:repeat(3,minmax(0,1fr)); } }
+.kpistrip .k1 { border:1px solid var(--line); border-radius:10px; background:var(--surface); padding:8px 11px 9px; }
+.kpistrip .k1 .lab { font-size:9.5px; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); }
+.kpistrip .k1 .val { font:650 20px/1.25 ui-sans-serif,sans-serif; letter-spacing:-.02em; margin-top:1px; }
+.kpistrip .k1 .dlt { font-size:10.5px; color:var(--muted); }
+.kpistrip .k1 .dlt.up { color:var(--exact); } .kpistrip .k1 .dlt.down { color:var(--dead); }
+.kpistrip .k1.alarm .val { color:var(--dead); }
+.kpistrip .k1 .spark { display:block; margin-top:3px; }
 
 .kpis { display:grid; grid-template-columns:repeat(auto-fit,minmax(148px,1fr)); gap:12px; margin:0 0 16px; }
 .kpi { border:1px solid var(--line); border-radius:11px; background:var(--surface); padding:11px 13px; }

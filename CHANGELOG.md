@@ -162,6 +162,33 @@ All notable changes to API View are documented here.
 - Clearing the last remaining side is refused, and so is a blank name — the old value is kept and the
   refusal is shown rather than the edit being silently dropped.
 
+### Changed — one shell for both pages
+
+The hub and a project page were two designs: a windowed page with the brand in a top bar and the theme
+control on the right, versus a full-bleed app with the brand in the rail and the theme control at its
+foot. Opening a project felt like leaving the application. They are now the same shell, and the shell
+lives in one file — `appStyle.ts` — so the next change lands on both.
+
+- The hub renders into `.app-shell` / `.rail` / `.main` / `.phead` / `.panel` / `.kpistrip` / `.watch`,
+  the project page's own components. Its cards' bespoke `.dbox`, `.totals`, `.bar3`, `.lgd` and `.todo`
+  are gone; the reconciliation bar is the same `.recon` + `.legend4` with the same four bucket names, so
+  a bar on the hub and the bar on the page it links to can no longer tell different stories.
+- One rail width (248px) and one brand position for both pages. The brand is now the way back to the
+  workspace: a link on a project page, the same element unlinked on the hub, and unlinked in the file
+  `apiflow view` writes — a dead link in an offline file is worse than none.
+- `+ Thêm project` moved from the project header to the foot of the rail on both pages. It is a
+  workspace action; in the header row it read as one of the things you can do to the project you opened.
+- A project page is now titled by the project (`adminhub`), not by the map (`adminhub-ui+adminhub-api`).
+  The rail on the hub calls it `adminhub`, so landing on a differently-named page read as another thing.
+  The map's own name still shows in the generator line under the roots.
+- Both pages' tiles carry the same three lines, so the two strips are the same height, and every tile on
+  the hub says which map it was measured on — a project can hold three.
+
+### Fixed
+
+- Nav item styling was scoped to `.rail a`, which caught the brand link and handed it a nav item's
+  padding: 16px of drift between two pages whose whole point was to look alike. Scoped to `.rail nav a`.
+
 ### Changed — the hub is a rail and a detail pane, not a wall of cards
 
 - `/` is now the same shape as a project page: the project list is a rail down the left, one project's
