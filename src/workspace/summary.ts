@@ -73,3 +73,24 @@ export function summarize(map: ApiMapFile): ProjectSummary {
     confidence,
   };
 }
+
+export interface Reliability {
+  exact: number;
+  inferred: number;
+  guess: number;
+  calls: number;
+}
+
+// cm:guard Distribution of EVIDENCE, never a health score. One call at `exact` is not stronger than
+// twenty calls at 90% exact, so `calls` travels with the split and any reader must show both.
+// cm:edge contract -> src/cli/viewGraph.ts — the per-row micro-bar renders exactly this split.
+export function endpointReliability(map: ApiMapFile): Map<string, Reliability> {
+  const out = new Map<string, Reliability>();
+  for (const call of map.calls) {
+    const row = out.get(call.endpointId) ?? { exact: 0, inferred: 0, guess: 0, calls: 0 };
+    row[call.confidence]++;
+    row.calls++;
+    out.set(call.endpointId, row);
+  }
+  return out;
+}

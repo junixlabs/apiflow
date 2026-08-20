@@ -1,3 +1,4 @@
+import { parseMap } from '../core/apimap';
 import { mkdirSync, readFileSync, realpathSync, writeFileSync } from 'fs';
 import { dirname, resolve } from 'path';
 import { fileURLToPath } from 'url';
@@ -244,7 +245,7 @@ function main(): void {
     process.exit(1);
   }
   const mapPath = resolve(positional[0]);
-  const map = JSON.parse(readFileSync(mapPath, 'utf8')) as ApiMapFile;
+  const map = parseMap(readFileSync(mapPath, 'utf8'));
   if (map.version !== 1) throw new Error(`unsupported .apimap version: ${String(map.version)}`);
 
   const outPath = resolve(flag('out') ?? mapPath.replace(/\.apimap$/, '') + '.html');

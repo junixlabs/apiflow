@@ -161,6 +161,20 @@ export interface Origin {
   file: string;
   symbol: string;
   member?: string;
+  line?: number;
+}
+
+// cm:why Roles come from the NAMING CONVENTION, not from analysis: `use*` is a hook by convention
+// and Capitalised is a component by convention. Recorded as a hint for reading the chain, never as a
+// fact about what the module is.
+export type ChainRole = 'client' | 'hook' | 'component' | 'module' | 'screen';
+
+export interface ChainStep {
+  file: string;
+  symbol: string;
+  line: number;
+  role: ChainRole;
+  precise: boolean;
 }
 
 export interface Attribution {
@@ -170,6 +184,15 @@ export interface Attribution {
   hops: number;
   precise: boolean;
   line: number;
+  chain: ChainStep[];
+}
+
+export function roleOf(symbol: string, isOrigin: boolean, isScreen: boolean): ChainRole {
+  if (isScreen) return 'screen';
+  if (isOrigin) return 'client';
+  if (/^use[A-Z]/.test(symbol)) return 'hook';
+  if (/^[A-Z]/.test(symbol)) return 'component';
+  return 'module';
 }
 
 export const MAX_FAN_OUT = 40;
@@ -188,14 +211,22 @@ export function attributeToScreens(
 ): Attribution[] {
   const found: Attribution[] = [];
   const seen = new Set<string>();
-  let frontier: Array<Origin & { hops: number; precise: boolean }> = [{ ...origin, hops: 0, precise: true }];
+  const originStep: ChainStep = {
+    file: origin.file,
+    symbol: origin.symbol,
+    line: origin.line ?? 0,
+    role: roleOf(origin.symbol, true, false),
+    precise: true,
+  };
+  let frontier: Array<Origin & { hops: number; precise: boolean; chain: ChainStep[] }> =
+    [{ ...origin, hops: 0, precise: true, chain: [originStep] }];
 
   // cm:guard Bound the walk by ROUNDS, not by frontier[0].hops — an intra-file edge deliberately
   // keeps hops the same, so reading depth off one entry would stop the walk early or never.
   let rounds = 0;
   while (frontier.length > 0 && rounds < maxDepth * 2 && found.length < MAX_FAN_OUT) {
     rounds++;
-    const next: Array<Origin & { hops: number; precise: boolean }> = [];
+    const next: Array<Origin & { hops: number; precise: boolean; chain: ChainStep[] }> = [];
     for (const current of frontier) {
       const key = `${current.file}|${current.symbol}|${current.member ?? ''}`;
       if (seen.has(key)) continue;
@@ -215,6 +246,10 @@ export function attributeToScreens(
           member: usage.member === undefined ? current.member : enclosing.member,
           hops: current.hops,
           precise: current.precise,
+          chain: [...current.chain, {
+            file: current.file, symbol: enclosing.symbol, line: usage.line,
+            role: roleOf(enclosing.symbol, false, false), precise: current.precise,
+          }],
         });
       }
 
@@ -250,6 +285,16 @@ export function attributeToScreens(
               hops: current.hops + 1,
               precise,
               line: usage.line,
+              // cm:guard Names the module's default export, not `symbolAt`: line 113 of a screen is
+              // JSX inside the return, so the nearest declaration above it is some inner handler —
+              // truthful about the line, misleading about whose chain step this is.
+              chain: [...current.chain, {
+                file: consumer.file,
+                symbol: module.parsed.defaultExport ?? enclosing.symbol,
+                line: usage.line,
+                role: 'screen',
+                precise,
+              }],
             });
           } else {
             // cm:guard The symbol INSIDE a file is not the name its consumers import — a default
@@ -261,6 +306,10 @@ export function attributeToScreens(
               member: usage.member === undefined ? current.member : enclosing.member,
               hops: current.hops + 1,
               precise: precise && exported,
+              chain: [...current.chain, {
+                file: consumer.file, symbol: enclosing.symbol, line: usage.line,
+                role: roleOf(enclosing.symbol, false, false), precise: precise && exported,
+              }],
             });
           }
         }

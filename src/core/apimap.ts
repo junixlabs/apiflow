@@ -65,12 +65,31 @@ export interface FieldNode {
   source?: SourceRef;
 }
 
+export interface ChainNode {
+  file: string;
+  symbol: string;
+  line: number;
+  role: 'client' | 'hook' | 'component' | 'module' | 'screen';
+  precise: boolean;
+}
+
 export interface CallEdge {
   screenId: string;
   endpointId: string;
   via: string;
   confidence: Confidence;
   source: SourceRef;
+  // cm:why The PATH, not just its length: "3 hop" cannot be read, while
+  // `api client -> useUpdateUser -> UserEditForm -> /user/:id` is the answer someone can act on.
+  // Optional so a map written before this field stays valid at version 1.
+  chain?: ChainNode[];
+}
+
+// cm:guard On-disk shape ONLY. Every layer above works with `chain` inline; indices exist so a file
+// path is written once instead of once per call, and `link` never has to renumber anything.
+interface StoredCallEdge extends Omit<CallEdge, 'chain'> {
+  chain?: number[];
+  impreciseFrom?: number;
 }
 
 export interface ReadEdge {
@@ -226,7 +245,7 @@ export function finalizeApiMap(map: ApiMapFile): ApiMapFile {
 
 export interface ImpactAnswer {
   endpoint: EndpointNode | null;
-  screens: Array<{ screen: ScreenNode; confidence: Confidence; source: SourceRef }>;
+  screens: Array<{ screen: ScreenNode; confidence: Confidence; source: SourceRef; chain?: ChainNode[] }>;
 }
 
 export function screensAffectedByEndpoint(map: ApiMapFile, id: string): ImpactAnswer {
@@ -237,8 +256,9 @@ export function screensAffectedByEndpoint(map: ApiMapFile, id: string): ImpactAn
       screen: map.screens.find((s) => s.id === c.screenId),
       confidence: c.confidence,
       source: c.source,
+      chain: c.chain,
     }))
-    .filter((x): x is { screen: ScreenNode; confidence: Confidence; source: SourceRef } => !!x.screen);
+    .flatMap((x) => (x.screen === undefined ? [] : [{ ...x, screen: x.screen }]));
   return { endpoint, screens };
 }
 
@@ -410,4 +430,95 @@ export function undeliveredFields(map: ApiMapFile): FieldAudit[] {
 // known solely from a frontend call has no server side to be dead, and would always list as one.
 export function orphanEndpoints(map: ApiMapFile): EndpointNode[] {
   return map.endpoints.filter((e) => e.source && !map.calls.some((c) => c.endpointId === e.id));
+}
+
+export interface ScreenDependency {
+  endpoint: EndpointNode;
+  confidence: Confidence;
+  source: SourceRef;
+  viaHops?: number;
+}
+
+// cm:why The reverse direction is the same evidence read the other way — "màn này ăn API nào" is the
+// question a newcomer to a large FE asks, and it needs no new data, only this query.
+export function endpointsForScreen(map: ApiMapFile, screenId: string): ScreenDependency[] {
+  const byId = new Map(map.endpoints.map((e) => [e.id, e]));
+  const screen = map.screens.find((s) => s.id === screenId);
+  const out: ScreenDependency[] = [];
+  for (const call of map.calls) {
+    if (call.screenId !== screenId) continue;
+    const endpoint = byId.get(call.endpointId);
+    if (endpoint === undefined) continue;
+    out.push({ endpoint, confidence: call.confidence, source: call.source, viaHops: screen?.viaHops });
+  }
+  return out.sort((a, b) =>
+    a.endpoint.path.localeCompare(b.endpoint.path) || a.endpoint.method.localeCompare(b.endpoint.method)
+  );
+}
+
+// cm:guard Matches by ROUTE, so every screen node carrying that route is included — one route can be
+// reached through more than one module, and answering for only the first would understate the answer.
+export function screenIdsForRoute(map: ApiMapFile, route: string): string[] {
+  return map.screens.filter((s) => s.route === route).map((s) => s.id);
+}
+
+type ChainKey = string;
+
+const chainKey = (n: ChainNode): ChainKey => `${n.file}|${n.symbol}|${String(n.line)}|${n.role}`;
+
+// cm:why Interned at WRITE time and expanded at READ time, so nothing between the two ever sees an
+// index. Node chains repeat their file paths 52% of the time on a real map (adminhub-ui) — inlining
+// them cost 159% file growth, interning brings it to 70%.
+// cm:edge lockstep -> expandChains — the pair must round-trip, and a test asserts it does.
+export function serializeMap(map: ApiMapFile): string {
+  const table: ChainNode[] = [];
+  const index = new Map<ChainKey, number>();
+  const intern = (node: ChainNode): number => {
+    const key = chainKey(node);
+    const known = index.get(key);
+    if (known !== undefined) return known;
+    index.set(key, table.length);
+    table.push({ file: node.file, symbol: node.symbol, line: node.line, role: node.role, precise: true });
+    return table.length - 1;
+  };
+
+  const calls: StoredCallEdge[] = map.calls.map((call) => {
+    const { chain, ...rest } = call;
+    if (chain === undefined || chain.length === 0) return rest;
+    const stored: StoredCallEdge = { ...rest, chain: chain.map(intern) };
+    const lost = chain.findIndex((n) => !n.precise);
+    if (lost >= 0) stored.impreciseFrom = lost;
+    return stored;
+  });
+
+  const body: Record<string, unknown> = { ...map, calls };
+  // cm:guard Emitted only when non-empty: a map with no chains must serialize byte-for-byte the way
+  // it did before this field existed, or every stored map looks changed the first time it is rewritten.
+  if (table.length > 0) body.chainNodes = table.map((n) => ({ file: n.file, symbol: n.symbol, line: n.line, role: n.role }));
+  return `${JSON.stringify(body, null, 2)}\n`;
+}
+
+export function expandChains(raw: unknown): ApiMapFile {
+  const map = raw as Omit<ApiMapFile, 'calls'> & { chainNodes?: ChainNode[]; calls: StoredCallEdge[] };
+  const table = map.chainNodes;
+  if (table === undefined) return map as unknown as ApiMapFile;
+  const calls: CallEdge[] = map.calls.map((call) => {
+    const { chain, impreciseFrom, ...rest } = call;
+    if (chain === undefined) return rest;
+    return {
+      ...rest,
+      chain: chain.map((i, position) => ({
+        ...table[i],
+        precise: impreciseFrom === undefined ? true : position < impreciseFrom,
+      })),
+    };
+  });
+  const { chainNodes: _drop, ...withoutTable } = map;
+  return { ...withoutTable, calls } as ApiMapFile;
+}
+
+export function parseMap(text: string): ApiMapFile {
+  const map = expandChains(JSON.parse(text));
+  if (map.version !== 1) throw new Error(`unsupported .apimap version: ${String(map.version)}`);
+  return map;
 }

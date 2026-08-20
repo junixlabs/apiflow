@@ -5,7 +5,8 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { ApiMapFile } from '../core/apimap';
 import { addProject, findProject, readWorkspace, removeProject, slug, workspaceRoot } from './registry';
 import { contentHash, mapPath, projectDir, readMap, statusOf, writeMap } from './store';
-import { endpointState, summarize } from './summary';
+import { endpointReliability, endpointState, summarize } from './summary';
+import { alertCounts, alerts } from './alerts';
 
 let home: string;
 let repo: string;
@@ -167,5 +168,70 @@ describe('one-sided scans', () => {
     const sum = summarize(beOnlyMap);
     expect(sum).toMatchObject({ uncalled: 0, unpaired: 1, hasBe: true, hasFe: false });
     expect(endpointState(beOnlyMap, 'e1')).toBe('unpaired');
+  });
+});
+
+describe('alerts', () => {
+  const linked = mapWith({
+    endpoints: [
+      { id: 'get', method: 'GET', path: '/api/users', source: { file: 'api.php', line: 1 }, auth: true },
+      { id: 'post', method: 'POST', path: '/api/users', source: { file: 'api.php', line: 2 }, auth: true },
+      { id: 'put', method: 'PUT', path: '/api/users' },
+      { id: 'ghost', method: 'GET', path: '/api/nowhere' },
+      { id: 'open', method: 'GET', path: '/api/logs', source: { file: 'api.php', line: 3 }, auth: false },
+      { id: 'dead', method: 'DELETE', path: '/api/old', source: { file: 'api.php', line: 4 }, auth: true },
+    ],
+    screens: [{ id: 's1', label: '/u', route: '/user/:id', source: { file: 'p.tsx', line: 1 } }],
+    calls: [
+      { screenId: 's1', endpointId: 'put', via: 'axios', confidence: 'exact', source: { file: 'edit.ts', line: 7 } },
+      { screenId: 's1', endpointId: 'ghost', via: 'axios', confidence: 'guess', source: { file: 'g.ts', line: 3 } },
+      { screenId: 's1', endpointId: 'get', via: 'axios', confidence: 'exact', source: { file: 'l.ts', line: 1 } },
+    ],
+  });
+
+  it('separates a method mismatch from a path that does not exist', () => {
+    const list = alerts(linked);
+    const mismatch = list.find((a) => a.kind === 'method-mismatch');
+    expect(mismatch).toMatchObject({ method: 'PUT', path: '/api/users', severity: 'high' });
+    expect(mismatch?.detail).toContain('GET, POST');
+    expect(mismatch?.screens).toEqual(['/user/:id']);
+    expect(list.find((a) => a.kind === 'fe-only-path')).toMatchObject({ path: '/api/nowhere' });
+  });
+
+  // cm:why A guess-confidence mismatch may be an artefact of this tool's own path inference, so it
+  // must not be filed next to a finding backed by a literal string in the source.
+  it('grades severity by how well the call is known', () => {
+    expect(alerts(linked).find((a) => a.path === '/api/nowhere')?.severity).toBe('low');
+  });
+
+  it('reports an open gate and an uncalled endpoint', () => {
+    const kinds = alerts(linked).map((a) => a.kind);
+    expect(kinds).toContain('open-auth');
+    expect(kinds).toContain('uncalled');
+    expect(alertCounts(alerts(linked)).high).toBeGreaterThanOrEqual(2);
+  });
+
+  it('says nothing about a missing side it never scanned', () => {
+    const feOnly = mapWith({
+      endpoints: [{ id: 'x', method: 'GET', path: '/a' }],
+      screens: [{ id: 's', label: '/s', route: '/s', source: { file: 'p.tsx', line: 1 } }],
+      calls: [{ screenId: 's', endpointId: 'x', via: 'f', confidence: 'exact', source: { file: 'a.ts', line: 1 } }],
+    });
+    expect(alerts(feOnly)).toEqual([]);
+  });
+});
+
+describe('endpointReliability', () => {
+  it('splits calls per endpoint and keeps the count alongside', () => {
+    const m = mapWith({
+      endpoints: [{ id: 'e', method: 'GET', path: '/a' }],
+      screens: [{ id: 's', label: 'x', source: { file: 'p.tsx', line: 1 } }],
+      calls: [
+        { screenId: 's', endpointId: 'e', via: 'f', confidence: 'exact', source: { file: 'a.ts', line: 1 } },
+        { screenId: 's', endpointId: 'e', via: 'f', confidence: 'guess', source: { file: 'a.ts', line: 2 } },
+        { screenId: 's', endpointId: 'e', via: 'f', confidence: 'guess', source: { file: 'a.ts', line: 3 } },
+      ],
+    });
+    expect(endpointReliability(m).get('e')).toEqual({ exact: 1, inferred: 0, guess: 2, calls: 3 });
   });
 });

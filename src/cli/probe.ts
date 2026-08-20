@@ -2,7 +2,7 @@ import { existsSync, mkdirSync, readFileSync, realpathSync, writeFileSync } from
 import { dirname, join, resolve } from 'path';
 import { fileURLToPath } from 'url';
 import type { ApiMapFile } from '../core/apimap';
-import { finalizeApiMap, undeliveredFields } from '../core/apimap';
+import { finalizeApiMap, parseMap, undeliveredFields } from '../core/apimap';
 import type { Stack } from '../core/beScanner';
 import { detectStack } from '../core/beScanner';
 import type { ProbeSample } from '../core/probeHarness';
@@ -12,7 +12,7 @@ const RESULT_FILE = 'apiflow-probe.json';
 const MANIFESTS = ['artisan', 'composer.json', 'package.json', 'go.mod', 'pyproject.toml', 'requirements.txt'];
 
 function loadMap(path: string): ApiMapFile {
-  const map = JSON.parse(readFileSync(path, 'utf8')) as ApiMapFile;
+  const map = parseMap(readFileSync(path, 'utf8'));
   if (map.version !== 1) throw new Error(`unsupported .apimap version: ${String(map.version)}`);
   return map;
 }

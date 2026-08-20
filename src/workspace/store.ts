@@ -1,3 +1,4 @@
+import { parseMap, serializeMap } from '../core/apimap';
 import { existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from 'fs';
 import { join } from 'path';
 import type { ApiMapFile } from '../core/apimap';
@@ -21,7 +22,7 @@ export function mapPath(id: string, kind: MapKind): string {
 export function readMap(id: string, kind: MapKind): ApiMapFile | null {
   const file = mapPath(id, kind);
   if (!existsSync(file)) return null;
-  const map = JSON.parse(readFileSync(file, 'utf8')) as ApiMapFile;
+  const map = parseMap(readFileSync(file, 'utf8'));
   if (map.version !== 1) throw new Error(`.apimap version không hỗ trợ: ${String(map.version)}`);
   return map;
 }
@@ -31,7 +32,7 @@ export function readMap(id: string, kind: MapKind): ApiMapFile | null {
 export function writeMap(id: string, kind: MapKind, map: ApiMapFile): { file: string; history: string } {
   const dir = projectDir(id);
   mkdirSync(join(dir, 'history'), { recursive: true });
-  const body = `${JSON.stringify(map, null, 2)}\n`;
+  const body = serializeMap(map);
   const file = mapPath(id, kind);
   writeFileSync(file, body);
   const history = join(dir, 'history', `${kind}-${contentHash(body)}.apimap`);

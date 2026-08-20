@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { createApiMap, endpointId, fieldId, finalizeApiMap, normalizePath, screenId, screensAffectedByEndpoint, screensAffectedByField, unreadResponseFields } from './apimap';
 import type { ApiMapFile } from './apimap';
+import { createApiMap, endpointId, fieldId, finalizeApiMap, normalizePath, parseMap, screenId, screensAffectedByEndpoint, screensAffectedByField, serializeMap, unreadResponseFields } from './apimap';
 
 describe('normalizePath', () => {
   it('strips origin, query and hash', () => {
@@ -166,5 +166,54 @@ describe('optional route params', () => {
 
   it('still strips a real query string', () => {
     expect(normalizePath('/v1/companies?page=2')).toBe('/v1/companies');
+  });
+});
+
+describe('chain interning', () => {
+  const withChain = (): ApiMapFile => ({
+    version: 1,
+    metadata: { name: 'x', root: '/r', generator: 'g' },
+    screens: [{ id: 's1', label: '/u', route: '/u', source: { file: 'p.tsx', line: 1 } }],
+    endpoints: [{ id: 'e1', method: 'PUT', path: '/api/users' }],
+    fields: [],
+    calls: [
+      {
+        screenId: 's1', endpointId: 'e1', via: 'axios', confidence: 'inferred',
+        source: { file: 'api/edit.ts', line: 7 },
+        chain: [
+          { file: 'api/edit.ts', symbol: 'editUser', line: 7, role: 'client', precise: true },
+          { file: 'hooks/useEdit.ts', symbol: 'useEditUser', line: 12, role: 'hook', precise: true },
+          { file: 'p.tsx', symbol: 'UserPage', line: 53, role: 'screen', precise: false },
+        ],
+      },
+      {
+        screenId: 's1', endpointId: 'e1', via: 'axios', confidence: 'exact',
+        source: { file: 'api/edit.ts', line: 7 },
+        chain: [{ file: 'api/edit.ts', symbol: 'editUser', line: 7, role: 'client', precise: true }],
+      },
+    ],
+    reads: [],
+    unresolved: [],
+  });
+
+  it('round-trips a chain through serialize and parse', () => {
+    const back = parseMap(serializeMap(withChain()));
+    expect(back.calls[0].chain).toEqual(withChain().calls[0].chain);
+    expect(back.calls[1].chain).toEqual(withChain().calls[1].chain);
+  });
+
+  it('writes a repeated node once', () => {
+    const text = serializeMap(withChain());
+    expect(text.split('"api/edit.ts"').length - 1).toBe(3);
+    expect(JSON.parse(text).chainNodes).toHaveLength(3);
+  });
+
+  // cm:why Without this, every stored map without chains would look changed the first time it is
+  // rewritten — and the byte-identical invariant is how apiflow proves a re-scan found nothing new.
+  it('emits no chainNodes key at all when nothing has a chain', () => {
+    const bare = { ...withChain(), calls: withChain().calls.map(({ chain, ...c }) => c) };
+    const text = serializeMap(bare);
+    expect(text).not.toContain('chainNodes');
+    expect(text).toBe(`${JSON.stringify(bare, null, 2)}\n`);
   });
 });

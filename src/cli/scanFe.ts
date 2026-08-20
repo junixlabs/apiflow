@@ -2,11 +2,12 @@ import { readdirSync, readFileSync, mkdirSync, writeFileSync, statSync, realpath
 import { join, relative, resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import type { ApiMapFile, Confidence, ScreenNode, UnresolvedCall } from '../core/apimap';
-import { createApiMap, finalizeApiMap, screenId } from '../core/apimap';
+import { createApiMap, finalizeApiMap, screenId, serializeMap } from '../core/apimap';
 import type { ScanHints } from '../core/feScanner';
 import { enclosingSymbols, isScannableFile, memberAt, objectMembers, routeFromFilePath, scanFile, symbolAt } from '../core/feScanner';
 import type { ModuleNode, ResolveImport } from '../core/callerGraph';
 import { MAX_FAN_OUT, attributeToScreens, buildCallerGraph, parseModule, stripJsonComments } from '../core/callerGraph';
+import type { ChainStep } from '../core/callerGraph';
 import { findHttpWrappers } from '../core/wrappers';
 import { buildRouteTable } from '../core/routeTable';
 
@@ -182,6 +183,11 @@ export function resolveCallerHops(map: ApiMapFile, sources: Map<string, string>,
   }
   const graph = buildCallerGraph(modules, resolve);
 
+  // cm:why A module-level screen node carries `line: 1` on purpose — it stands for the whole module.
+  // The chain needs a real line, so the origin step points at where the symbol is DECLARED.
+  const declaredAt = (file: string, symbol: string): number =>
+    symbolIndex.get(file)?.symbols.find((s) => s.name === symbol)?.line ?? 1;
+
   const enclosingAt = (file: string, line: number) => {
     const index = symbolIndex.get(file);
     if (!index) return { symbol: file };
@@ -191,7 +197,7 @@ export function resolveCallerHops(map: ApiMapFile, sources: Map<string, string>,
 
   const screens = new Map(map.screens.map((s) => [s.id, s]));
   const extraScreens: ScreenNode[] = [];
-  const rewrite = new Map<string, Array<{ id: string; precise: boolean; hops: number }>>();
+  const rewrite = new Map<string, Array<{ id: string; precise: boolean; hops: number; chain: ChainStep[] }>>();
   let reattributed = 0;
   let stillModuleLevel = 0;
   const saturated: UnresolvedCall[] = [];
@@ -199,7 +205,7 @@ export function resolveCallerHops(map: ApiMapFile, sources: Map<string, string>,
   for (const screen of map.screens) {
     if (screen.route || !screen.symbol) continue;
     const attributions = attributeToScreens(
-      { file: screen.source.file, symbol: screen.symbol, member: screen.member },
+      { file: screen.source.file, symbol: screen.symbol, member: screen.member, line: declaredAt(screen.source.file, screen.symbol) },
       graph,
       enclosingAt
     );
@@ -232,7 +238,7 @@ export function resolveCallerHops(map: ApiMapFile, sources: Map<string, string>,
         screens.set(id, node);
         extraScreens.push(node);
       }
-      return { id, precise: a.precise, hops: a.hops };
+      return { id, precise: a.precise, hops: a.hops, chain: a.chain };
     });
     rewrite.set(screen.id, targets);
   }
@@ -253,7 +259,7 @@ export function resolveCallerHops(map: ApiMapFile, sources: Map<string, string>,
     calls: map.calls.flatMap((c) => {
       const targets = rewrite.get(c.screenId);
       if (!targets) return [c];
-      return targets.map((t) => ({ ...c, screenId: t.id, confidence: degrade(c.confidence, t.precise) }));
+      return targets.map((t) => ({ ...c, screenId: t.id, confidence: degrade(c.confidence, t.precise), chain: t.chain }));
     }),
     reads: map.reads.flatMap((r) => {
       const targets = rewrite.get(r.screenId);
@@ -322,13 +328,13 @@ function main(): void {
   const map = scanDirectory(root, name, hints);
 
   if (args.includes('--json')) {
-    process.stdout.write(JSON.stringify(map, null, 2));
+    process.stdout.write(serializeMap(map));
     return;
   }
 
   const outPath = resolve(flag('out') ?? join(root, '.apiview', 'map', `${name}.apimap`));
   mkdirSync(dirname(outPath), { recursive: true });
-  writeFileSync(outPath, `${JSON.stringify(map, null, 2)}\n`);
+  writeFileSync(outPath, serializeMap(map));
   console.log(renderReport(map, outPath));
 }
 

@@ -2,10 +2,10 @@ import { mkdirSync, readFileSync, realpathSync, writeFileSync } from 'fs';
 import { dirname, resolve } from 'path';
 import { fileURLToPath } from 'url';
 import type { ApiMapFile } from '../core/apimap';
-import { endpointsWithTracedReads, linkMaps, orphanEndpoints, undeliveredFields, unreadResponseFields } from '../core/apimap';
+import { endpointsWithTracedReads, linkMaps, orphanEndpoints, parseMap, serializeMap, undeliveredFields, unreadResponseFields } from '../core/apimap';
 
 function loadMap(path: string): ApiMapFile {
-  const map = JSON.parse(readFileSync(path, 'utf8')) as ApiMapFile;
+  const map = parseMap(readFileSync(path, 'utf8'));
   if (map.version !== 1) throw new Error(`unsupported .apimap version: ${String(map.version)}`);
   return map;
 }
@@ -68,7 +68,7 @@ function main(): void {
 
   const outPath = resolve(flag('out') ?? `${name.replace(/[^\w.+-]/g, '-')}.apimap`);
   mkdirSync(dirname(outPath), { recursive: true });
-  writeFileSync(outPath, `${JSON.stringify(joined, null, 2)}\n`);
+  writeFileSync(outPath, serializeMap(joined));
 
   const matched = joined.endpoints.filter((e) => e.linked).length;
 
