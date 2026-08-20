@@ -1,13 +1,14 @@
 import { readdirSync, readFileSync, mkdirSync, writeFileSync, statSync, realpathSync } from 'fs';
 import { join, relative, resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
-import type { ApiMapFile, Confidence, ScreenNode } from '../core/apimap';
+import type { ApiMapFile, Confidence, ScreenNode, UnresolvedCall } from '../core/apimap';
 import { createApiMap, finalizeApiMap, screenId } from '../core/apimap';
 import type { ScanHints } from '../core/feScanner';
 import { enclosingSymbols, isScannableFile, memberAt, objectMembers, routeFromFilePath, scanFile, symbolAt } from '../core/feScanner';
 import type { ModuleNode, ResolveImport } from '../core/callerGraph';
-import { attributeToScreens, buildCallerGraph, parseModule, stripJsonComments } from '../core/callerGraph';
+import { MAX_FAN_OUT, attributeToScreens, buildCallerGraph, parseModule, stripJsonComments } from '../core/callerGraph';
 import { findHttpWrappers } from '../core/wrappers';
+import { buildRouteTable } from '../core/routeTable';
 
 const GENERATOR = 'apiflow scan-fe/1';
 
@@ -55,11 +56,14 @@ function collectAliasConfigs(root: string): AliasConfig[] {
     } catch {
       continue;
     }
-    const baseUrl = config.compilerOptions?.baseUrl ?? '.';
+    const baseUrl = config.compilerOptions?.baseUrl;
     const aliases: Array<[string, string[]]> = [];
     for (const [pattern, targets] of Object.entries(config.compilerOptions?.paths ?? {})) {
-      aliases.push([pattern, targets.map((t) => normalizePosix(join(dir, baseUrl, t)))]);
+      aliases.push([pattern, targets.map((t) => normalizePosix(join(dir, baseUrl ?? '.', t)))]);
     }
+    // cm:guard `baseUrl` with no `paths` is the CRA/Vite default, and it makes EVERY bare import
+    // resolvable: without this fallback `from 'modules/auth/login'` resolves to nothing at all.
+    if (baseUrl !== undefined) aliases.push(['*', [normalizePosix(join(dir, baseUrl, '*'))]]);
     if (aliases.length > 0) configs.push({ dir, aliases });
   }
   return configs.sort((a, b) => b.dir.length - a.dir.length);
@@ -114,7 +118,7 @@ function normalizePosix(p: string): string {
   return p.split('\\').join('/').replace(/^\.\//, '');
 }
 
-export const lastScanStats = { serverFilesSkipped: 0, wrappers: 0 };
+export const lastScanStats = { serverFilesSkipped: 0, wrappers: 0, declaredRoutes: 0 };
 
 export function scanDirectory(root: string, name: string, hints?: ScanHints): ApiMapFile {
   const map = createApiMap(name, root, GENERATOR);
@@ -148,11 +152,12 @@ export function scanDirectory(root: string, name: string, hints?: ScanHints): Ap
 }
 
 export interface HopStats {
+  saturated: number;
   reattributed: number;
   stillModuleLevel: number;
 }
 
-export let lastHopStats: HopStats = { reattributed: 0, stillModuleLevel: 0 };
+export let lastHopStats: HopStats = { reattributed: 0, stillModuleLevel: 0, saturated: 0 };
 
 // cm:edge protocol -> src/core/callerGraph.ts — runs AFTER every file is scanned, because a call in
 // an api module can only be attributed once the whole import graph exists.
@@ -164,9 +169,15 @@ export function resolveCallerHops(map: ApiMapFile, sources: Map<string, string>,
     { symbols: Array<{ line: number; name: string }>; members: Array<{ line: number; name: string }>; lines: string[] }
   >();
 
+  // cm:why File-based routing covers Next/Nuxt/Remix and nothing else — a Vite SPA declares its
+  // routes in JSX, so without the table every screen in the app is invisible to the hop.
+  const table = buildRouteTable([...sources].map(([file, content]) => ({ file, content })), resolve);
+  lastScanStats.declaredRoutes = table.routes.size;
+
   const modules: ModuleNode[] = [];
   for (const [file, content] of sources) {
-    modules.push({ file, parsed: parseModule(content), route: routeFromFilePath(file) });
+    const declared = table.routes.get(file);
+    modules.push({ file, parsed: parseModule(content), route: routeFromFilePath(file) ?? declared?.[0] });
     symbolIndex.set(file, { symbols: enclosingSymbols(content), members: objectMembers(content), lines: content.split('\n') });
   }
   const graph = buildCallerGraph(modules, resolve);
@@ -183,6 +194,7 @@ export function resolveCallerHops(map: ApiMapFile, sources: Map<string, string>,
   const rewrite = new Map<string, Array<{ id: string; precise: boolean; hops: number }>>();
   let reattributed = 0;
   let stillModuleLevel = 0;
+  const saturated: UnresolvedCall[] = [];
 
   for (const screen of map.screens) {
     if (screen.route || !screen.symbol) continue;
@@ -193,6 +205,17 @@ export function resolveCallerHops(map: ApiMapFile, sources: Map<string, string>,
     );
     if (attributions.length === 0) {
       stillModuleLevel++;
+      continue;
+    }
+    // cm:guard Saturation is reported, never truncated: through re-export barrels one call reaches
+    // hundreds of screens, and naming 40 arbitrary ones answers the question wrongly, not partially.
+    if (attributions.length >= MAX_FAN_OUT) {
+      stillModuleLevel++;
+      saturated.push({
+        source: screen.source,
+        reason: `reachable from ${attributions.length}+ screens through re-exports — too wide to name a screen`,
+        snippet: screen.symbol,
+      });
       continue;
     }
     reattributed++;
@@ -214,8 +237,8 @@ export function resolveCallerHops(map: ApiMapFile, sources: Map<string, string>,
     rewrite.set(screen.id, targets);
   }
 
-  lastHopStats = { reattributed, stillModuleLevel };
-  if (rewrite.size === 0) return map;
+  lastHopStats = { reattributed, stillModuleLevel, saturated: saturated.length };
+  if (rewrite.size === 0) return { ...map, unresolved: [...map.unresolved, ...saturated] };
 
   // cm:why Confidence only ever drops across a hop. An imprecise hop (member unknown on one side)
   // widens the blast radius, so the edge must stop claiming to be exact.
@@ -225,6 +248,7 @@ export function resolveCallerHops(map: ApiMapFile, sources: Map<string, string>,
   const keep = (id: string) => !rewrite.has(id);
   return {
     ...map,
+    unresolved: [...map.unresolved, ...saturated],
     screens: [...map.screens.filter((s) => keep(s.id)), ...extraScreens],
     calls: map.calls.flatMap((c) => {
       const targets = rewrite.get(c.screenId);
@@ -260,8 +284,14 @@ export function renderReport(map: ApiMapFile, outPath: string): string {
   lines.push(`**Fields traced**: ${map.fields.length}`);
   lines.push(
     `**Attributed to a route**: ${lastHopStats.reattributed} call sites walked back to a screen · ` +
-      `${lastHopStats.stillModuleLevel} stopped at module level`
+      `${lastHopStats.stillModuleLevel} stopped at module level` +
+      (lastHopStats.saturated > 0
+        ? ` (trong đó ${lastHopStats.saturated} bị bỏ vì fan-out quá rộng — xem Unresolved)`
+        : '')
   );
+  if (lastScanStats.declaredRoutes > 0) {
+    lines.push(`**Route khai trong code**: ${lastScanStats.declaredRoutes} file gắn với một route`);
+  }
   if (lastScanStats.wrappers > 0) lines.push(`**Client wrappers followed**: ${lastScanStats.wrappers}`);
   if (lastScanStats.serverFilesSkipped > 0) {
     lines.push(`**Server files skipped**: ${lastScanStats.serverFilesSkipped} (route registrations, not calls)`);
