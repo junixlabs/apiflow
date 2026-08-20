@@ -80,11 +80,14 @@ const LARAVEL_PREFIX = /->prefix\s*\(\s*(['"])([^'"]*)\1\s*\)|['"]prefix['"]\s*=
 
 // cm:why Route::resource is one line that registers five endpoints. Expanding it is not a nicety —
 // a Laravel map that skips it silently loses most of the API surface.
+// cm:guard `update` answers on PUT *and* PATCH — Laravel registers both for one resource line, so
+// emitting only PUT leaves one real endpoint per resource missing from the map.
 const RESOURCE_ACTIONS: Array<[string, string, string]> = [
   ['GET', '', 'index'],
   ['POST', '', 'store'],
   ['GET', '/{id}', 'show'],
   ['PUT', '/{id}', 'update'],
+  ['PATCH', '/{id}', 'update'],
   ['DELETE', '/{id}', 'destroy'],
 ];
 

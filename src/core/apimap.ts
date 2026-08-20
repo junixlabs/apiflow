@@ -146,6 +146,9 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 export function normalizePath(raw: string): string {
   let p = raw.trim();
   p = p.replace(/^[a-z][a-z0-9+.-]*:\/\/[^/]+/i, '');
+  // cm:guard An optional route param carries a `?` INSIDE the braces — `{country_code?}` — so it has
+  // to become a param before the query string is cut, or the cut eats its closing brace.
+  p = p.replace(/\{[^{}]*\?\}/g, '{param}');
   p = p.replace(/[?#].*$/, '');
   p = stripInterpolations(p);
   p = p.replace(/'\s*\+\s*[^+]+\s*\+\s*'/g, '{param}');

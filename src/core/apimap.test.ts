@@ -158,3 +158,13 @@ describe('normalizePath root', () => {
     expect(normalizePath('')).toBe('/');
   });
 });
+
+describe('optional route params', () => {
+  it('keeps an optional Laravel param instead of losing its closing brace', () => {
+    expect(normalizePath('/v1/paygates/currencies/{country_code?}')).toBe('/v1/paygates/currencies/{param}');
+  });
+
+  it('still strips a real query string', () => {
+    expect(normalizePath('/v1/companies?page=2')).toBe('/v1/companies');
+  });
+});

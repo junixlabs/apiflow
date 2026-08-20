@@ -59,11 +59,10 @@ Route::middleware('auth:sanctum')->prefix('v1')->group(function () {
     Route::get('reports/{id}', [\\App\\Http\\Controllers\\ReportController::class, 'show']);
 });`;
 
-  it('expands apiResource into five endpoints under the group prefix', () => {
+  it('expands apiResource the way Laravel registers it, PATCH included', () => {
     const scan = scanBackendFile('routes/api.php', routes, 'laravel');
     const users = scan.routes.filter((r) => r.path.startsWith('/v1/users'));
-    expect(users).toHaveLength(5);
-    expect(users.map((r) => r.method).sort()).toEqual(['DELETE', 'GET', 'GET', 'POST', 'PUT']);
+    expect(users.map((r) => r.method).sort()).toEqual(['DELETE', 'GET', 'GET', 'PATCH', 'POST', 'PUT']);
     expect(users.every((r) => r.auth)).toBe(true);
   });
 
@@ -523,10 +522,14 @@ Route::apiResource('plain', PlainController::class);`;
   });
 
   it('drops the actions named by ->except across a multi-line call', () => {
-    expect(of('menus')).toEqual(['GET', 'GET', 'POST', 'PUT']);
+    expect(of('menus').filter((m) => m === 'DELETE')).toEqual([]);
   });
 
-  it('still emits all five when the resource is unrestricted', () => {
-    expect(of('plain')).toEqual(['DELETE', 'GET', 'GET', 'POST', 'PUT']);
+  it('still emits every action when the resource is unrestricted', () => {
+    expect(of('plain')).toEqual(['DELETE', 'GET', 'GET', 'PATCH', 'POST', 'PUT']);
+  });
+
+  it('answers update on PATCH as well as PUT', () => {
+    expect(of('menus')).toEqual(['GET', 'GET', 'PATCH', 'POST', 'PUT']);
   });
 });
