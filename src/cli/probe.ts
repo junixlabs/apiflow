@@ -7,6 +7,7 @@ import type { Stack } from '../core/beScanner';
 import { detectStack } from '../core/beScanner';
 import type { ProbeSample } from '../core/probeHarness';
 import { buildHarness, ingestSamples } from '../core/probeHarness';
+import { localRootFor } from '../workspace/registry';
 
 const RESULT_FILE = 'apiflow-probe.json';
 const MANIFESTS = ['artisan', 'composer.json', 'package.json', 'go.mod', 'pyproject.toml', 'requirements.txt'];
@@ -35,7 +36,6 @@ function main(): void {
   }
   const mapPath = resolve(positional[0]);
   const map = loadMap(mapPath);
-  const root = flag('root') ?? map.metadata.root;
   const ingestPath = flag('ingest');
 
   if (ingestPath) {
@@ -67,6 +67,13 @@ function main(): void {
     return;
   }
 
+  const root = flag('root') ?? localRootFor(map.metadata.root);
+  if (root === undefined) {
+    console.error(`Không biết ${map.metadata.root} nằm ở đâu trên máy này.`);
+    console.error('Bản đồ chỉ ghi repo, không ghi đường dẫn máy — đưa nó vào bằng --root=<dir>,');
+    console.error('hoặc thêm project vào workspace: apiflow project add <tên> --be=<dir>');
+    process.exit(1);
+  }
   const emitDir = resolve(flag('emit') ?? root);
   const stack = stackOf(emitDir, flag('stack'));
   const harness = buildHarness(stack, map.endpoints, RESULT_FILE);

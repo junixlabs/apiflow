@@ -1,6 +1,7 @@
 import type { ApiMapFile, Confidence, MapMethod, SourceRef } from '../core/apimap';
+import { bePartial } from '../core/apimap';
 
-export type AlertKind = 'method-mismatch' | 'fe-only-path' | 'open-auth' | 'uncalled' | 'murky-auth';
+export type AlertKind = 'method-mismatch' | 'fe-only-path' | 'open-auth' | 'uncalled' | 'murky-auth' | 'be-partial';
 
 export type Severity = 'high' | 'medium' | 'low';
 
@@ -55,12 +56,31 @@ export function alerts(map: ApiMapFile): Alert[] {
   const bySignal = (best: Confidence | undefined): Severity =>
     best === 'exact' ? 'high' : best === 'inferred' ? 'medium' : 'low';
 
+  const declaredCount = map.endpoints.filter((e) => e.source !== undefined).length;
+  const undeclaredCalled = map.endpoints.filter((e) => e.source === undefined && (callsOf.get(e.id) ?? []).length > 0).length;
+  // cm:guard Suppressing the per-endpoint findings is not the same as hiding them: one alert still
+  // fires carrying both numbers, because a BE map this thin is itself the thing that needs fixing.
+  const partial = bePartial(map);
+
   const out: Alert[] = [];
+  if (partial) {
+    out.push({
+      kind: 'be-partial',
+      severity: 'medium',
+      endpointId: '',
+      method: 'GET',
+      path: '',
+      detail: `Phía BE chỉ đọc được ${declaredCount} endpoint, trong khi FE gọi ${undeclaredCalled} endpoint không thấy khai — ` +
+        'con số đó là scanner chưa đọc được mặt API, không phải API thiếu. So sánh hai phía chưa dùng được.',
+      screens: [],
+      evidence: [],
+    });
+  }
   for (const e of map.endpoints) {
     const ctx = context(e.id);
     const base = { endpointId: e.id, method: e.method, path: e.path, screens: ctx.screens, evidence: ctx.evidence, bestConfidence: ctx.best };
 
-    if (e.source === undefined && hasBe) {
+    if (e.source === undefined && hasBe && !partial) {
       const declared = declaredMethods.get(e.path);
       if (declared !== undefined) {
         out.push({
@@ -100,7 +120,7 @@ export function alerts(map: ApiMapFile): Alert[] {
 }
 
 export function alertCounts(list: Alert[]): { total: number; high: number; byKind: Record<AlertKind, number> } {
-  const byKind = { 'method-mismatch': 0, 'fe-only-path': 0, 'open-auth': 0, uncalled: 0, 'murky-auth': 0 };
+  const byKind = { 'method-mismatch': 0, 'fe-only-path': 0, 'open-auth': 0, uncalled: 0, 'murky-auth': 0, 'be-partial': 0 };
   for (const a of list) byKind[a.kind]++;
   return { total: list.length, high: list.filter((a) => a.severity === 'high').length, byKind };
 }

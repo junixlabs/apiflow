@@ -1,9 +1,10 @@
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'fs';
+import { scanOrigin } from './scanOrigin';
 import { tmpdir } from 'os';
 import { join } from 'path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { ApiMapFile } from '../core/apimap';
-import { parseMap } from '../core/apimap';
+import { createApiMap, endpointId, finalizeApiMap, parseMap, screenId } from '../core/apimap';
 import { addProject, findProject, readWorkspace, removeProject, slug, updateProject, workspaceRoot } from './registry';
 import { hubProjects } from './hubData';
 import { contentHash, historyOf, mapPath, projectDir, readMap, statusOf, writeMap } from './store';
@@ -416,21 +417,59 @@ describe('hub staleness', () => {
   it('reports the root a map was scanned from once the project points elsewhere', () => {
     const moved = mkdtempSync(join(tmpdir(), 'apiflow-moved-'));
     addProject({ name: 'lech', fe: repo });
-    writeMap('lech', 'fe', mapWith({ metadata: { name: 'lech', root: repo, generator: 'apiflow test' } }));
+    writeMap('lech', 'fe', mapWith({ metadata: { name: 'lech', root: scanOrigin(repo), generator: 'apiflow test' } }));
     expect(hubProjects()[0].maps[0].scannedFrom).toBeUndefined();
 
     updateProject('lech', { fe: moved });
     // cm:why The map is NOT deleted when a root moves, so this flag is the only thing standing
     // between the reader and a card of numbers measured on a different repo.
-    expect(hubProjects()[0].maps[0].scannedFrom).toBe(repo);
+    expect(hubProjects()[0].maps[0].scannedFrom).toBe(scanOrigin(repo));
     rmSync(moved, { recursive: true, force: true });
   });
 
   it('accepts a linked map whose root names both sides', () => {
     addProject({ name: 'ghep', fe: repo, be: repo });
     writeMap('ghep', 'linked', mapWith({
-      metadata: { name: 'ghep', root: `${repo} + ${repo}`, generator: 'apiflow link/1' },
+      metadata: { name: 'ghep', root: `${scanOrigin(repo)} + ${scanOrigin(repo)}`, generator: 'apiflow link/1' },
     }));
     expect(hubProjects()[0].maps[0].scannedFrom).toBeUndefined();
+  });
+});
+
+describe('a BE half too thin to compare', () => {
+  // cm:why This is the getcontent case measured on 2026-08-20: 2 routes read out of 103, because the
+  // mount sites carry no literal path. Without the guard the map reports 86 endpoints the API "does
+  // not declare" — and an agent handed that list goes and edits an API that was never wrong.
+  function thinBe(): ApiMapFile {
+    const map = createApiMap('thin', 'github.com/acme/app', 'apiflow link/1');
+    const declared = endpointId('GET', '/api/media/{param}');
+    map.endpoints.push({ id: declared, method: 'GET', path: '/api/media/{param}', source: { file: 'src/index.ts', line: 9 }, auth: true });
+    for (let i = 0; i < 5; i++) {
+      const id = endpointId('GET', `/projects/${i}`);
+      map.endpoints.push({ id, method: 'GET', path: `/projects/${i}` });
+      const sc = screenId(`/p/${i}`, `src/pages/p${i}.tsx`, 'P');
+      map.screens.push({ id: sc, label: `/p/${i}`, route: `/p/${i}`, source: { file: `src/pages/p${i}.tsx`, line: 1 } });
+      map.calls.push({ screenId: sc, endpointId: id, via: 'fetch', confidence: 'inferred', source: { file: 'src/api.ts', line: 3 } });
+    }
+    return finalizeApiMap(map);
+  }
+
+  it('blames the reader, not the API, and only once', () => {
+    const list = alerts(thinBe());
+    const counts = alertCounts(list);
+    expect(counts.byKind['fe-only-path']).toBe(0);
+    expect(counts.byKind['be-partial']).toBe(1);
+    expect(list.find((a) => a.kind === 'be-partial')?.detail).toContain('scanner chưa đọc được');
+  });
+
+  it('leaves the comparison alone once the BE side is the bigger half', () => {
+    const map = thinBe();
+    for (let i = 0; i < 20; i++) {
+      const id = endpointId('GET', `/declared/${i}`);
+      map.endpoints.push({ id, method: 'GET', path: `/declared/${i}`, source: { file: 'src/index.ts', line: 10 + i }, auth: true });
+    }
+    const counts = alertCounts(alerts(finalizeApiMap(map)));
+    expect(counts.byKind['be-partial']).toBe(0);
+    expect(counts.byKind['fe-only-path']).toBe(5);
   });
 });

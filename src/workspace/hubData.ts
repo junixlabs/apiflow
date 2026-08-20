@@ -1,5 +1,6 @@
 import type { HubProject } from '../view/hub';
 import type { ProjectEntry } from './registry';
+import { scanOrigin } from './scanOrigin';
 import { readWorkspace } from './registry';
 import { gitHead } from './gitInfo';
 import type { MapKind } from './store';
@@ -57,13 +58,16 @@ export function hubProjects(): HubProject[] {
 // this the card would show numbers scanned from a different repo and say nothing about it.
 // cm:edge contract -> src/core/apimap.ts linkMaps() — a linked map's root is the two sides joined
 // by " + ", which is why this checks containment for that kind instead of equality.
+// cm:edge contract -> src/workspace/scanOrigin.ts — the map records the repo id, not the machine
+// path, so "scanned somewhere else" is decided by running the registry path through the SAME
+// function the scan used. Comparing against the raw path here would mark every map stale.
 function staleRoot(entry: ProjectEntry, kind: MapKind, root: string): string | undefined {
   if (kind === 'linked') {
     const sides = [entry.fe, entry.be].filter((side): side is string => side !== undefined);
-    return sides.every((side) => root.includes(side)) ? undefined : root;
+    return sides.every((side) => root.includes(scanOrigin(side))) ? undefined : root;
   }
   const now = entry[kind];
-  return now !== undefined && now !== root ? root : undefined;
+  return now !== undefined && scanOrigin(now) !== root ? root : undefined;
 }
 
 export function bestKind(project: HubProject): MapKind | null {

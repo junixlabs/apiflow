@@ -23,6 +23,7 @@ const SUBCOMMANDS = {
   probe: 'probe.ts',
   link: 'link.ts',
   impact: 'impact.ts',
+  check: 'check.ts',
   view: 'view.ts',
   project: 'project.ts',
   ui: 'ui.ts',

@@ -6,7 +6,7 @@
 **Bản này để chống trôi mục tiêu.** Đọc §2 và §7 trước khi thêm bất cứ tính năng nào. Repo này đã
 nằm im 4 tháng một lần; bản này tồn tại để lần sau quay lại còn biết nó dùng để làm gì.
 
-Cập nhật 2026-08-19. Anh em: `README.md` · `~/tools/repo-gates/NORTH-STAR.md` (chỉ mục 4 sản phẩm).
+Cập nhật 2026-08-20. Anh em: `README.md` · `~/tools/repo-gates/NORTH-STAR.md` (chỉ mục 4 sản phẩm).
 
 ---
 
@@ -133,15 +133,37 @@ Thứ tự này thay cho danh sách cũ (bản trước xếp canvas vào nhóm 
    196 endpoint FE · 419 endpoint BE · 166 khớp cả hai phía. Câu trả lời ảnh hưởng đã kiểm chứng
    bằng tay: `GET /agents` → `/admin/agents`, qua đúng chuỗi page → component → hook → api client.
    Còn lại: giải Unresolved bằng hints, và chạy `probe` thật trên bộ test của dự án.
-6. **Canvas đọc bản đồ.** Chỉ sau khi có §8.5 — layout bằng elkjs/dagre, collapse mặc định, focus
+6. **Bản đồ dùng chung được cho team và cho agent** (chen lên trước canvas — xem §9, 20/08).
+   ✅ `.apimap` không còn đường dẫn máy (`metadata.root` là id repo) nên commit và review được ·
+   ✅ `apiflow impact --json` + exit code · ✅ `apiflow check` làm cổng CI.
+   Còn lại: MCP tool đọc bản đồ, và một chỗ giữ bản đồ dùng chung (server giữ **bản đồ**, không giữ
+   code — scan vẫn chạy nơi có code; fence loopback phải được **thay** bằng auth, không phải bỏ).
+
+7. **Canvas đọc bản đồ.** Chỉ sau khi có §8.6 — layout bằng elkjs/dagre, collapse mặc định, focus
    một node rồi bung theo bậc. Không render cả bản đồ.
-7. **Chỉ sau đó** mới tính chuyện bind làm MCP vào `pipelineConfig.states.testing.mcpServers`
+8. **Chỉ sau đó** mới tính chuyện bind làm MCP vào `pipelineConfig.states.testing.mcpServers`
    (`pipeline-config-schema.ts:245` — config-only, không sửa forge core).
 
 Trong bốn sản phẩm, apiflow public **cuối cùng** — vì **xây ít nhất**, không phải vì thiếu giá trị.
 
 ## 9. Nhật ký quyết định
 
+- **2026-08-20** — **Bản đồ phải *chia sẻ được* trước khi bàn canvas.** Chủ sở hữu chuyển apiflow từ
+  công cụ một máy sang **context dùng chung** cho team và cho agent, trên hai dự án thật. Vì thế
+  §8.6 (canvas) bị đẩy xuống: canvas là cách **một người** đọc bản đồ, còn thứ đang thiếu là **nhiều
+  người và agent đọc cùng một bản đồ**. Ba việc đã làm ngay trong quyết định này: bỏ đường dẫn máy
+  khỏi `.apimap` (đo: hai lần scan cùng commit ra file giống byte, `grep '/home'` = 0), `impact
+  --json` + exit code cho hook/CI, và `apiflow check` làm cổng CI. `check` bắt được drift **thật**
+  ngay hôm dựng: một dự án sửa client HTTP sau lần scan trước → 190 → 182 lời gọi, unresolved 6 → 7,
+  bản đồ đang commit đã sai mà không ai biết.
+- **2026-08-20** — **Nếu đưa lên web thì server giữ *bản đồ*, không giữ code.** Scan cần code trên
+  đĩa, nên nơi scan là máy dev hoặc CI của repo; server chỉ nhận file `.apimap` đã sinh, giữ registry
+  + history và trả lời cho agent. Không cho server clone repo private để tự scan (thêm token, thêm
+  runner, thêm bề mặt tấn công cho một việc chỉ cần đọc kết quả). Và không mở `apiflow ui` ra
+  `0.0.0.0` (máy một người thành phụ thuộc của cả team — fence loopback tồn tại đúng để chặn việc
+  đó). Ba điều kiện trước khi mở ra mạng: auth thật **thay** fence `localWritesOnly`, registry khoá
+  theo **git remote + subdir** thay vì đường dẫn máy, và bản đồ chỉ đặt sau auth trong mạng nội bộ —
+  `.apimap` là mặt API nội bộ của khách.
 - **2026-08-19** — **Call site phải truy ngược tới màn hình, không dừng ở api module.** Chạy thật
   trên một Next.js: chỉ 13/203 call quy được về route, phần còn lại dừng ở `agentsApi`, `usersApi` —
   đúng nhưng không phải câu hỏi ở §1. Thêm `callerGraph`: đồ thị import + cạnh trong cùng file

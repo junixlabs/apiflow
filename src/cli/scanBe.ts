@@ -3,6 +3,7 @@ import { join, relative, resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import type { ApiMapFile, FieldNode } from '../core/apimap';
 import { createApiMap, endpointId, fieldId, finalizeApiMap, normalizePath } from '../core/apimap';
+import { scanOrigin } from '../workspace/scanOrigin';
 import type { ClassIndex, SchemaDef, Stack } from '../core/beScanner';
 import { detectStack, indexClasses, isBackendFile, laravelRouteFilePrefixes, resolveHandlerSchemas, scanBackendFile } from '../core/beScanner';
 import { enclosingSymbols, symbolAt } from '../core/feScanner';
@@ -92,7 +93,7 @@ export function scanBackend(root: string, name: string): BeScanResult {
   const classes: ClassIndex = indexClasses(files);
 
   const schemas = new Map<string, SchemaDef>();
-  const map = createApiMap(name, root, GENERATOR);
+  const map = createApiMap(name, scanOrigin(root), GENERATOR);
   const routes = [];
 
   for (const { file, content } of files) {

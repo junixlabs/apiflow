@@ -1,7 +1,7 @@
 import { readFileSync, realpathSync } from 'fs';
 import { resolve } from 'path';
 import { fileURLToPath } from 'url';
-import type { ApiMapFile, ImpactAnswer } from '../core/apimap';
+import type { ApiMapFile, Confidence, ImpactAnswer, SourceRef } from '../core/apimap';
 import { endpointId, endpointsForScreen, normalizePath, parseMap, screenIdsForRoute, screensAffectedByEndpoint, screensAffectedByField, toMapMethod } from '../core/apimap';
 
 export function loadMap(path: string): ApiMapFile {
@@ -83,6 +83,84 @@ export function renderScreenDeps(map: ApiMapFile, route: string): string {
   return lines.join('\n');
 }
 
+export interface ImpactJson {
+  query: { kind: 'endpoint' | 'field' | 'screen' | 'map'; value?: string };
+  map: { name: string; root: string; endpoints: number; screens: number; calls: number; fields: number; unresolved: number };
+  matches: unknown[];
+  found: boolean;
+}
+
+const at = (s: SourceRef): string => `${s.file}:${s.line}`;
+
+function mapFacts(map: ApiMapFile): ImpactJson['map'] {
+  return {
+    name: map.metadata.name,
+    root: map.metadata.root,
+    endpoints: map.endpoints.length,
+    screens: map.screens.length,
+    calls: map.calls.length,
+    fields: map.fields.length,
+    unresolved: map.unresolved.length,
+  };
+}
+
+// cm:why The agent-facing shape is deliberately NOT the .apimap shape: it carries the answer plus
+// the file:line evidence for it, and nothing else. A tool that hands an agent the whole map spends
+// its context on data the agent then has to re-derive.
+// cm:guard `unresolved` travels with every answer. An empty screen list means "nothing in the map
+// consumes it", never "nothing consumes it" — dropping the count here is how that becomes a lie.
+export function impactJson(map: ApiMapFile, kind: 'endpoint' | 'field', value: string, answers: ImpactAnswer[]): ImpactJson {
+  const order: Record<Confidence, number> = { exact: 0, inferred: 1, guess: 2 };
+  const matches = answers.map((a) => ({
+    endpoint: a.endpoint === null ? null : { method: a.endpoint.method, path: a.endpoint.path },
+    screens: [...a.screens]
+      .sort((x, y) => order[x.confidence] - order[y.confidence])
+      .map((s) => ({
+        route: s.screen.route ?? null,
+        label: s.screen.label,
+        confidence: s.confidence,
+        at: at(s.source),
+        hops: s.screen.viaHops ?? 0,
+        chain: (s.chain ?? []).map((c) => ({ role: c.role, symbol: c.symbol, at: at(c), precise: c.precise })),
+      })),
+  }));
+  return { query: { kind, value }, map: mapFacts(map), matches, found: matches.some((m) => m.screens.length > 0) };
+}
+
+export function screenDepsJson(map: ApiMapFile, route: string): ImpactJson {
+  const ids = screenIdsForRoute(map, route);
+  const deps = ids.flatMap((id) => endpointsForScreen(map, id));
+  const seen = new Map(deps.map((d) => [`${d.endpoint.id}|${d.confidence}`, d]));
+  const order: Record<Confidence, number> = { exact: 0, inferred: 1, guess: 2 };
+  return {
+    query: { kind: 'screen', value: route },
+    map: mapFacts(map),
+    matches: [...seen.values()]
+      .sort((a, b) => order[a.confidence] - order[b.confidence])
+      .map((d) => ({
+        method: d.endpoint.method,
+        path: d.endpoint.path,
+        confidence: d.confidence,
+        at: at(d.source),
+        hops: d.viaHops ?? 0,
+      })),
+    found: ids.length > 0,
+  };
+}
+
+export function mapJson(map: ApiMapFile): ImpactJson {
+  return {
+    query: { kind: 'map' },
+    map: mapFacts(map),
+    matches: map.endpoints.map((e) => ({
+      method: e.method,
+      path: e.path,
+      callers: map.calls.filter((c) => c.endpointId === e.id).length,
+    })),
+    found: map.endpoints.length > 0,
+  };
+}
+
 function main(): void {
   const args = process.argv.slice(2);
   const positional = args.filter((a) => !a.startsWith('--'));
@@ -98,12 +176,23 @@ function main(): void {
   const fieldQuery = flag('field');
   const screenQuery = flag('screen');
 
+  const asJson = args.includes('--json');
+  const emit = (payload: ImpactJson): void => {
+    process.stdout.write(`${JSON.stringify(payload, null, 2)}\n`);
+    // cm:edge protocol -> skills/apiflow-impact/skill.md — stdout stays valid JSON even when nothing
+    // matched, and the verdict rides on the exit code (0 found · 2 nothing found). A hook that has to
+    // parse prose to learn "no match" is a hook that reports a miss as an answer.
+    process.exit(payload.found ? 0 : 2);
+  };
+
   if (screenQuery !== undefined) {
+    if (asJson) emit(screenDepsJson(map, screenQuery));
     console.log(renderScreenDeps(map, screenQuery));
     return;
   }
 
   if (!endpointQuery && !fieldQuery) {
+    if (asJson) emit(mapJson(map));
     console.log(`## ${map.metadata.name} — ${map.endpoints.length} endpoint(s), ${map.screens.length} screen(s)`);
     console.log('');
     for (const e of map.endpoints) {
@@ -113,14 +202,17 @@ function main(): void {
     return;
   }
 
-  const ids = endpointQuery ? resolveEndpointQuery(map, endpointQuery) : resolveFieldQuery(map, fieldQuery as string);
-  if (ids.length === 0) {
-    console.error(`No match for ${endpointQuery ?? fieldQuery} in ${map.metadata.name}.`);
-    process.exit(2);
-  }
+  const kind = endpointQuery ? 'endpoint' : 'field';
+  const query = (endpointQuery ?? fieldQuery) as string;
+  const ids = endpointQuery ? resolveEndpointQuery(map, endpointQuery) : resolveFieldQuery(map, query);
   const answers = ids.map((id) =>
     endpointQuery ? screensAffectedByEndpoint(map, id) : screensAffectedByField(map, id)
   );
+  if (asJson) emit(impactJson(map, kind, query, answers));
+  if (ids.length === 0) {
+    console.error(`No match for ${query} in ${map.metadata.name}.`);
+    process.exit(2);
+  }
   console.log(answers.map((a, i) => renderImpact(a, ids[i])).join('\n\n'));
 }
 

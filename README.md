@@ -250,7 +250,22 @@ npx @junixlabs/apiflow probe ./my-api/.apiview/map/api.apimap --ingest=./my-api/
 # Join them, then ask
 npx @junixlabs/apiflow link web.apimap api.apimap --out=full.apimap
 npx @junixlabs/apiflow impact full.apimap --endpoint="GET /api/users"
+
+# Machine-readable answer, for an agent or a hook
+npx @junixlabs/apiflow impact web.apimap --endpoint="GET /api/users" --json   # exit 0 found, 2 not found
+
+# Is the committed map still true? (CI gate)
+npx @junixlabs/apiflow check .apiflow/fe.apimap --root=apps/web-next          # exit 0 clean, 1 drifted
+npx @junixlabs/apiflow check .apiflow/fe.apimap --root=apps/web-next --write  # refresh it
 ```
+
+### Sharing a map with a team
+
+A `.apimap` records the **repo** it was scanned from (`github.com/acme/app//apps/web`), never a path
+on the machine that scanned it. Two people scanning the same commit get the same bytes, so the file
+can be committed, reviewed in a pull request, and gated in CI with `apiflow check`. Anything that
+needs the real directory back — `probe --emit`, `check` without `--root` — resolves it locally
+through `apiflow project add`.
 
 ### Development
 

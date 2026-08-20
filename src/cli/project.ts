@@ -1,7 +1,8 @@
 import { realpathSync } from 'fs';
 import { fileURLToPath } from 'url';
 import type { ProjectEntry } from '../workspace/registry';
-import { addProject, readWorkspace, removeProject, workspaceRoot } from '../workspace/registry';
+import { addProject, findProject, readWorkspace, removeProject, workspaceRoot } from '../workspace/registry';
+import { scanInBackground } from '../workspace/runScan';
 import type { MapKind } from '../workspace/store';
 import { readMap, statusOf } from '../workspace/store';
 import { summarize } from '../workspace/summary';
@@ -10,6 +11,7 @@ const USAGE = `Usage:
   apiflow project add <tên> --fe=<thư mục> [--be=<thư mục>] [--id=<slug>] [--hints=<file>]
   apiflow project ls [--json]
   apiflow project rm <id>
+  apiflow project scan <id> [--fe] [--be]
 
 Workspace: ${workspaceRoot()}`;
 
@@ -68,6 +70,30 @@ export function renderList(rows: ProjectRow[]): string {
   return lines.join('\n');
 }
 
+function runSides(id: string, sides: Array<'fe' | 'be'>): void {
+  const next = (i: number): void => {
+    if (i >= sides.length) return;
+    let failed = false;
+    scanInBackground(id, sides[i], (event) => {
+      if (event.kind === 'error') {
+        failed = true;
+        console.error(event.text);
+      } else if (event.kind === 'done') {
+        console.log(`${id}/${sides[i]} — ${event.text}`);
+        next(i + 1);
+      } else if (event.text.startsWith('đã ')) {
+        console.log(event.text);
+      }
+    });
+    // cm:guard The exit code is what CI reads. scanInBackground reports failure through the callback,
+    // so a scan that died must still leave a non-zero code behind rather than a clean "done".
+    process.on('exit', () => {
+      if (failed) process.exitCode = 1;
+    });
+  };
+  next(0);
+}
+
 function main(): void {
   const args = process.argv.slice(2);
   const verb = args[0];
@@ -88,6 +114,22 @@ function main(): void {
     if (verb === 'ls' || verb === undefined) {
       const rows = collectRows();
       console.log(args.includes('--json') ? JSON.stringify(rows, null, 2) : renderList(rows));
+      return;
+    }
+    // cm:why CI and a terminal need the same scan the UI button runs — same staging file, same
+    // history write, same automatic re-link — so this reuses scanInBackground instead of shelling out
+    // to scan-fe with a hand-built --out path, which is how the two would drift apart.
+    if (verb === 'scan') {
+      const id = positional[0];
+      if (id === undefined) throw new Error('thiếu id');
+      const entry = findProject(id);
+      if (entry === undefined) throw new Error(`không có project nào tên ${id}`);
+      const sides: Array<'fe' | 'be'> = [];
+      const asked = args.includes('--fe') || args.includes('--be');
+      if ((!asked || args.includes('--fe')) && entry.fe !== undefined) sides.push('fe');
+      if ((!asked || args.includes('--be')) && entry.be !== undefined) sides.push('be');
+      if (sides.length === 0) throw new Error(`${id} chưa khai thư mục nào để scan`);
+      runSides(id, sides);
       return;
     }
     if (verb === 'rm') {

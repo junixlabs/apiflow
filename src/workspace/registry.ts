@@ -1,6 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'fs';
 import { homedir } from 'os';
 import { isAbsolute, join, resolve } from 'path';
+import { scanOrigin } from './scanOrigin';
 
 export interface ProjectEntry {
   id: string;
@@ -56,6 +57,18 @@ export function writeWorkspace(workspace: Workspace): void {
 
 export function findProject(id: string): ProjectEntry | undefined {
   return readWorkspace().projects.find((p) => p.id === id);
+}
+
+// cm:why The map stopped carrying a machine path on purpose (see scanOrigin), so anything that needs
+// the real directory back — probe emitting a harness, a re-scan — resolves it HERE against the local
+// registry. The map says which repo it is; only this machine knows where that repo sits on it.
+export function localRootFor(origin: string): string | undefined {
+  for (const p of readWorkspace().projects) {
+    for (const side of [p.fe, p.be]) {
+      if (side !== undefined && existsSync(side) && scanOrigin(side) === origin) return side;
+    }
+  }
+  return undefined;
 }
 
 // cm:guard Every root is stored absolute and verified to be a directory HERE, so no other layer has

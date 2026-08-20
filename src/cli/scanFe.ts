@@ -3,6 +3,7 @@ import { join, relative, resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import type { ApiMapFile, Confidence, ScreenNode, UnresolvedCall } from '../core/apimap';
 import { createApiMap, finalizeApiMap, screenId, serializeMap } from '../core/apimap';
+import { scanOrigin } from '../workspace/scanOrigin';
 import type { ScanHints } from '../core/feScanner';
 import { enclosingSymbols, isScannableFile, memberAt, objectMembers, routeFromFilePath, scanFile, symbolAt } from '../core/feScanner';
 import type { ModuleNode, ResolveImport } from '../core/callerGraph';
@@ -122,7 +123,7 @@ function normalizePosix(p: string): string {
 export const lastScanStats = { serverFilesSkipped: 0, wrappers: 0, declaredRoutes: 0 };
 
 export function scanDirectory(root: string, name: string, hints?: ScanHints): ApiMapFile {
-  const map = createApiMap(name, root, GENERATOR);
+  const map = createApiMap(name, scanOrigin(root), GENERATOR);
   const sources = new Map<string, string>();
   lastScanStats.serverFilesSkipped = 0;
   for (const rel of walk(root, root)) {

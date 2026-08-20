@@ -375,9 +375,6 @@ const byId = (list) => new Map(list.map((x) => [x.id, x]));
 const endpoints = byId(MAP.endpoints);
 const screens = byId(MAP.screens);
 
-const HAS_BE = MAP.endpoints.some((e) => e.source !== undefined);
-const HAS_FE = MAP.calls.length > 0;
-
 const callsByEndpoint = new Map();
 const callsByScreen = new Map();
 for (const c of MAP.calls) {
@@ -386,6 +383,15 @@ for (const c of MAP.calls) {
   if (!callsByScreen.has(c.screenId)) callsByScreen.set(c.screenId, []);
   callsByScreen.get(c.screenId).push(c);
 }
+// cm:guard Must stay BELOW callsByEndpoint: this block is inside a browser script, so tsc and eslint
+// see a string, not code — reading the map above its own initialiser throws a TDZ ReferenceError at
+// the top of the script and takes every pane on the page down with it.
+const DECLARED = MAP.endpoints.filter((e) => e.source !== undefined).length;
+const UNDECLARED_CALLED = MAP.endpoints.filter((e) => e.source === undefined && (callsByEndpoint.get(e.id) || []).length > 0).length;
+const BE_PARTIAL = DECLARED > 0 && UNDECLARED_CALLED > DECLARED;
+const HAS_BE = DECLARED > 0 && !BE_PARTIAL;
+const HAS_FE = MAP.calls.length > 0;
+
 const fieldsByEndpoint = new Map();
 for (const f of MAP.fields) {
   if (!fieldsByEndpoint.has(f.endpointId)) fieldsByEndpoint.set(f.endpointId, []);
@@ -1241,6 +1247,7 @@ const KIND_LABEL = {
   'open-auth': 'không thấy cổng auth',
   uncalled: 'API khai mà không ai gọi',
   'murky-auth': 'cổng auth không phân loại được',
+  'be-partial': 'phía BE đọc được quá ít để so sánh',
 };
 
 function renderAlerts() {
@@ -1277,15 +1284,21 @@ function renderAlerts() {
     tr.appendChild(c0);
     tr.appendChild(h('td', 'nowrap', KIND_LABEL[a.kind] || a.kind));
     const c2 = h('td');
-    c2.appendChild(h('span', 'verb ' + a.method, a.method));
-    c2.appendChild(h('div', 'mono', a.path));
+    // cm:why A finding about the map as a whole has no endpoint. Printing the placeholder verb and an
+    // empty path made the one alert that says "do not trust this comparison" look like a GET was wrong.
+    if (a.endpointId) {
+      c2.appendChild(h('span', 'verb ' + a.method, a.method));
+      c2.appendChild(h('div', 'mono', a.path));
+    } else {
+      c2.appendChild(h('div', 'sub2', 'cả bản đồ'));
+    }
     tr.appendChild(c2);
     const c3 = h('td');
     c3.appendChild(h('div', null, a.detail));
     if (a.bestConfidence) c3.appendChild(h('div', 'sub2', 'lời gọi rõ nhất: ' + a.bestConfidence));
     tr.appendChild(c3);
     const c4 = h('td');
-    c4.appendChild(h('div', 'mono', a.screens.length ? a.screens.slice(0, 4).join(' · ') : '(chưa truy được về màn nào)'));
+    c4.appendChild(h('div', 'mono', a.screens.length ? a.screens.slice(0, 4).join(' · ') : (a.endpointId ? '(chưa truy được về màn nào)' : '—')));
     if (a.screens.length > 4) c4.appendChild(h('div', 'sub2', '+' + (a.screens.length - 4) + ' màn nữa'));
     tr.appendChild(c4);
     tr.onclick = () => { state.endpoint = a.endpointId; state.section = 'impact'; location.hash = 'impact'; render(); };

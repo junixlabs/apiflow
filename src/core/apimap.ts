@@ -248,6 +248,26 @@ export interface ImpactAnswer {
   screens: Array<{ screen: ScreenNode; confidence: Confidence; source: SourceRef; chain?: ChainNode[] }>;
 }
 
+// cm:why One number decides whether the reconciliation is worth showing at all. Measured on a real
+// Hono API (2026-08-20): the reader understood 2 of 103 routes because every mount site is
+// `.get(declared(SPEC), h)` with no literal path, and the map then reported 88 endpoints the API
+// "does not declare" — a defect invented out of a gap in the reader. Not a tuned threshold: if the
+// accusation would cover MORE endpoints than the API declares in total, the untrustworthy half is
+// the reader, so those endpoints are unpaired (not compared), not FE-only (compared and wrong).
+// cm:edge lockstep -> src/workspace/summary.ts · src/workspace/alerts.ts · src/view/panes.ts reconOf
+// — all four decide the same four buckets; the browser pane re-implements this because it cannot
+// import node code, so a change here is a change in four places.
+export function bePartial(map: ApiMapFile): boolean {
+  const called = new Set(map.calls.map((c) => c.endpointId));
+  let declared = 0;
+  let undeclaredCalled = 0;
+  for (const e of map.endpoints) {
+    if (e.source !== undefined) declared++;
+    else if (called.has(e.id)) undeclaredCalled++;
+  }
+  return declared > 0 && undeclaredCalled > declared;
+}
+
 export function screensAffectedByEndpoint(map: ApiMapFile, id: string): ImpactAnswer {
   const endpoint = map.endpoints.find((e) => e.id === id) ?? null;
   const screens = map.calls

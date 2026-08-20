@@ -6,6 +6,27 @@ All notable changes to API View are documented here.
 
 ## [Unreleased]
 
+### Added — team use (map as shared context)
+
+- **A `.apimap` no longer contains a machine path.** `metadata.root` is now the repo the scan came
+  from — `github.com/acme/app//apps/web`, derived from the git remote with any credential stripped —
+  so two people scanning one commit produce identical bytes and the file can be committed, reviewed
+  in a PR and served to a team. Whatever needs the real directory back (`probe --emit`, `check`)
+  resolves it through the local workspace registry.
+- `apiflow check <map.apimap> [--root=<dir>] [--json] [--write]` — re-scans and compares against the
+  stored map. Exit 0 clean, 1 drifted, 2 cannot check. Prints which endpoints appeared or vanished,
+  and separates "different bytes, same structure" from real drift. `--write` refreshes the file.
+- `apiflow project scan <id> [--fe] [--be]` — the scan the UI button runs, from a terminal or CI:
+  same staging file, same history entry, same automatic re-link. Non-zero exit when a side fails.
+- **A BE half too thin to compare no longer accuses the API.** If the endpoints the map would report
+  as "FE calls it, the API does not declare it" outnumber every endpoint the API declares, the
+  untrustworthy half is the reader: those endpoints become `unpaired` (not compared) instead of
+  `feOnly` (compared and wrong), and one `be-partial` alert states both numbers. Measured on a real
+  Hono API where the reader understood 2 of 103 routes: 88 invented findings became 1 true one.
+- `apiflow impact … --json` — the answer as data (screens, confidence, `file:line`, the caller chain),
+  with the unresolved count travelling in every payload so an empty answer cannot be read as "nothing
+  calls this". Valid JSON on stdout even when nothing matched; the verdict is the exit code.
+
 ### Added — dependency map (the read half)
 
 - `.apimap` format (`src/core/apimap.ts`): screens, endpoints, fields and the edges between them.

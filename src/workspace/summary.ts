@@ -1,4 +1,5 @@
 import type { ApiMapFile, Confidence } from '../core/apimap';
+import { bePartial } from '../core/apimap';
 
 export interface ProjectSummary {
   endpoints: number;
@@ -26,7 +27,7 @@ export type EndpointState = 'both' | 'uncalled' | 'feOnly' | 'unpaired';
 // cm:edge contract -> src/view/panes.ts — the browser pane re-implements this as `reconOf`
 // because it cannot import node code; the two must keep agreeing on what a colour means.
 export function endpointState(map: ApiMapFile, endpointId: string): EndpointState {
-  const hasBe = map.endpoints.some((e) => e.source !== undefined);
+  const hasBe = map.endpoints.some((e) => e.source !== undefined) && !bePartial(map);
   const hasFe = map.calls.length > 0;
   const endpoint = map.endpoints.find((e) => e.id === endpointId);
   const called = map.calls.some((c) => c.endpointId === endpointId);
@@ -40,7 +41,9 @@ export function summarize(map: ApiMapFile): ProjectSummary {
   for (const call of map.calls) confidence[call.confidence]++;
 
   const called = new Set(map.calls.map((c) => c.endpointId));
-  const hasBe = map.endpoints.some((e) => e.source !== undefined);
+  // cm:guard hasBe here means "the BE half is complete enough to compare against", not "a BE map
+  // exists" — that is what keeps a thin BE scan out of the feOnly column and out of the KPI strip.
+  const hasBe = map.endpoints.some((e) => e.source !== undefined) && !bePartial(map);
   const hasFe = map.calls.length > 0;
   let both = 0;
   let uncalled = 0;
