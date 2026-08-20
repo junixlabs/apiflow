@@ -143,8 +143,14 @@ Alerts and Unresolved are separate counts on purpose. An alert is something the 
 finds dangerous — a method mismatch, an endpoint with no auth, a route no screen calls. An
 unresolved is something it could not understand, and it is listed with the line it gave up on.
 
+Once the list is long enough to scroll, the toolbar above the cards searches name, id and both roots,
+filters by side (`cả hai phía` / `chỉ FE` / `chỉ BE`), by `chưa scan`, or down to the maps whose root
+has moved, and orders by name, scan age, endpoints, unresolved, or `đáng để mắt`. The count says how
+many are hidden rather than only how many are left, and the totals strip recomputes itself from the
+cards on screen and relabels itself while a filter is on.
+
 For a repo with no server to run, `apiflow hub <dir>` writes the same project list as a single
-self-contained HTML file.
+self-contained HTML file — including the search, the filters and the ordering, which run in the page.
 
 ## Features
 

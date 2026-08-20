@@ -56,6 +56,20 @@ const HUB_STYLE = `
 .totals .t1 .sub { font-size:10.5px; color:var(--muted); }
 .totals .t1.alarm .val { color:var(--dead); }
 
+.hubbar { display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin:0 0 14px; }
+.hubbar .search { display:flex; align-items:center; gap:7px; background:var(--surface);
+  border:1px solid var(--line); border-radius:8px; padding:6px 10px; min-width:250px; }
+.hubbar .search input { border:0; outline:0; background:transparent; color:var(--ink);
+  font:inherit; width:100%; }
+.hubbar .facet { border:1px solid var(--line); border-radius:8px; background:var(--surface);
+  color:var(--ink); font:12.5px inherit; padding:6px 9px; max-width:230px; }
+.hubbar .stat { margin-left:auto; color:var(--muted); font-size:12px; }
+.chips { display:flex; gap:5px; flex-wrap:wrap; }
+.chip { font-size:11.5px; padding:5px 10px; border-radius:999px; border:1px solid var(--line);
+  background:var(--surface); color:var(--muted); cursor:pointer; }
+.chip:hover { color:var(--ink); background:var(--surface-3); }
+.chip.on { color:var(--brand); border-color:var(--brand); background:var(--tint-brand); font-weight:600; }
+#hb-empty { display:flex; align-items:center; gap:10px; padding:20px 0; }
 .cards { display:grid; grid-template-columns:repeat(auto-fill,minmax(360px,1fr)); gap:16px;
   align-items:start; }
 .card { border:1px solid var(--line); border-radius:14px; background:var(--surface);
@@ -107,6 +121,111 @@ const HUB_STYLE = `
 .hint { margin:0 0 16px; }
 .hint code { background:var(--surface-2); padding:2px 6px; border-radius:5px;
   font:12px ui-monospace,monospace; }
+`;
+
+// cm:guard No backticks and no ${} below — embedded in a String.raw literal.
+// cm:why Filters and sorts in the browser over the cards already on the page: the static hub written
+// by `apiflow hub` has no server to ask, and a page reload on every keystroke would wipe the scan log.
+export const HUB_SCRIPT = String.raw`
+(function () {
+  const bar = document.getElementById('hb-q');
+  if (!bar) return;
+  const grid = document.querySelector('.cards');
+  const cards = [...grid.querySelectorAll('.card')];
+  const sortSel = document.getElementById('hb-sort');
+  const count = document.getElementById('hb-count');
+  const emptyRow = document.getElementById('hb-empty');
+  const state = { q: '', chip: '', sort: 'name' };
+
+  try {
+    const saved = localStorage.getItem('apiflow-hub-sort');
+    if (saved) { state.sort = saved; sortSel.value = saved; }
+  } catch (err) { /* file:// vẫn phải sắp được */ }
+
+  const num = (card, key) => Number(card.dataset[key] || 0);
+  // cm:why A stale map outranks every real finding, because those findings were measured on a repo
+  // the project no longer points at — the number being wrong beats the number being bad. The option
+  // label spells this order out, so the ranking is not a mystery.
+  const risk = (card) => num(card, 'open') * 3 + num(card, 'feonly') * 3
+    + (card.dataset.stale === '1' ? 1000 : 0) + num(card, 'unresolved') / 1000;
+
+  const ORDER = {
+    name: (a, b) => a.dataset.card.localeCompare(b.dataset.card),
+    recent: (a, b) => num(b, 'scanned') - num(a, 'scanned'),
+    oldest: (a, b) => num(a, 'scanned') - num(b, 'scanned'),
+    endpoints: (a, b) => num(b, 'endpoints') - num(a, 'endpoints'),
+    unresolved: (a, b) => num(b, 'unresolved') - num(a, 'unresolved'),
+    risk: (a, b) => risk(b) - risk(a),
+  };
+
+  const matches = (card) => {
+    if (state.q && !card.dataset.hay.includes(state.q)) return false;
+    if (state.chip === '') return true;
+    if (state.chip === 'stale') return card.dataset.stale === '1';
+    return card.dataset.state === state.chip;
+  };
+
+  // cm:why Recomputes the totals from the VISIBLE cards, and says so when a filter is on: a strip of
+  // numbers over a filtered list is read as the total of what is on screen, whatever the label says.
+  const retotal = (shown) => {
+    const cells = document.querySelectorAll('.totals .t1');
+    if (!cells.length) return;
+    const put = (index, value, sub) => {
+      const cell = cells[index];
+      if (!cell) return;
+      cell.querySelector('.val').textContent = value.toLocaleString('vi-VN');
+      cell.classList.toggle('alarm', index >= 3 && value > 0);
+      if (sub !== undefined) cell.querySelector('.sub').textContent = sub;
+    };
+    const sum = (key) => shown.reduce((n, card) => n + num(card, key), 0);
+    const unscanned = shown.filter((card) => card.dataset.state === 'unscanned').length;
+    const scope = shown.length === cards.length ? 'trên mọi project' : 'trên ' + shown.length + ' project đang hiện';
+    // cm:guard The first tile must keep the workspace total in view while a filter is on: a big "2"
+    // labelled only "đã scan hết" reads as the whole workspace, which is the one number it is not.
+    put(0, shown.length, shown.length !== cards.length ? 'trong ' + cards.length + ' project'
+      : unscanned === 0 ? 'đã scan hết' : unscanned + ' chưa scan');
+    put(1, sum('endpoints'), scope);
+    put(2, sum('screens'), scope);
+    put(3, sum('open'), 'không thấy cổng chặn');
+    put(4, sum('feonly'), 'chỉ tính project đã scan hai phía');
+    put(5, sum('unresolved'), 'không nằm trong các số trên');
+  };
+
+  const apply = () => {
+    const shown = cards.filter(matches);
+    for (const card of cards) card.hidden = !matches(card);
+    for (const card of [...shown].sort(ORDER[state.sort] || ORDER.name)) grid.appendChild(card);
+    // cm:guard Says how many are hidden, never just how many are left: a count of 3 with no mention
+    // of the other 9 reads as "this workspace has three projects".
+    count.textContent = shown.length === cards.length
+      ? cards.length + ' project'
+      : shown.length + '/' + cards.length + ' project · ' + (cards.length - shown.length) + ' bị lọc đi';
+    emptyRow.hidden = shown.length > 0;
+    retotal(shown);
+  };
+
+  bar.addEventListener('input', () => { state.q = bar.value.trim().toLowerCase(); apply(); });
+  sortSel.addEventListener('change', () => {
+    state.sort = sortSel.value;
+    try { localStorage.setItem('apiflow-hub-sort', state.sort); } catch (err) { /* không lưu được thì thôi */ }
+    apply();
+  });
+  for (const chip of document.querySelectorAll('#hb-chips .chip')) {
+    chip.onclick = () => {
+      state.chip = chip.dataset.state;
+      for (const other of document.querySelectorAll('#hb-chips .chip')) other.classList.toggle('on', other === chip);
+      apply();
+    };
+  }
+  document.getElementById('hb-reset').onclick = () => {
+    state.q = '';
+    state.chip = '';
+    bar.value = '';
+    for (const chip of document.querySelectorAll('#hb-chips .chip')) chip.classList.toggle('on', chip.dataset.state === '');
+    apply();
+  };
+  apply();
+})();
 `;
 
 function escapeHtml(value: string): string {
@@ -199,7 +318,25 @@ function card(project: HubProject, options: HubOptions, now: number): string {
        <button class="btn rm" data-rm="${escapeHtml(project.id)}" data-name="${escapeHtml(project.name)}">Bỏ khỏi workspace</button>`
     : '';
 
-  return `<div class="card">
+  const newest = project.maps
+    .map((m) => (m.scannedAt === undefined ? 0 : new Date(m.scannedAt).getTime()))
+    .reduce((a, b) => Math.max(a, b), 0);
+  const state = project.maps.length === 0 ? 'unscanned'
+    : best !== undefined && best.hasFe && best.hasBe ? 'both'
+      : best !== undefined && best.hasBe ? 'be' : 'fe';
+
+  // cm:edge contract -> HUB_SCRIPT below — it filters and sorts on these data-* attributes and
+  // recomputes the totals strip from them, so a renamed attribute silently zeroes a column.
+  return `<div class="card" data-card="${escapeHtml(project.id)}"
+  data-hay="${escapeHtml([project.name, project.id, project.fe ?? '', project.be ?? ''].join(' ').toLowerCase())}"
+  data-state="${state}"
+  data-stale="${project.maps.some((m) => m.scannedFrom !== undefined) ? '1' : '0'}"
+  data-scanned="${newest}"
+  data-endpoints="${best?.endpoints ?? 0}"
+  data-screens="${best?.screens ?? 0}"
+  data-unresolved="${best?.unresolved ?? 0}"
+  data-open="${best?.open ?? 0}"
+  data-feonly="${best !== undefined && best.hasBe ? best.feOnly : 0}">
   <h2><span class="nm" title="${escapeHtml(project.name)}">${escapeHtml(project.name)}</span><span class="sides">${sides}</span></h2>
   ${project.name === project.id ? '' : `<p class="idline">${escapeHtml(project.id)}</p>`}
   ${roots}
@@ -246,12 +383,35 @@ export function renderHub(projects: HubProject[], options: HubOptions, now: numb
         <p>Bản tĩnh này được sinh khi workspace <code>${escapeHtml(options.workspace)}</code> còn rỗng.</p>
         <p><code>apiflow project add adminhub --fe=/đường/dẫn/ui --be=/đường/dẫn/api</code></p></div>`;
 
+  const toolbar = `<div class="hubbar">
+    <label class="search">🔎<input id="hb-q" placeholder="tìm theo tên, id hoặc đường dẫn" autocomplete="off"></label>
+    <div class="chips" id="hb-chips">
+      <button class="chip on" data-state="">tất cả</button>
+      <button class="chip" data-state="both">cả hai phía</button>
+      <button class="chip" data-state="fe">chỉ FE</button>
+      <button class="chip" data-state="be">chỉ BE</button>
+      <button class="chip" data-state="unscanned">chưa scan</button>
+      <button class="chip" data-state="stale">map lệch gốc</button>
+    </div>
+    <select class="facet" id="hb-sort" title="thứ tự sắp xếp danh sách project">
+      <option value="name">tên A→Z</option>
+      <option value="recent">scan gần nhất</option>
+      <option value="oldest">scan lâu nhất</option>
+      <option value="endpoints">endpoint nhiều nhất</option>
+      <option value="unresolved">unresolved nhiều nhất</option>
+      <option value="risk">đáng để mắt: lệch gốc → không auth → FE gọi API không khai</option>
+    </select>
+    <span class="stat" id="hb-count"></span>
+  </div>`;
+
   const legend = '<p class="hint sub">Thanh màu trong mỗi thẻ là tỉ lệ <b>có màn gọi</b> / '
     + '<b>không ai gọi</b> / <b>FE gọi mà API không khai</b> / <b>chưa đối chiếu được</b> '
     + '(kẻ sọc — thiếu một trong hai phía), tính trên bản đồ đầy đủ nhất của project đó.</p>';
   const body = projects.length === 0
     ? empty
-    : `${totals(projects)}${legend}<div class="cards">${projects.map((p) => card(p, options, now)).join('\n')}</div>`;
+    : `${totals(projects)}${toolbar}${legend}<div class="cards">${projects.map((p) => card(p, options, now)).join('\n')}</div>`
+      + '<p class="none" id="hb-empty" hidden>Không project nào khớp bộ lọc. '
+      + '<button class="btn" id="hb-reset">Bỏ lọc</button></p>';
 
   return `<!doctype html>
 <html lang="vi">
@@ -284,7 +444,7 @@ ${THEME_BOOT}
 ${options.live ? ADD_DIALOG : ''}
 <script type="application/json" id="project">null</script>
 ${options.live ? `<script>${ADD_SCRIPT}</script>` : ''}
-<script>${THEME_SCRIPT}</script>
+<script>${THEME_SCRIPT}${projects.length === 0 ? '' : HUB_SCRIPT}</script>
 </body>
 </html>
 `;

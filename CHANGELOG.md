@@ -162,8 +162,26 @@ All notable changes to API View are documented here.
 - Clearing the last remaining side is refused, and so is a blank name — the old value is kept and the
   refusal is shown rather than the edit being silently dropped.
 
+### Added — sorting and filtering the project list
+
+- A toolbar over the cards: free-text search across name, id and both roots; chips for `cả hai phía`
+  / `chỉ FE` / `chỉ BE` / `chưa scan` / `map lệch gốc`; and six orders — name, newest scan, oldest
+  scan, most endpoints, most unresolved, and `đáng để mắt`, whose option label spells out its own
+  ranking (a map scanned from a root the project no longer points at outranks every real finding,
+  because those findings were measured on a different repo).
+- The count says how many are hidden, not just how many are left, and the totals strip is recomputed
+  from the visible cards with its subtitle switching to `trên N project đang hiện` — a row of big
+  numbers over a filtered list is read as the total of what is on screen whatever the label says.
+- Filtering and sorting happen in the browser over the cards already rendered, so the static hub
+  written by `apiflow hub` filters too, and a keystroke does not wipe a running scan log. Only the
+  chosen order is remembered between visits; a filter is not, because a hidden project is the kind of
+  thing that should not survive a reload.
+
 ### Fixed
 
+- `[hidden]` was losing to the cards' own `display:flex`, so the first cut of the filter counted
+  correctly and hid nothing. The shared sheet now carries one `[hidden] { display:none !important }`
+  rule, and `hub.test.ts` fails if it goes.
 - `headlineFor` called a scan "chắc chắn hơn" when coverage grew and every confidence share moved
   0.0pp. It now says coverage grew and certainty held, which is what the panel underneath shows.
 - A literal newline inside a quoted string in an embedded script broke the whole script in the

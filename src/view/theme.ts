@@ -13,7 +13,13 @@ const DARK = `
   --shadow:0 1px 2px rgba(0,0,0,.5), 0 10px 30px rgba(0,0,0,.4);
 `;
 
+// cm:guard Must stay in the shared sheet, and must keep `!important`: `hidden` only wins against the
+// UA sheet, so any rule that sets `display` on a component outranks it and the element the script just
+// hid stays on screen — the hub filter counted 1 of 3 while all 3 were still painted.
+const HIDDEN = '[hidden] { display:none !important; }';
+
 export const STYLE = `
+${HIDDEN}
 :root {
   --bg:#f4f7fb; --surface:#fff; --surface-2:#f7f9fc; --surface-3:#eaf0f8;
   --ink:#0d1526; --ink-2:#3c4a60; --muted:#64748b; --line:#dfe6ef; --line-2:#c6d2e2;
