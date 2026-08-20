@@ -87,6 +87,36 @@ All notable changes to API View are documented here.
 - `.dependency-cruiser.cjs` + `npm run boundary` — the map side and the request-runner side may not
   import each other.
 
+### Added — the design layer
+
+- Dark and light palettes from one token string, interpolated into both dark selectors: the media
+  query for a viewer who never chose, `[data-theme="dark"]` for one who did. A stored choice is
+  applied in `<head>` before the body paints, so a dark setup never flashes white. The rail cycles
+  system → light → dark and the hub honours the same choice.
+- The header dates the map instead of just naming it: branch and short sha read straight out of
+  `.git` of each scanned root, plus how long ago each side was scanned. Where `.git` cannot be read
+  it says so rather than leaving the space where a sha belongs empty.
+- One KPI band, rendered once and used by both the overview and the endpoints pane, with a delta
+  against the previous stored scan. A delta appears only when a previous scan exists — no "▲ 0" on
+  a first run — and a sparkline appears only from the third scan, because two points joined by a
+  straight line is not a trend.
+- Endpoints pane rebuilt for scanning: facet sidebar with a count on every value (counted over the
+  whole map, so the number does not move as you filter), 50 rows a page, path and handler on two
+  fixed lines with the full value in the title, and an inspector that opens on a row instead of
+  asking you to click one. Screens and alerts paginate through the same pager.
+- The dependency chain is drawn as a graph, not four lists: nodes in role columns, one arrow per
+  real chain edge coloured by the confidence of the call it came from, dashed where the chain lost
+  precision. Hovering a node lights its whole branch in both directions, because the question at a
+  component is "which screen breaks" and that answer is two hops away.
+- The endpoint inspector says when apiflow first saw that endpoint (`xuất hiện ở bản scan thứ 2/3`),
+  derived from the stored history. Dates come from file mtime — a `.apimap` deliberately carries no
+  timestamp inside it.
+
+### Fixed
+
+- `headlineFor` called a scan "chắc chắn hơn" when coverage grew and every confidence share moved
+  0.0pp. It now says coverage grew and certainty held, which is what the panel underneath shows.
+
 ### Changed
 
 - `.apimap` fields now carry `kind` (`request`/`response`), `type`, and independent `declared` /

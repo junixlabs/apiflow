@@ -38,9 +38,12 @@ export function headlineFor(before: ApiMapFile, after: ApiMapFile): string {
 
   if (coverage > 0 && trust < -1) return 'Phủ rộng hơn, nhưng chắc chắn kém đi.';
   if (coverage > 0 && trust > 1) return 'Phủ rộng hơn và chắc chắn hơn.';
+  // cm:guard A flat trust with more coverage is NOT "chắc chắn hơn" — the old fallthrough said that
+  // on a scan where every confidence share moved 0.0pp, and the panel under it showed the zeros.
+  if (coverage > 0) return 'Phủ rộng hơn, độ chắc gần như không đổi.';
   if (coverage < 0 && trust > 1) return 'Phủ hẹp hơn, phần còn lại chắc hơn.';
   if (coverage < 0) return 'Phủ hẹp hơn.';
-  if (Math.abs(trust) <= 1 && coverage === 0) return 'Không thay đổi đáng kể.';
+  if (Math.abs(trust) <= 1) return 'Không thay đổi đáng kể.';
   return trust < 0 ? 'Chắc chắn kém đi.' : 'Chắc chắn hơn.';
 }
 

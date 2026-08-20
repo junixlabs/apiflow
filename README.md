@@ -126,6 +126,10 @@ output; the map is only replaced when the scan finishes cleanly.
 `apiflow view <file.apimap>` writes that same app to a single self-contained HTML file — same panes,
 no server, and no control that would need one.
 
+The page follows the operating system's light/dark setting; the control at the bottom of the rail
+cycles system → light → dark and the choice sticks. The header reads the branch and short sha out of
+`.git` of each scanned root, so a map always says which revision it was taken from.
+
 Alerts and Unresolved are separate counts on purpose. An alert is something the tool understood and
 finds dangerous — a method mismatch, an endpoint with no auth, a route no screen calls. An
 unresolved is something it could not understand, and it is listed with the line it gave up on.

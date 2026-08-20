@@ -1,5 +1,5 @@
 import type { MapKind } from '../workspace/store';
-import { BRAND_STYLE, FAVICON, MARK, STYLE } from './theme';
+import { BRAND_STYLE, FAVICON, MARK, STYLE, THEME_BOOT } from './theme';
 
 export interface HubMap {
   kind: MapKind;
@@ -152,6 +152,7 @@ export function renderHub(projects: HubProject[], options: HubOptions, now: numb
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>apiflow — ${projects.length} project</title>
 <link rel="icon" href="${FAVICON}">
+${THEME_BOOT}
 <style>${STYLE}${BRAND_STYLE}${HUB_STYLE}</style>
 </head>
 <body>

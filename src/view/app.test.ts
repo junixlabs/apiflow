@@ -69,9 +69,24 @@ describe('panes', () => {
   });
 
   it('ships the mount points the visual panes draw into', () => {
-    for (const id of ['blocks', 'bip', 'scope-label', 'graph-note', 'imp-body', 'ep-rows']) {
+    for (const id of ['blocks', 'bip', 'scope-label', 'graph-note', 'imp-body', 'ep-rows',
+      'ep-kpis', 'ov-kpis', 'f-groups', 'ep-pager', 'sc-pager']) {
       expect(html).toContain(`id="${id}"`);
     }
+  });
+
+  it('defines both dark selectors from one token string, so they cannot drift', () => {
+    // cm:why Counts the palette twice on purpose: the media query serves a viewer who never chose,
+    // the attribute selector one who did, and a palette present in only one is a half-dark page.
+    const dark = html.match(/--bg:#070b14/g) ?? [];
+    expect(dark).toHaveLength(2);
+    expect(html).toContain('@media (prefers-color-scheme: dark) { :root:not([data-theme="light"])');
+    expect(html).toContain(':root[data-theme="dark"]');
+  });
+
+  it('applies a stored theme before the body paints', () => {
+    const headEnd = html.indexOf('</head>');
+    expect(html.indexOf("localStorage.getItem('apiflow-theme')")).toBeLessThan(headEnd);
   });
 
   it('refuses to draw a graph too wide to read instead of cutting it', () => {
@@ -86,6 +101,24 @@ describe('panes', () => {
 
 describe('live extras', () => {
   const live = renderApp({ map: mapWith('demo-api'), sourcePath: '/tmp/demo.apimap', live: true, projectId: 'demo' });
+
+  it('names the revision each side was scanned at', () => {
+    const withSides = renderApp({
+      map: mapWith('demo-api'), sourcePath: '/tmp/demo.apimap', live: true, projectId: 'demo',
+      now: Date.parse('2026-08-20T10:00:00Z'),
+      sides: [{ kind: 'fe', root: '/repo/web', branch: 'release/stg', sha: '387da27', scannedAt: '2026-08-20T09:30:00Z' }],
+    });
+    expect(withSides).toContain('release/stg · 387da27');
+    expect(withSides).toContain('30 phút trước');
+  });
+
+  it('says the revision is unreadable rather than leaving a blank where a sha goes', () => {
+    const noGit = renderApp({
+      map: mapWith('demo-api'), sourcePath: '/tmp/demo.apimap', live: true, projectId: 'demo', now: 0,
+      sides: [{ kind: 'be', root: '/repo/api' }],
+    });
+    expect(noGit).toContain('không đọc được revision');
+  });
 
   it('only offers the scan buttons when a project backs the page', () => {
     expect(live).toContain('id="scan-fe"');

@@ -42,7 +42,90 @@ svg.bip.dim rect.node { opacity:.25; }
 svg.bip.dim g.lit rect.node { opacity:1; }
 .wide { color:var(--guess); font-size:12.5px; margin:10px 0 0; }
 
-.toolrow { display:flex; gap:9px; align-items:center; flex-wrap:wrap; margin:0 0 12px; }
+.toolrow { display:flex; gap:9px; align-items:center; flex-wrap:wrap; margin:0 0 10px; }
+.grid3 { display:grid; grid-template-columns:196px minmax(0,1fr) 336px; gap:14px; align-items:start; }
+@media (max-width:1400px) { .grid3 { grid-template-columns:196px minmax(0,1fr); } }
+@media (max-width:1000px) { .grid3 { grid-template-columns:1fr; } }
+
+.kpistrip { display:grid; grid-template-columns:repeat(6,minmax(0,1fr)); gap:10px; margin:0 0 14px; }
+@media (max-width:1250px) { .kpistrip { grid-template-columns:repeat(3,minmax(0,1fr)); } }
+.kpistrip .k1 { border:1px solid var(--line); border-radius:10px; background:var(--surface); padding:8px 11px 9px; }
+.kpistrip .k1 .lab { font-size:9.5px; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); }
+.kpistrip .k1 .val { font:650 20px/1.25 ui-sans-serif,sans-serif; letter-spacing:-.02em; margin-top:1px; }
+.kpistrip .k1 .dlt { font-size:10.5px; color:var(--muted); }
+.kpistrip .k1 .dlt.up { color:var(--exact); } .kpistrip .k1 .dlt.down { color:var(--dead); }
+.kpistrip .k1.alarm .val { color:var(--dead); }
+.kpistrip .k1 .spark { display:block; margin-top:3px; }
+
+.facets { border:1px solid var(--line); border-radius:12px; background:var(--surface);
+  padding:11px 0 6px; position:sticky; top:14px; max-height:80vh; overflow:auto; }
+.facets .fhead { display:flex; align-items:center; padding:0 12px 8px; }
+.facets .fhead span { font:650 10px/1 ui-sans-serif,sans-serif; text-transform:uppercase;
+  letter-spacing:.09em; color:var(--muted); }
+.facets .reset { margin-left:auto; font:11px inherit; color:var(--brand); background:none;
+  border:0; cursor:pointer; padding:0; }
+.facets .fg { border-top:1px solid var(--line); padding:8px 0 6px; }
+.facets .fg > h5 { margin:0 0 4px; padding:0 12px; font:650 9.5px/1 ui-sans-serif,sans-serif;
+  text-transform:uppercase; letter-spacing:.09em; color:var(--muted); }
+.facets label { display:flex; align-items:center; gap:7px; padding:4px 12px; font-size:12px;
+  cursor:pointer; color:var(--ink-2); }
+.facets label:hover { background:var(--surface-2); }
+.facets label.on { color:var(--ink); font-weight:600; }
+.facets label input { accent-color:var(--brand); margin:0; flex:none; }
+.facets label .fn { margin-left:auto; font:11px ui-monospace,monospace; color:var(--muted); }
+.facets label .sw { width:8px; height:8px; border-radius:2px; flex:none; }
+
+.pager { display:flex; align-items:center; gap:5px; padding:9px 2px 4px; flex-wrap:wrap; }
+.pager button { min-width:28px; font:12px inherit; border:1px solid var(--line); border-radius:7px;
+  background:var(--surface); color:var(--ink-2); padding:4px 7px; cursor:pointer; }
+.pager button:hover:not([disabled]) { background:var(--surface-3); color:var(--ink); }
+.pager button.on { background:var(--brand); border-color:var(--brand); color:#fff; font-weight:650; }
+.pager button[disabled] { opacity:.4; cursor:default; }
+.pager .gap { color:var(--muted); padding:0 2px; }
+.pager .of { margin-left:auto; font-size:11.5px; color:var(--muted); }
+
+.legendbar { display:flex; gap:16px; flex-wrap:wrap; align-items:center; margin:16px 0 0;
+  padding:10px 13px; border:1px solid var(--line); border-radius:10px; background:var(--surface-2);
+  font-size:11.5px; color:var(--muted); }
+.legendbar b { color:var(--ink); font-weight:600; }
+.cmp4 { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:14px; margin:0 0 16px; }
+@media (max-width:1150px) { .cmp4 { grid-template-columns:1fr; } }
+.barow { display:flex; align-items:baseline; gap:10px; padding:5px 0; border-bottom:1px dashed var(--line); }
+.barow:last-child { border-bottom:0; }
+.barow .lb { font-size:12px; color:var(--muted); min-width:76px; }
+.barow .lb .sw { width:8px; height:8px; border-radius:2px; display:inline-block; }
+.ba { display:flex; align-items:baseline; gap:7px; margin-left:auto; }
+.ba .b1 { font:600 13px ui-monospace,monospace; color:var(--muted); }
+.ba .b2 { font:650 16px ui-monospace,monospace; }
+.ba .ar { color:var(--muted); font-size:11px; }
+.ba .dl { font-size:11px; color:var(--muted); }
+.ba .dl.up { color:var(--exact); } .ba .dl.down { color:var(--dead); }
+.stk { display:flex; align-items:center; gap:8px; margin:0 0 7px; }
+.stk .tg { font-size:10.5px; color:var(--muted); min-width:32px; }
+.stk .sb { display:flex; flex:1; height:9px; border-radius:999px; overflow:hidden; background:var(--surface-3); }
+.stk .sb i { display:block; }
+.stk .tot { font:600 11px ui-monospace,monospace; color:var(--muted); }
+.bignum { display:flex; align-items:baseline; gap:9px; margin:2px 0 6px; }
+.bignum .b1 { font:600 19px ui-monospace,monospace; color:var(--muted); }
+.bignum .b2 { font:650 27px ui-sans-serif,sans-serif; letter-spacing:-.02em; }
+.bignum .b2.worse { color:var(--dead); }
+.bignum .ar { color:var(--muted); }
+.chg { font:650 9.5px/1 ui-sans-serif,sans-serif; text-transform:uppercase; letter-spacing:.07em;
+  border-radius:999px; padding:4px 8px; border:1px solid var(--line); color:var(--muted); }
+.chg.ok { color:var(--exact); border-color:var(--exact); background:var(--tint-exact); }
+.chg.bad { color:var(--dead); border-color:var(--dead); background:var(--tint-dead); }
+.chg.warn { color:var(--guess); border-color:var(--guess); background:var(--tint-guess); }
+.ihead { display:flex; align-items:center; gap:8px; margin:0 0 9px; min-width:0; }
+.ihead h4 { margin:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.callout { border:1px solid var(--line); border-left-width:3px; border-radius:8px;
+  padding:8px 10px; margin:0 0 11px; background:var(--surface-2); }
+.callout .ct { font-weight:650; font-size:12.5px; }
+.callout .cw { font-size:11.5px; color:var(--muted); margin-top:2px; line-height:1.5; }
+.callout.d-both { border-left-color:var(--exact); background:var(--tint-exact); }
+.callout.d-feonly { border-left-color:var(--dead); background:var(--tint-dead); }
+.callout.d-uncalled { border-left-color:var(--guess); background:var(--tint-guess); }
+.callout.d-unpaired { border-left-color:var(--line-2); }
+.btn.wide2 { width:100%; margin-top:12px; text-align:center; display:block; }
 .toolrow .search { display:flex; align-items:center; gap:7px; background:var(--surface);
   border:1px solid var(--line); border-radius:8px; padding:5px 9px; min-width:240px; }
 .toolrow .search input { border:0; outline:0; background:transparent; color:var(--ink); font:inherit; width:100%; }
@@ -52,15 +135,23 @@ svg.bip.dim g.lit rect.node { opacity:1; }
 @media (max-width:1150px) { .grid2 { grid-template-columns:1fr; } }
 /* cm:guard The chain needs FOUR readable columns — squeezing it into the 348px inspector slot broke
    every label into one character per line, which is worse than not drawing it. */
-.impgrid { display:grid; grid-template-columns:400px 1fr; gap:14px; align-items:start; }
+.impgrid { display:grid; grid-template-columns:360px minmax(0,1fr); gap:14px; align-items:start; }
 @media (max-width:1250px) { .impgrid { grid-template-columns:1fr; } }
 table.rows { width:100%; border-collapse:collapse; font-size:12.5px; }
 table.rows th { text-align:left; font:600 10.5px/1 ui-sans-serif,sans-serif; text-transform:uppercase;
   letter-spacing:.07em; color:var(--muted); padding:0 8px 7px; border-bottom:1px solid var(--line); white-space:nowrap; }
 table.rows td { padding:7px 8px; border-bottom:1px solid var(--line); vertical-align:top; }
+table.rows.dense { table-layout:fixed; }
+table.rows.dense td { padding:6px 8px; vertical-align:middle; }
+table.rows.dense th { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+table.rows.dense th.num, table.rows.dense td.num { text-align:right; font:600 12px ui-monospace,monospace; }
+table.rows.dense .clip { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+table.rows.dense .mono { font:12px/1.4 ui-monospace,monospace; }
+table.rows.dense .sub2 { font:10.5px/1.35 ui-monospace,monospace; }
 table.rows tbody tr { cursor:pointer; }
 table.rows tbody tr:hover { background:var(--surface-2); }
-table.rows tbody tr.on { background:var(--surface-3); }
+table.rows tbody tr.on { background:var(--surface-3); box-shadow:inset 3px 0 0 var(--brand); }
+table.rows tbody tr.on .mono { color:var(--ink); font-weight:600; }
 .tblwrap { border:1px solid var(--line); border-radius:12px; background:var(--surface); padding:12px 12px 4px; overflow-x:auto; }
 .mono { font:12px/1.45 ui-monospace,monospace; word-break:break-all; }
 .sub2 { color:var(--muted); font:11px/1.4 ui-monospace,monospace; word-break:break-all; }
@@ -75,6 +166,26 @@ table.rows tbody tr.on { background:var(--surface-3); }
 .insp2 h4 { margin:0 0 3px; font:12.5px/1.4 ui-monospace,monospace; word-break:break-all; }
 .kv { display:grid; grid-template-columns:96px 1fr; gap:3px 10px; font-size:12px; margin:9px 0; }
 .kv span:first-child { color:var(--muted); }
+.chainwrap { overflow-x:auto; margin-top:6px; }
+svg.chaing { width:100%; min-width:760px; height:auto; display:block; }
+svg.chaing text { font:11px ui-monospace,monospace; fill:var(--ink); }
+svg.chaing text.sub { font:9.5px ui-monospace,monospace; fill:var(--muted); }
+svg.chaing text.head { font:650 9.5px ui-sans-serif,sans-serif; fill:var(--muted);
+  letter-spacing:.09em; text-transform:uppercase; }
+svg.chaing g.cnode rect { fill:var(--surface-2); stroke:var(--line-2); stroke-width:1; }
+svg.chaing g.cnode.loose rect { stroke:var(--guess); stroke-dasharray:3 2; }
+svg.chaing .cedge { fill:none; stroke-width:1.3; opacity:.55; }
+svg.chaing .cedge.loose { stroke-dasharray:4 3; }
+svg.chaing .cedge.c-exact { stroke:var(--exact); }
+svg.chaing .cedge.c-inferred { stroke:var(--inferred); }
+svg.chaing .cedge.c-guess { stroke:var(--guess); }
+svg.chaing .arrowhead { fill:var(--muted); }
+svg.chaing g.cnode { cursor:default; }
+svg.chaing.dim .cedge { opacity:.07; }
+svg.chaing.dim .cedge.lit { opacity:.95; stroke-width:2; }
+svg.chaing.dim g.cnode { opacity:.25; }
+svg.chaing.dim g.cnode.lit { opacity:1; }
+svg.chaing.dim g.cnode.lit rect { stroke:var(--brand); }
 .chain { display:flex; flex-direction:column; gap:0; margin:8px 0 0; }
 .chain .step { display:flex; gap:8px; align-items:baseline; padding:6px 0; border-bottom:1px dashed var(--line); }
 .chain .role { font:600 9.5px/1 ui-sans-serif,sans-serif; text-transform:uppercase; letter-spacing:.06em;
@@ -115,24 +226,40 @@ table.rows tbody tr.on { background:var(--surface-3); }
 
 export const PANES_HTML = `
 <section class="pane" id="pane-endpoints" hidden>
-  <div class="toolrow">
-    <label class="search">🔎<input id="q" placeholder="tìm theo method, path hoặc controller" autocomplete="off"></label>
-    <select class="facet" id="f-method"></select>
-    <select class="facet" id="f-auth"></select>
-    <select class="facet" id="f-recon"></select>
-    <select class="facet" id="f-conf"></select>
-    <span class="stat" id="ep-count"></span>
-  </div>
-  <div class="grid2">
-    <div class="tblwrap">
-      <table class="rows">
-        <thead><tr>
-          <th>method</th><th>path</th><th>controller</th><th>auth</th>
-          <th>trạng thái</th><th class="nowrap">#gọi</th><th>độ tin cậy</th>
-        </tr></thead>
-        <tbody id="ep-rows"></tbody>
-      </table>
-      <p class="cut" id="ep-cut"></p>
+  <div class="kpistrip" id="ep-kpis"></div>
+  <div class="grid3">
+    <aside class="facets" id="ep-facets">
+      <div class="fhead"><span>Bộ lọc</span><button class="reset" id="f-reset" type="button">Bỏ lọc</button></div>
+      <div id="f-groups"></div>
+    </aside>
+    <div>
+      <div class="toolrow">
+        <label class="search">🔎<input id="q" placeholder="tìm theo method, path hoặc controller" autocomplete="off"></label>
+        <span class="stat" id="ep-count"></span>
+        <span class="spacer"></span>
+        <span class="stat" id="ep-range"></span>
+      </div>
+      <div class="tblwrap">
+        <table class="rows dense">
+          <colgroup>
+            <col style="width:74px"><col><col style="width:54px">
+            <col style="width:132px"><col style="width:38px"><col style="width:82px">
+          </colgroup>
+          <thead><tr>
+            <th>method</th><th>path · controller</th>
+            <th>auth</th><th>trạng thái</th><th class="num">#</th><th>tin cậy</th>
+          </tr></thead>
+          <tbody id="ep-rows"></tbody>
+        </table>
+        <div class="pager" id="ep-pager"></div>
+      </div>
+      <div class="legendbar">
+        <span><b>độ tin cậy</b></span>
+        <span><span class="swatch c-bg-exact"></span>exact — đọc trực tiếp từ code</span>
+        <span><span class="swatch c-bg-inferred"></span>inferred — suy qua wrapper hoặc hằng số</span>
+        <span><span class="swatch c-bg-guess"></span>guess — đi qua re-export, có thể sai màn</span>
+        <span>Unresolved <b>không</b> nằm trong ba mức trên — apiflow không đọc được đường dẫn.</span>
+      </div>
     </div>
     <div class="insp2">
       <div class="htabs" id="insp-tabs"></div>
@@ -195,7 +322,7 @@ export const PANES_HTML = `
         <thead><tr><th>màn</th><th class="nowrap">#endpoint</th><th>độ tin cậy</th></tr></thead>
         <tbody id="sc-rows"></tbody>
       </table>
-      <p class="cut" id="sc-cut"></p>
+      <div class="pager" id="sc-pager"></div>
     </div>
     <div class="insp2"><div class="body" id="sc-insp"></div></div>
   </div>
@@ -227,12 +354,29 @@ export const PANES_HTML = `
 // cm:guard No template literals and no backticks below — this block is embedded inside a String.raw
 // literal, so one backtick closes it early and the page ships a syntax error.
 export const PANES_SCRIPT = String.raw`
+const el0 = (id) => (document.getElementById(id) || { textContent: 'null' }).textContent;
 const MAP = JSON.parse(document.getElementById('apimap').textContent);
 const ALERTS = JSON.parse(document.getElementById('alerts').textContent);
 const RELIABILITY = new Map(JSON.parse(document.getElementById('reliability').textContent)
   .map((r) => [r[0], { exact: r[1], inferred: r[2], guess: r[3] }]));
 const DIFF = JSON.parse(document.getElementById('diff').textContent);
+const SERIES = JSON.parse(el0('series'));
+const EPHIST = JSON.parse(el0('ephist'));
 
+// cm:why "bản scan thứ 3/5" plus a date, not just a date: history holds only the scans that CHANGED
+// something, so "2 ngày trước" alone hides that there were three scans in between that saw the same.
+function seenText(endpointId) {
+  if (!EPHIST) return null;
+  const total = EPHIST.scans.length;
+  const index = EPHIST.first[endpointId];
+  if (index === undefined) return 'có ở cả ' + total + ' bản scan đã lưu';
+  const at = EPHIST.scans[index] && EPHIST.scans[index].at;
+  return 'xuất hiện ở bản scan thứ ' + (index + 1) + '/' + total
+    + (at ? ' (' + new Date(at).toLocaleString('vi-VN') + ')' : '');
+}
+
+// cm:guard Kept for the panes that still cap instead of paginate — unresolved groups by reason, and
+// a page boundary through a group would split one reason across two pages.
 const ROW_CAP = 400;
 const SCREEN_CAP = 20;
 
@@ -276,11 +420,22 @@ const RECON_LABEL = {
   unpaired: 'chưa đối chiếu',
 };
 const RECON_CLS = { both: 'd-both', uncalled: 'd-uncalled', feonly: 'd-feonly', unpaired: 'd-unpaired' };
+// cm:why Each state gets a sentence, not just a colour: "feonly" is a finding a reader has to act on,
+// and the action depends on WHY apiflow says it — which the colour cannot carry.
+const RECON_WHY = {
+  both: 'API khai route này và có màn gọi nó. Đổi nó là đổi cả hai phía.',
+  uncalled: 'API khai route này nhưng không màn nào trong FE đã scan gọi tới. Ứng viên route chết — client khác vẫn có thể đang gọi.',
+  feonly: 'FE gọi đường dẫn này nhưng BE không khai. Hoặc sai đường dẫn, hoặc route nằm ở service khác.',
+  unpaired: 'Chưa đối chiếu được vì thiếu một phía. Scan phía còn lại rồi mới kết luận được.',
+};
+
+const screensFor = (endpointId) =>
+  [...new Set((callsByEndpoint.get(endpointId) || []).map((c) => c.screenId))];
 
 const state = {
   section: 'overview', q: '', method: '', auth: '', recon: '', conf: '',
   endpoint: null, insp: 'overview', screen: null, impQ: '',
-  alertKind: '', alertSev: '', unQ: '', scQ: '', cvQ: '', cvRecon: '', group: null,
+  alertKind: '', alertSev: '', unQ: '', scQ: '', cvQ: '', cvRecon: '', group: null, gEndpoint: null, page: 1, scPage: 1, alPage: 1,
 };
 
 const el = (id) => document.getElementById(id);
@@ -347,57 +502,215 @@ function visibleEndpoints() {
   });
 }
 
+const PAGE = 50;
+
+function kpiStrip(id) {
+  const box = el(id);
+  if (!box) return;
+  box.textContent = '';
+  const d = DIFF;
+  const rows = [
+    ['endpoint', MAP.endpoints.length, d && (d.endpoints.added.length - d.endpoints.removed.length), ''],
+    ['màn hình', MAP.screens.length, d && (d.screens.after - d.screens.before), ''],
+    ['lời gọi', MAP.calls.length, d && (d.calls.after - d.calls.before), ''],
+    ['field', MAP.fields.length, null, ''],
+    ['unresolved', MAP.unresolved.length, d && (d.unresolved.after - d.unresolved.before), MAP.unresolved.length ? 'alarm' : ''],
+    ['thấy hai phía', MAP.endpoints.filter((e) => reconOf(e) === 'both').length, null, ''],
+  ];
+  const SERIES_KEY = { endpoint: 'endpoints', 'màn hình': 'screens', 'lời gọi': 'calls', unresolved: 'unresolved' };
+  for (const [lab, val, delta, cls] of rows) {
+    const card = h('div', 'k1 ' + cls);
+    card.appendChild(h('div', 'lab', lab));
+    card.appendChild(h('div', 'val', val.toLocaleString('vi-VN')));
+    // cm:why A delta is shown only when two scans exist — an unchanged "▲ 0" on a first scan reads
+    // as "measured, no movement" when the truth is that nothing has been measured against yet.
+    if (delta === null || delta === undefined || delta === 0) {
+      card.appendChild(h('div', 'dlt', d ? '—' : 'chưa có bản trước để so'));
+    } else {
+      const up = lab === 'unresolved' ? delta < 0 : delta > 0;
+      card.appendChild(h('div', 'dlt ' + (up ? 'up' : 'down'),
+        (delta > 0 ? '▲ ' : '▼ ') + Math.abs(delta).toLocaleString('vi-VN') + ' so lần trước'));
+    }
+    const line = SERIES && SERIES[SERIES_KEY[lab]];
+    if (line && line.length >= 3) card.appendChild(spark(line, cls === 'alarm'));
+    box.appendChild(card);
+  }
+}
+
+// cm:why Draws the series as-is with no y-axis and no baseline at zero: this is a shape, not a
+// measurement — the number above it is the measurement, and a fake axis would invite reading values
+// off 40 pixels of svg.
+function spark(values, inverse) {
+  const w = 78;
+  const hgt = 16;
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const span = max - min || 1;
+  const pts = values.map((v, i) => {
+    const x = (i / (values.length - 1)) * (w - 2) + 1;
+    const y = hgt - 1 - ((v - min) / span) * (hgt - 2);
+    return x.toFixed(1) + ',' + y.toFixed(1);
+  }).join(' ');
+  const rising = values[values.length - 1] > values[0];
+  const good = inverse ? !rising : rising;
+  const svg = svgEl('svg', { class: 'spark', width: w, height: hgt, viewBox: '0 0 ' + w + ' ' + hgt });
+  svg.appendChild(svgEl('polyline', {
+    points: pts, fill: 'none', 'stroke-width': '1.4', 'stroke-linejoin': 'round',
+    stroke: 'var(--' + (values[0] === values[values.length - 1] ? 'muted' : good ? 'exact' : 'dead') + ')',
+  }));
+  svg.setAttribute('aria-label', values.length + ' lần scan: ' + values.join(' → '));
+  const titleEl = svgEl('title', {});
+  titleEl.textContent = values.length + ' lần scan gần nhất: ' + values.join(' → ');
+  svg.appendChild(titleEl);
+  return svg;
+}
+
+const FACET_GROUPS = [
+  { key: 'method', title: 'method', values: () => [...new Set(MAP.endpoints.map((e) => e.method))].sort()
+      .map((m) => ({ v: m, label: m, test: (e) => e.method === m })) },
+  { key: 'auth', title: 'auth', values: () => [
+      { v: 'yes', label: 'có auth', test: (e) => e.auth === true },
+      { v: 'no', label: 'không auth', test: (e) => e.auth === false },
+      { v: 'murky', label: 'không rõ', test: (e) => e.auth === undefined },
+    ] },
+  { key: 'recon', title: 'đối chiếu', values: () => Object.keys(RECON_LABEL)
+      .map((k) => ({ v: k, label: RECON_LABEL[k], cls: RECON_CLS[k], test: (e) => reconOf(e) === k })) },
+  { key: 'conf', title: 'độ tin cậy của lời gọi', values: () => ['exact', 'inferred', 'guess']
+      .map((k) => ({ v: k, label: k, cls: 'c-bg-' + k, test: (e) => bestConf(callsByEndpoint.get(e.id) || []) === k })) },
+];
+
+// cm:why Every value carries its own count, and the count is over the WHOLE map, not the filtered
+// rows: a facet whose number moves as you filter cannot tell you whether it is worth clicking.
+function renderFacets() {
+  const box = el('f-groups');
+  box.textContent = '';
+  for (const group of FACET_GROUPS) {
+    const wrap = h('div', 'fg');
+    const head = h('h5', null, group.title);
+    wrap.appendChild(head);
+    const all = h('label', state[group.key] === '' ? 'on' : null);
+    const allInput = document.createElement('input');
+    allInput.type = 'radio';
+    allInput.name = 'f-' + group.key;
+    allInput.checked = state[group.key] === '';
+    allInput.onchange = () => { state[group.key] = ''; state.page = 1; render(); };
+    all.append(allInput, h('span', null, 'tất cả'), h('span', 'fn', String(MAP.endpoints.length)));
+    wrap.appendChild(all);
+    for (const value of group.values()) {
+      const n = MAP.endpoints.filter(value.test).length;
+      const row = h('label', state[group.key] === value.v ? 'on' : null);
+      const input = document.createElement('input');
+      input.type = 'radio';
+      input.name = 'f-' + group.key;
+      input.checked = state[group.key] === value.v;
+      input.onchange = () => { state[group.key] = value.v; state.page = 1; render(); };
+      row.appendChild(input);
+      if (value.cls) row.appendChild(h('span', 'sw ' + value.cls));
+      row.appendChild(h('span', null, value.label));
+      row.appendChild(h('span', 'fn', String(n)));
+      wrap.appendChild(row);
+    }
+    box.appendChild(wrap);
+  }
+  el('f-reset').onclick = () => {
+    state.method = ''; state.auth = ''; state.recon = ''; state.conf = ''; state.q = '';
+    const q = el('q');
+    if (q) q.value = '';
+    state.page = 1;
+    render();
+  };
+}
+
+// cm:why One pager for every long list: three panes each dumping 600+ rows was the reason the page
+// scrolled for 23 000 pixels, and three hand-rolled pagers would drift apart within a week.
+function renderPager(hostId, total, key, anchorId) {
+  const box = el(hostId);
+  if (!box) return;
+  box.textContent = '';
+  const pages = Math.max(1, Math.ceil(total / PAGE));
+  if (state[key] > pages) state[key] = pages;
+  const current = state[key];
+  const go = (n) => {
+    state[key] = n;
+    render();
+    const anchor = el(anchorId);
+    if (anchor) anchor.scrollIntoView({ block: 'nearest' });
+  };
+  const btn = (label, n, on, disabled) => {
+    const b = document.createElement('button');
+    b.textContent = label;
+    if (on) b.className = 'on';
+    if (disabled) b.disabled = true;
+    else b.onclick = () => go(n);
+    return b;
+  };
+  box.appendChild(btn('‹', current - 1, false, current === 1));
+  // cm:why Shows first, last and a window around the current page — 22 numbered buttons is not
+  // navigation, and dropping the last page hides how much is left.
+  const want = new Set([1, pages, current, current - 1, current + 1]);
+  let previous = 0;
+  for (const n of [...want].filter((n) => n >= 1 && n <= pages).sort((a, b) => a - b)) {
+    if (n - previous > 1) box.appendChild(h('span', 'gap', '…'));
+    box.appendChild(btn(String(n), n, n === current, false));
+    previous = n;
+  }
+  box.appendChild(btn('›', current + 1, false, current === pages));
+  box.appendChild(h('span', 'of', pages > 1 ? current + ' / ' + pages + ' trang' : ''));
+}
+
 function renderEndpoints() {
-  const all = MAP.endpoints;
-  const count = (fn) => all.filter(fn).length;
-  const methods = [...new Set(all.map((e) => e.method))].sort()
-    .map((m) => [m, m + ' (' + count((e) => e.method === m) + ')']);
-  fillFacet('f-method', 'method — tất cả (' + all.length + ')', methods, state.method, (v) => { state.method = v; render(); });
-  fillFacet('f-auth', 'auth — tất cả', [
-    ['yes', 'có auth (' + count((e) => e.auth === true) + ')'],
-    ['no', 'không auth (' + count((e) => e.auth === false) + ')'],
-    ['murky', 'không rõ (' + count((e) => e.auth === undefined) + ')'],
-  ], state.auth, (v) => { state.auth = v; render(); });
-  fillFacet('f-recon', 'đối chiếu — tất cả', Object.keys(RECON_LABEL)
-    .map((k) => [k, RECON_LABEL[k] + ' (' + count((e) => reconOf(e) === k) + ')']),
-    state.recon, (v) => { state.recon = v; render(); });
-  fillFacet('f-conf', 'độ tin cậy — tất cả', ['exact', 'inferred', 'guess']
-    .map((k) => [k, k + ' (' + count((e) => bestConf(callsByEndpoint.get(e.id) || []) === k) + ')']),
-    state.conf, (v) => { state.conf = v; render(); });
+  kpiStrip('ep-kpis');
+  renderFacets();
 
   const rows = visibleEndpoints();
-  el('ep-count').textContent = rows.length + '/' + all.length + ' endpoint';
+  el('ep-count').textContent = rows.length.toLocaleString('vi-VN') + ' / '
+    + MAP.endpoints.length.toLocaleString('vi-VN') + ' endpoint';
+
+  const from = (state.page - 1) * PAGE;
+  const page = rows.slice(from, from + PAGE);
+  // cm:why Selects the first visible row when the current selection is filtered away: an inspector
+  // that says "bấm một dòng" next to a full table is a third of the pane spent on an instruction.
+  if (state.endpoint === null || !rows.some((e) => e.id === state.endpoint)) {
+    state.endpoint = page.length > 0 ? page[0].id : null;
+  }
+  el('ep-range').textContent = rows.length === 0 ? 'không có dòng nào khớp'
+    : 'đang xem ' + (from + 1) + '–' + (from + page.length) + ' trong ' + rows.length.toLocaleString('vi-VN');
+
   const body = el('ep-rows');
   body.textContent = '';
-  for (const e of rows.slice(0, ROW_CAP)) {
+  for (const e of page) {
     const tr = document.createElement('tr');
     if (state.endpoint === e.id) tr.className = 'on';
     const verb = h('td');
     verb.appendChild(h('span', 'verb ' + e.method, e.method));
     tr.appendChild(verb);
+    // cm:why Path and handler share ONE cell on two lines: seven columns of real Laravel paths do not
+    // fit 740px, and a path clipped to 20 characters is a row you cannot identify at all.
+    // cm:guard title carries the full value on both lines, because both are clipped.
     const path = h('td');
-    path.appendChild(h('div', 'mono', e.path));
+    const pathText = h('div', 'mono clip', e.path);
+    pathText.title = e.path;
+    path.appendChild(pathText);
+    const where = e.handler
+      ? e.handler + (e.source ? '  ·  ' + e.source.file + ':' + e.source.line : '')
+      : e.source ? e.source.file + ':' + e.source.line : 'BE không khai route này';
+    const sub = h('div', 'sub2 clip', where);
+    sub.title = where;
+    path.appendChild(sub);
     tr.appendChild(path);
-    const ctl = h('td');
-    if (e.handler) ctl.appendChild(h('div', 'mono', e.handler));
-    if (e.source) ctl.appendChild(h('div', 'sub2', e.source.file + ':' + e.source.line));
-    if (!e.handler && !e.source) ctl.appendChild(h('div', 'sub2', '—'));
-    tr.appendChild(ctl);
     tr.appendChild(h('td', 'nowrap', e.auth === true ? 'có' : e.auth === false ? 'KHÔNG' : '?'));
     const st = h('td', 'nowrap');
     st.appendChild(h('span', 'dot ' + RECON_CLS[reconOf(e)]));
     st.appendChild(document.createTextNode(' ' + RECON_LABEL[reconOf(e)]));
     tr.appendChild(st);
-    tr.appendChild(h('td', 'nowrap', String((callsByEndpoint.get(e.id) || []).length)));
+    tr.appendChild(h('td', 'num', String((callsByEndpoint.get(e.id) || []).length)));
     const rel = h('td');
     rel.appendChild(microBar(e.id));
     tr.appendChild(rel);
     tr.onclick = () => { state.endpoint = e.id; render(); };
     body.appendChild(tr);
   }
-  el('ep-cut').textContent = rows.length > ROW_CAP
-    ? 'Còn ' + (rows.length - ROW_CAP) + ' endpoint nữa không hiện ở đây — lọc hẹp lại để thấy chúng.'
-    : '';
+  renderPager('ep-pager', rows.length, 'page', 'ep-rows');
   renderInspector();
 }
 
@@ -419,15 +732,27 @@ function renderInspector() {
     tabs.appendChild(t);
   }
   const calls = callsByEndpoint.get(e.id) || [];
-  body.appendChild(h('h4', null, e.method + ' ' + e.path));
+  const title = h('div', 'ihead');
+  title.appendChild(h('span', 'verb ' + e.method, e.method));
+  const titlePath = h('h4', null, e.path);
+  titlePath.title = e.path;
+  title.appendChild(titlePath);
+  body.appendChild(title);
 
   if (state.insp === 'overview') {
+    const st = reconOf(e);
+    const callout = h('div', 'callout ' + RECON_CLS[st]);
+    callout.appendChild(h('div', 'ct', RECON_LABEL[st]));
+    callout.appendChild(h('div', 'cw', RECON_WHY[st]));
+    body.appendChild(callout);
     const kv = h('div', 'kv');
     const add = (k, v) => { kv.appendChild(h('span', null, k)); kv.appendChild(h('span', 'mono', v)); };
     add('đối chiếu', RECON_LABEL[reconOf(e)]);
     add('auth', e.auth === true ? 'có cổng' : e.auth === false ? 'KHÔNG thấy cổng nào' : 'có cổng nhưng không phân loại được');
     add('handler', e.handler || '—');
     add('khai ở', e.source ? e.source.file + ':' + e.source.line : 'không thấy trong BE');
+    const seen = seenText(e.id);
+    if (seen) add('lịch sử', seen);
     add('số lời gọi', String(calls.length));
     add('độ tin cậy', calls.length ? bestConf(calls) + ' (tốt nhất)' : '—');
     body.appendChild(kv);
@@ -443,6 +768,15 @@ function renderInspector() {
       p.appendChild(document.createTextNode(' ' + a.detail));
       body.appendChild(p);
     }
+    const go = h('button', 'btn primary wide2', calls.length
+      ? 'Xem ' + calls.length + ' lời gọi tới ' + (screensFor(e.id).length) + ' màn →'
+      : 'Xem pane ảnh hưởng →');
+    go.onclick = () => {
+      state.section = 'impact';
+      location.hash = 'impact';
+      render();
+    };
+    body.appendChild(go);
     return;
   }
 
@@ -524,6 +858,147 @@ function renderInspector() {
 
 export const PANES_SCRIPT_2 = String.raw`
 const ROLE_COLS = [['client', 'api client'], ['hook', 'hook / util'], ['component', 'component'], ['screen', 'màn']];
+const COL_CAP = 14;
+
+// cm:why Draws the edges, not four independent lists: the columns alone tell you WHICH components
+// exist, never which screen each one leads to — and that mapping is the whole answer this pane owes.
+function chainGraph(chains) {
+  const byRole = new Map(ROLE_COLS.map(([role]) => [role, new Map()]));
+  const key = (step) => step.role + '|' + step.file + '|' + step.symbol;
+  for (const c of chains) {
+    for (const step of c.chain) {
+      const bucket = byRole.get(step.role);
+      if (!bucket) continue;
+      const k = key(step);
+      if (!bucket.has(k) || (!bucket.get(k).precise && step.precise)) bucket.set(k, step);
+    }
+  }
+
+  const shown = new Map();
+  const cut = new Map();
+  ROLE_COLS.forEach(([role]) => {
+    const all = [...byRole.get(role).values()];
+    cut.set(role, Math.max(0, all.length - COL_CAP));
+    all.slice(0, COL_CAP).forEach((step) => shown.set(key(step), step));
+  });
+
+  const edges = new Map();
+  const rank = { exact: 0, inferred: 1, guess: 2 };
+  for (const c of chains) {
+    const path = c.chain.filter((step) => shown.has(key(step)));
+    for (let i = 0; i + 1 < path.length; i++) {
+      const a = key(path[i]);
+      const b = key(path[i + 1]);
+      const id = a + '>' + b;
+      const loose = path[i + 1].precise === false;
+      const previous = edges.get(id);
+      if (!previous || rank[c.confidence] < rank[previous.confidence]) {
+        edges.set(id, { a, b, confidence: c.confidence, loose });
+      }
+    }
+  }
+
+  const W = 1080;
+  const colW = 236;
+  const gap = (W - colW * 4) / 3;
+  const xOf = (index) => index * (colW + gap);
+  const top = 26;
+  const rowH = 34;
+  const tallest = Math.max(...ROLE_COLS.map(([role]) => Math.min(byRole.get(role).size, COL_CAP)), 1);
+  const span = tallest * rowH;
+  const height = top + span + 12;
+
+  const pos = new Map();
+  ROLE_COLS.forEach(([role], index) => {
+    const list = [...byRole.get(role).values()].slice(0, COL_CAP);
+    list.forEach((step, i) => {
+      pos.set(key(step), { x: xOf(index), y: top + ((i + 0.5) * span) / list.length, col: index });
+    });
+  });
+
+  const svg = svgEl('svg', { class: 'chaing', viewBox: '0 0 ' + W + ' ' + height, role: 'img' });
+  ROLE_COLS.forEach(([role, label], index) => {
+    const t = svgEl('text', { x: xOf(index), y: 12, class: 'head' });
+    t.textContent = label + ' (' + byRole.get(role).size + ')';
+    svg.appendChild(t);
+  });
+
+  const edgeEls = [];
+  for (const edge of edges.values()) {
+    const from = pos.get(edge.a);
+    const to = pos.get(edge.b);
+    if (!from || !to) continue;
+    const x1 = from.x + colW;
+    const x2 = to.x;
+    const mid = (x1 + x2) / 2;
+    const path = svgEl('path', {
+      class: 'cedge c-' + edge.confidence + (edge.loose ? ' loose' : ''),
+      d: 'M ' + x1 + ' ' + from.y + ' C ' + mid + ' ' + from.y + ', ' + mid + ' ' + to.y + ', ' + (x2 - 5) + ' ' + to.y,
+      'marker-end': 'url(#arrow)',
+    });
+    path.dataset.a = edge.a;
+    path.dataset.b = edge.b;
+    svg.appendChild(path);
+    edgeEls.push(path);
+  }
+
+  const groups = new Map();
+  for (const [k, step] of shown) {
+    const at = pos.get(k);
+    const g = svgEl('g', { class: 'cnode' + (step.precise ? '' : ' loose') });
+    g.appendChild(svgEl('rect', { x: at.x, y: at.y - 13, width: colW, height: 26, rx: 7 }));
+    const name = svgEl('text', { x: at.x + 9, y: at.y - 1 });
+    name.textContent = clip(step.symbol, 26);
+    const where = svgEl('text', { x: at.x + 9, y: at.y + 9, class: 'sub' });
+    where.textContent = clip(step.file.split('/').slice(-2).join('/') + ':' + step.line, 32);
+    g.appendChild(name);
+    g.appendChild(where);
+    const tip = svgEl('title', {});
+    tip.textContent = step.symbol + '\n' + step.file + ':' + step.line
+      + (step.precise ? '' : '\nbước này đã mất độ chắc');
+    g.appendChild(tip);
+    g.onmouseenter = () => {
+      svg.classList.add('dim');
+      const lit = new Set([k]);
+      // cm:why Lights the whole reachable branch in BOTH directions, not just adjacent nodes: the
+      // question at a component is "which screen breaks", and that answer is two hops away.
+      for (let pass = 0; pass < 4; pass++) {
+        for (const e of edgeEls) {
+          if (lit.has(e.dataset.a)) lit.add(e.dataset.b);
+          if (lit.has(e.dataset.b)) lit.add(e.dataset.a);
+        }
+      }
+      for (const e of edgeEls) e.classList.toggle('lit', lit.has(e.dataset.a) && lit.has(e.dataset.b));
+      for (const [nk, ng] of groups) ng.classList.toggle('lit', lit.has(nk));
+    };
+    g.onmouseleave = () => {
+      svg.classList.remove('dim');
+      for (const e of edgeEls) e.classList.remove('lit');
+      for (const ng of groups.values()) ng.classList.remove('lit');
+    };
+    groups.set(k, g);
+    svg.appendChild(g);
+  }
+
+  const defs = svgEl('defs', {});
+  const marker = svgEl('marker', {
+    id: 'arrow', viewBox: '0 0 8 8', refX: '7', refY: '4',
+    markerWidth: '5', markerHeight: '5', orient: 'auto-start-reverse',
+  });
+  marker.appendChild(svgEl('path', { d: 'M 0 1 L 7 4 L 0 7 z', class: 'arrowhead' }));
+  defs.appendChild(marker);
+  svg.insertBefore(defs, svg.firstChild);
+
+  const wrap = h('div', 'chainwrap');
+  wrap.appendChild(svg);
+  const dropped = ROLE_COLS.filter(([role]) => cut.get(role) > 0)
+    .map(([role, label]) => cut.get(role) + ' ' + label);
+  if (dropped.length) {
+    wrap.appendChild(h('p', 'cut', 'Không vẽ: ' + dropped.join(' · ')
+      + ' — mỗi cột chỉ vẽ ' + COL_CAP + ' hộp đầu.'));
+  }
+  return wrap;
+}
 
 function renderImpact() {
   const pick = el('imp-pick');
@@ -590,29 +1065,50 @@ function renderImpact() {
     const s = screens.get(c.screenId);
     const label = s ? (s.route || s.label + ' (chưa gắn route)') : '?';
     const cur = perScreen.get(label);
-    if (!cur || rank[c.confidence] < rank[cur.confidence]) perScreen.set(label, { call: c, confidence: c.confidence, screen: s });
+    if (!cur) perScreen.set(label, { call: c, confidence: c.confidence, screen: s, n: 1 });
+    else {
+      cur.n++;
+      if (rank[c.confidence] < rank[cur.confidence]) { cur.confidence = c.confidence; cur.call = c; }
+    }
   }
   const ordered = [...perScreen.entries()]
-    .sort((a, b) => rank[a[1].confidence] - rank[b[1].confidence] || a[0].localeCompare(b[0]));
+    .sort((a, b) => rank[a[1].confidence] - rank[b[1].confidence] || b[1].n - a[1].n || a[0].localeCompare(b[0]));
 
   const wrap = h('div', 'impgrid');
   const left = h('div', 'tblwrap');
   left.appendChild(h('h3', null, 'Màn bị ảnh hưởng — ' + ordered.length));
   const tbl = document.createElement('table');
-  tbl.className = 'rows';
+  tbl.className = 'rows dense';
+  const thead = document.createElement('thead');
+  const hr = document.createElement('tr');
+  for (const [label, cls] of [['màn', ''], ['tin cậy', 'nowrap'], ['#gọi', 'num']]) {
+    hr.appendChild(h('th', cls, label));
+  }
+  thead.appendChild(hr);
+  tbl.appendChild(thead);
   const tb = document.createElement('tbody');
   // cm:why Cut, labelled, never silent: the honest move on a 54-screen fan-out is to rank by how
   // well each is known and say how many were left out — refusing to draw loses the count itself.
   for (const [label, info] of ordered.slice(0, SCREEN_CAP)) {
     const tr = document.createElement('tr');
     const c1 = h('td');
-    c1.appendChild(h('div', 'mono', label));
-    c1.appendChild(h('div', 'sub2', info.call.source.file + ':' + info.call.source.line));
+    const name = h('div', 'mono clip', label);
+    name.title = label;
+    c1.appendChild(name);
+    // cm:guard Names the SCREEN's own file, not the call site: every row of a 13-screen fan-out
+    // shares one api-module line, and printing that made thirteen different screens look identical.
+    const where = info.screen && info.screen.source
+      ? info.screen.source.file + ':' + info.screen.source.line
+      : info.call.source.file + ':' + info.call.source.line + ' (vị trí lời gọi)';
+    const sub = h('div', 'sub2 clip', where);
+    sub.title = where;
+    c1.appendChild(sub);
     tr.appendChild(c1);
     const c2 = h('td', 'nowrap');
     c2.appendChild(h('span', 'badge ' + info.confidence, info.confidence));
     tr.appendChild(c2);
-    tr.onclick = () => { state.screen = info.call.screenId; state.section = 'screens'; render(); };
+    tr.appendChild(h('td', 'num', String(info.n)));
+    tr.onclick = () => { state.screen = info.call.screenId; state.section = 'screens'; location.hash = 'screens'; render(); };
     tb.appendChild(tr);
   }
   tbl.appendChild(tb);
@@ -632,30 +1128,8 @@ function renderImpact() {
     right.appendChild(h('p', 'empty2', 'Không chuỗi nào truy được về màn. Có ' + calls.length
       + ' lời gọi tới endpoint này ở mức module — mở tab Endpoints để xem vị trí.'));
   } else {
-    const cols = h('div', 'cols');
-    for (const [role, label] of ROLE_COLS) {
-      const col = h('div', 'col');
-      const seen = new Map();
-      for (const c of chains) {
-        for (const step of c.chain) {
-          if (step.role !== role) continue;
-          const k = step.file + '|' + step.symbol;
-          if (!seen.has(k) || (!seen.get(k).precise && step.precise)) seen.set(k, step);
-        }
-      }
-      col.appendChild(h('h4', null, label + ' (' + seen.size + ')'));
-      for (const step of [...seen.values()].slice(0, 14)) {
-        const n = h('div', 'node' + (step.precise ? '' : ' loose'));
-        n.appendChild(h('div', 'nm', step.symbol));
-        n.appendChild(h('div', 'sub2', step.file + ':' + step.line));
-        col.appendChild(n);
-      }
-      if (seen.size > 14) col.appendChild(h('p', 'cut', '+' + (seen.size - 14) + ' nữa'));
-      if (seen.size === 0) col.appendChild(h('p', 'sub2', '—'));
-      cols.appendChild(col);
-    }
-    right.appendChild(cols);
-    right.appendChild(h('p', 'sub2', 'Viền cam = bước mà chuỗi đã mất độ chắc (đi qua re-export hoặc default export không tên).'));
+    right.appendChild(chainGraph(chains));
+    right.appendChild(h('p', 'sub2', 'Nét đứt = bước mà chuỗi đã mất độ chắc (đi qua re-export hoặc default export không tên). Trỏ vào một hộp để soi riêng nhánh của nó.'));
   }
   wrap.appendChild(right);
   box.appendChild(wrap);
@@ -670,7 +1144,8 @@ function renderScreens() {
   el('sc-count').textContent = rows.length + '/' + MAP.screens.length + ' màn';
   const body = el('sc-rows');
   body.textContent = '';
-  for (const row of rows.slice(0, ROW_CAP)) {
+  const scFrom = (state.scPage - 1) * PAGE;
+  for (const row of rows.slice(scFrom, scFrom + PAGE)) {
     const tr = document.createElement('tr');
     if (state.screen === row.s.id) tr.className = 'on';
     const c1 = h('td');
@@ -685,7 +1160,7 @@ function renderScreens() {
     tr.onclick = () => { state.screen = row.s.id; renderScreens(); };
     body.appendChild(tr);
   }
-  el('sc-cut').textContent = rows.length > ROW_CAP ? 'Còn ' + (rows.length - ROW_CAP) + ' màn nữa.' : '';
+  renderPager('sc-pager', rows.length, 'scPage', 'sc-rows');
 
   const insp = el('sc-insp');
   insp.textContent = '';
@@ -782,11 +1257,11 @@ function renderAlerts() {
   fillFacet('al-kind', 'loại — tất cả (' + ALERTS.length + ')',
     Object.keys(KIND_LABEL).filter((k) => count((a) => a.kind === k) > 0)
       .map((k) => [k, KIND_LABEL[k] + ' (' + count((a) => a.kind === k) + ')']),
-    state.alertKind, (v) => { state.alertKind = v; renderAlerts(); });
+    state.alertKind, (v) => { state.alertKind = v; state.alPage = 1; renderAlerts(); });
   fillFacet('al-sev', 'mức — tất cả', ['high', 'medium', 'low']
     .filter((s) => count((a) => a.severity === s) > 0)
     .map((s) => [s, s + ' (' + count((a) => a.severity === s) + ')']),
-    state.alertSev, (v) => { state.alertSev = v; renderAlerts(); });
+    state.alertSev, (v) => { state.alertSev = v; state.alPage = 1; renderAlerts(); });
 
   const rows = ALERTS.filter((a) =>
     (!state.alertKind || a.kind === state.alertKind) && (!state.alertSev || a.severity === state.alertSev));
@@ -798,11 +1273,13 @@ function renderAlerts() {
   const wrap = h('div', 'tblwrap');
   const tbl = document.createElement('table');
   tbl.className = 'rows';
+  tbl.id = 'al-rows';
   const thead = document.createElement('thead');
   thead.innerHTML = '<tr><th>mức</th><th>loại</th><th>endpoint</th><th>chi tiết</th><th>màn ảnh hưởng</th></tr>';
   tbl.appendChild(thead);
   const tb = document.createElement('tbody');
-  for (const a of rows.slice(0, ROW_CAP)) {
+  const alFrom = (state.alPage - 1) * PAGE;
+  for (const a of rows.slice(alFrom, alFrom + PAGE)) {
     const tr = document.createElement('tr');
     const c0 = h('td', 'nowrap');
     c0.appendChild(h('span', 'badge ' + a.severity, a.severity));
@@ -820,13 +1297,16 @@ function renderAlerts() {
     c4.appendChild(h('div', 'mono', a.screens.length ? a.screens.slice(0, 4).join(' · ') : '(chưa truy được về màn nào)'));
     if (a.screens.length > 4) c4.appendChild(h('div', 'sub2', '+' + (a.screens.length - 4) + ' màn nữa'));
     tr.appendChild(c4);
-    tr.onclick = () => { state.endpoint = a.endpointId; state.section = 'impact'; render(); };
+    tr.onclick = () => { state.endpoint = a.endpointId; state.section = 'impact'; location.hash = 'impact'; render(); };
     tb.appendChild(tr);
   }
   tbl.appendChild(tb);
   wrap.appendChild(tbl);
-  if (rows.length > ROW_CAP) wrap.appendChild(h('p', 'cut', 'Còn ' + (rows.length - ROW_CAP) + ' alert nữa — lọc hẹp lại.'));
+  const pager = h('div', 'pager');
+  pager.id = 'al-pager';
+  wrap.appendChild(pager);
   box.appendChild(wrap);
+  renderPager('al-pager', rows.length, 'alPage', 'al-rows');
 }
 
 function renderCompare() {
@@ -841,79 +1321,161 @@ function renderCompare() {
   const bad = /kém đi|hẹp hơn/.test(d.headline);
   box.appendChild(h('p', 'headline ' + (bad ? 'bad' : 'good'), d.headline));
 
-  const pp = (after, before, at, bt) => {
-    const a = at ? (after / at) * 100 : 0;
-    const b = bt ? (before / bt) * 100 : 0;
-    const delta = a - b;
-    return { text: (delta >= 0 ? '▲' : '▼') + ' ' + Math.abs(delta).toFixed(1) + 'pp', up: delta >= 0 };
-  };
-  const cmp = h('div', 'cmp');
-  const box1 = h('div', 'box');
-  box1.appendChild(h('div', 'k', 'lời gọi'));
-  const a1 = h('div', 'arrow');
-  a1.appendChild(h('span', null, String(d.calls.before)));
-  a1.appendChild(h('small', null, '→'));
-  a1.appendChild(h('span', null, String(d.calls.after)));
-  box1.appendChild(a1);
-  cmp.appendChild(box1);
-
-  for (const k of ['exact', 'inferred', 'guess']) {
-    const b = h('div', 'box');
-    b.appendChild(h('div', 'k', k));
-    const ar = h('div', 'arrow');
-    ar.appendChild(h('span', null, String(d.confidence.before[k])));
-    ar.appendChild(h('small', null, '→'));
-    ar.appendChild(h('span', null, String(d.confidence.after[k])));
-    b.appendChild(ar);
-    const shift = pp(d.confidence.after[k], d.confidence.before[k], d.calls.after, d.calls.before);
-    // cm:why Percentage POINTS, not a ratio: guess going 571 -> 13 144 while total calls triple is a
-    // different story from guess tripling on a fixed total, and only the share tells them apart.
-    b.appendChild(h('div', 'pp ' + (k === 'guess' ? (shift.up ? 'down' : 'up') : (shift.up ? 'up' : 'down')), shift.text + ' tỉ trọng'));
-    cmp.appendChild(b);
-  }
-  const bu = h('div', 'box');
-  bu.appendChild(h('div', 'k', 'unresolved'));
-  const au = h('div', 'arrow');
-  au.appendChild(h('span', null, String(d.unresolved.before)));
-  au.appendChild(h('small', null, '→'));
-  au.appendChild(h('span', null, String(d.unresolved.after)));
-  bu.appendChild(au);
-  cmp.appendChild(bu);
-  box.appendChild(cmp);
-
-  const section = (title, items) => {
-    if (!items.length) return;
-    const wrap = h('div', 'tblwrap');
-    wrap.appendChild(h('h3', null, title + ' — ' + items.length));
-    const tbl = document.createElement('table');
-    tbl.className = 'rows';
-    const tb = document.createElement('tbody');
-    for (const it of items.slice(0, 120)) {
-      const tr = document.createElement('tr');
-      const c0 = h('td', 'nowrap');
-      c0.appendChild(h('span', 'verb ' + it.method, it.method));
-      tr.appendChild(c0);
-      tr.appendChild(h('td', 'mono', it.path));
-      tr.appendChild(h('td', null, it.detail || ''));
-      const c3 = h('td', 'mono');
-      c3.textContent = (it.screens && it.screens.length) ? it.screens.slice(0, 3).join(' · ') : '—';
-      tr.appendChild(c3);
-      tb.appendChild(tr);
+  const num = (n) => n.toLocaleString('vi-VN');
+  const arrow = (before, after, invert) => {
+    const row = h('div', 'ba');
+    row.appendChild(h('span', 'b1', num(before)));
+    row.appendChild(h('span', 'ar', '→'));
+    row.appendChild(h('span', 'b2', num(after)));
+    const delta = after - before;
+    if (delta !== 0) {
+      const good = invert ? delta < 0 : delta > 0;
+      row.appendChild(h('span', 'dl ' + (good ? 'up' : 'down'),
+        (delta > 0 ? '+' : '−') + num(Math.abs(delta))));
     }
-    tbl.appendChild(tb);
-    wrap.appendChild(tbl);
-    if (items.length > 120) wrap.appendChild(h('p', 'cut', 'Còn ' + (items.length - 120) + ' mục nữa.'));
-    wrap.style.marginBottom = '14px';
-    box.appendChild(wrap);
+    return row;
   };
-  section('Endpoint mới', d.endpoints.added);
-  section('Endpoint mất', d.endpoints.removed);
-  section('Endpoint đổi', d.endpoints.changed);
+
+  const panels = h('div', 'cmp4');
+
+  const p1 = h('div', 'panel');
+  p1.appendChild(h('h3', null, 'Tổng quan'));
+  const rows1 = [
+    ['màn hình', d.screens.before, d.screens.after, false],
+    ['lời gọi', d.calls.before, d.calls.after, false],
+    ['unresolved', d.unresolved.before, d.unresolved.after, true],
+  ];
+  const epLine = h('div', 'barow');
+  epLine.appendChild(h('span', 'lb', 'endpoint'));
+  const epTxt = h('div', 'ba');
+  epTxt.appendChild(h('span', 'b2', '+' + d.endpoints.added.length));
+  epTxt.appendChild(h('span', 'ar', '/'));
+  epTxt.appendChild(h('span', 'b1', '−' + d.endpoints.removed.length));
+  epTxt.appendChild(h('span', 'dl', d.endpoints.changed.length + ' đổi'));
+  epLine.appendChild(epTxt);
+  p1.appendChild(epLine);
+  for (const [label, before, after, invert] of rows1) {
+    const line = h('div', 'barow');
+    line.appendChild(h('span', 'lb', label));
+    line.appendChild(arrow(before, after, invert));
+    p1.appendChild(line);
+  }
+  panels.appendChild(p1);
+
+  const p2 = h('div', 'panel');
+  p2.appendChild(h('h3', null, 'Độ chắc của lời gọi'));
+  const stack = (counts, total, tag) => {
+    const wrap = h('div', 'stk');
+    wrap.appendChild(h('span', 'tg', tag));
+    const bar = h('div', 'sb');
+    for (const k of ['exact', 'inferred', 'guess']) {
+      if (!counts[k]) continue;
+      const seg = h('i', 'c-bg-' + k);
+      seg.style.width = ((counts[k] / (total || 1)) * 100).toFixed(2) + '%';
+      seg.title = k + ': ' + num(counts[k]) + ' / ' + num(total);
+      bar.appendChild(seg);
+    }
+    wrap.appendChild(bar);
+    wrap.appendChild(h('span', 'tot', num(total)));
+    return wrap;
+  };
+  p2.appendChild(stack(d.confidence.before, d.calls.before, 'trước'));
+  p2.appendChild(stack(d.confidence.after, d.calls.after, 'sau'));
+  // cm:why Percentage POINTS, not a ratio: guess going 571 → 13 144 while total calls triple is a
+  // different story from guess tripling on a fixed total, and only the share tells them apart.
+  for (const k of ['exact', 'inferred', 'guess']) {
+    const a = d.calls.after ? (d.confidence.after[k] / d.calls.after) * 100 : 0;
+    const b = d.calls.before ? (d.confidence.before[k] / d.calls.before) * 100 : 0;
+    const delta = a - b;
+    const good = k === 'guess' ? delta < 0 : delta > 0;
+    const line = h('div', 'barow');
+    line.appendChild(h('span', 'lb'));
+    const lab = h('span', 'lb');
+    lab.appendChild(h('i', 'sw c-bg-' + k));
+    lab.appendChild(document.createTextNode(' ' + k));
+    line.textContent = '';
+    line.appendChild(lab);
+    line.appendChild(Math.abs(delta) < 0.05
+      ? h('span', 'pp', 'tỉ trọng không đổi')
+      : h('span', 'pp ' + (good ? 'up' : 'down'),
+        (delta > 0 ? '▲ ' : '▼ ') + Math.abs(delta).toFixed(1) + 'pp tỉ trọng'));
+    p2.appendChild(line);
+  }
+  panels.appendChild(p2);
+
+  const p3 = h('div', 'panel');
+  p3.appendChild(h('h3', null, 'Unresolved'));
+  const big = h('div', 'bignum');
+  big.appendChild(h('span', 'b1', num(d.unresolved.before)));
+  big.appendChild(h('span', 'ar', '→'));
+  big.appendChild(h('span', 'b2' + (d.unresolved.after > d.unresolved.before ? ' worse' : ''), num(d.unresolved.after)));
+  p3.appendChild(big);
+  const share = (n, calls) => (calls + n === 0 ? '0%' : ((n / (calls + n)) * 100).toFixed(1) + '%');
+  p3.appendChild(h('p', 'sub2', 'chiếm ' + share(d.unresolved.before, d.calls.before) + ' → '
+    + share(d.unresolved.after, d.calls.after) + ' số lời gọi apiflow nhìn thấy'));
+  // cm:guard Says out loud that unresolved is NOT part of the three confidence levels — the two
+  // panels sit side by side, and a reader adding them up gets a total that does not exist.
+  p3.appendChild(h('p', 'sub2', 'Unresolved không nằm trong exact/inferred/guess bên cạnh — đó là những lời gọi apiflow không đọc được đường dẫn.'));
+  panels.appendChild(p3);
+  box.appendChild(panels);
+
+  const CHG = {
+    added: { label: 'mới', cls: 'ok' },
+    removed: { label: 'mất', cls: 'bad' },
+    changed: { label: 'đổi', cls: 'warn' },
+  };
+  const all = [
+    ...d.endpoints.added.map((x) => ({ ...x, chg: 'added' })),
+    ...d.endpoints.removed.map((x) => ({ ...x, chg: 'removed' })),
+    ...d.endpoints.changed.map((x) => ({ ...x, chg: 'changed' })),
+  ];
+  if (all.length === 0) {
+    box.appendChild(h('p', 'hintbox', 'Không endpoint nào thêm, mất hay đổi giữa hai bản. Thay đổi nằm ở phía lời gọi và độ chắc, xem bốn ô trên.'));
+    return;
+  }
+
+  const wrap = h('div', 'tblwrap');
+  wrap.appendChild(h('h3', null, 'Endpoint thay đổi — ' + all.length));
+  const tbl = document.createElement('table');
+  tbl.className = 'rows dense';
+  const thead = document.createElement('thead');
+  const hr = document.createElement('tr');
+  for (const [label, cls] of [['loại', 'nowrap'], ['method', 'nowrap'], ['endpoint', ''], ['chi tiết', ''], ['màn ảnh hưởng', 'num']]) {
+    hr.appendChild(h('th', cls, label));
+  }
+  thead.appendChild(hr);
+  tbl.appendChild(thead);
+  const tb = document.createElement('tbody');
+  for (const it of all.slice(0, 150)) {
+    const tr = document.createElement('tr');
+    const c0 = h('td', 'nowrap');
+    c0.appendChild(h('span', 'chg ' + CHG[it.chg].cls, CHG[it.chg].label));
+    tr.appendChild(c0);
+    const c1 = h('td', 'nowrap');
+    c1.appendChild(h('span', 'verb ' + it.method, it.method));
+    tr.appendChild(c1);
+    const c2 = h('td');
+    const path = h('div', 'mono clip', it.path);
+    path.title = it.path;
+    c2.appendChild(path);
+    tr.appendChild(c2);
+    tr.appendChild(h('td', 'sub2', it.detail || (it.chg === 'added' ? 'chưa có ở bản trước' : it.chg === 'removed' ? 'bản trước có, bản này không' : '')));
+    const c4 = h('td', 'num');
+    c4.textContent = it.screens && it.screens.length ? String(it.screens.length) : '—';
+    if (it.screens && it.screens.length) c4.title = it.screens.join('\n');
+    tr.appendChild(c4);
+    tb.appendChild(tr);
+  }
+  tbl.appendChild(tb);
+  wrap.appendChild(tbl);
+  if (all.length > 150) wrap.appendChild(h('p', 'cut', 'Còn ' + (all.length - 150) + ' thay đổi nữa không hiện ở đây.'));
+  box.appendChild(wrap);
 }
 
 function render() {
   for (const a of document.querySelectorAll('.rail a')) a.classList.toggle('on', a.dataset.section === state.section);
   for (const p of document.querySelectorAll('.pane')) p.hidden = p.id !== 'pane-' + state.section;
+  if (state.section === 'overview') kpiStrip('ov-kpis');
   if (state.section === 'endpoints') renderEndpoints();
   if (state.section === 'impact') renderImpact();
   if (state.section === 'screens') renderScreens();
@@ -928,7 +1490,7 @@ for (const a of document.querySelectorAll('[data-section]')) {
   a.onclick = (ev) => {
     ev.preventDefault();
     state.section = a.dataset.section;
-    if (a.dataset.kind) { state.alertKind = a.dataset.kind; state.alertSev = ''; }
+    if (a.dataset.kind) { state.alertKind = a.dataset.kind; state.alertSev = ''; state.alPage = 1; }
     location.hash = state.section;
     render();
   };
@@ -938,10 +1500,45 @@ const bind = (id, key) => {
   if (node) node.addEventListener('input', (ev) => { state[key] = ev.target.value.trim(); render(); });
 };
 bind('q', 'q');
+// cm:guard Typing in the search resets to page 1 — otherwise a query that returns 8 rows while you
+// sit on page 7 shows an empty table and looks like the search itself is broken.
+el('q')?.addEventListener('input', () => { state.page = 1; });
 bind('imp-q', 'impQ');
 bind('sc-q', 'scQ');
+el('sc-q')?.addEventListener('input', () => { state.scPage = 1; });
+el('un-q')?.addEventListener('input', () => { state.alPage = 1; });
 bind('un-q', 'unQ');
 bind('cv-q', 'cvQ');
+
+// cm:why Three states, not a boolean: "theo hệ điều hành" has to stay reachable, otherwise the first
+// click permanently pins the page to whatever it looked like at that moment.
+// cm:edge contract -> src/view/theme.ts THEME_BOOT — same localStorage key, same two valid values.
+const THEME_LABEL = { system: 'theo hệ điều hành', light: 'nền sáng', dark: 'nền tối' };
+const THEME_NEXT = { system: 'light', light: 'dark', dark: 'system' };
+function themeNow() {
+  const stored = (() => { try { return localStorage.getItem('apiflow-theme'); } catch (e) { return null; } })();
+  return stored === 'light' || stored === 'dark' ? stored : 'system';
+}
+function paintTheme() {
+  const mode = themeNow();
+  if (mode === 'system') delete document.documentElement.dataset.theme;
+  else document.documentElement.dataset.theme = mode;
+  const label = el('theme-label');
+  if (label) label.textContent = THEME_LABEL[mode];
+}
+if (el('theme-btn')) {
+  el('theme-btn').onclick = () => {
+    const next = THEME_NEXT[themeNow()];
+    try {
+      if (next === 'system') localStorage.removeItem('apiflow-theme');
+      else localStorage.setItem('apiflow-theme', next);
+    } catch (e) { /* trang mở bằng file:// vẫn phải đổi được nền */ }
+    if (next === 'system') delete document.documentElement.dataset.theme;
+    else document.documentElement.dataset.theme = next;
+    el('theme-label').textContent = THEME_LABEL[next];
+  };
+  paintTheme();
+}
 
 const PROJECT = JSON.parse(el('project')?.textContent || 'null');
 
@@ -1047,7 +1644,9 @@ function renderCover() {
       cell.title = e.method + ' ' + e.path + '\n' + RECON_LABEL[st] + '\nmàn gọi: ' + callers
         + (e.auth === false ? '\nkhông thấy cổng auth nào' : '');
       cell.onclick = () => {
-        state.endpoint = e.id;
+        // cm:why Sets the GRAPH's own scope, not the table selection: picking a row in the endpoints
+        // table must not silently narrow this diagram to one endpoint behind the reader's back.
+        state.gEndpoint = e.id;
         state.group = groupOf(e.path);
         state.section = 'graph';
         location.hash = 'graph';
@@ -1064,8 +1663,8 @@ function renderCover() {
 // cm:why Falls back to the biggest group rather than drawing everything: a bipartite of 1000
 // endpoints is a grey smear, and a picture nobody can read is not a smaller answer, it is no answer.
 function scopeForGraph() {
-  if (state.endpoint) {
-    const e = endpoints.get(state.endpoint);
+  if (state.gEndpoint) {
+    const e = endpoints.get(state.gEndpoint);
     if (e) return { eps: [e], label: e.method + ' ' + e.path, one: true };
   }
   const visible = coverVisible();
@@ -1101,7 +1700,7 @@ function renderGraph() {
     wider.href = '#graph';
     wider.onclick = (ev) => {
       ev.preventDefault();
-      state.endpoint = null;
+      state.gEndpoint = null;
       render();
     };
     label.appendChild(wider);

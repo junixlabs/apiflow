@@ -11,6 +11,8 @@ import { historyOf, mapPath, projectDir, readMap } from '../workspace/store';
 import type { MapDiff } from '../workspace/diff';
 import { diffMaps } from '../workspace/diff';
 import { parseMap } from '../core/apimap';
+import { sidesOf } from '../workspace/sides';
+import { endpointHistory, mapSeries } from '../workspace/series';
 import { readFileSync } from 'fs';
 import { join } from 'path';
 
@@ -69,6 +71,11 @@ export function buildApp(): Express {
       projectId: project.id,
       sourcePath: mapPath(project.id, kind),
       live: true,
+      kind,
+      sides: sidesOf(project.id),
+      now: Date.now(),
+      series: mapSeries(project.id, kind),
+      epHistory: endpointHistory(project.id, kind),
       diff: diffFor(project.id, kind),
     }));
   });

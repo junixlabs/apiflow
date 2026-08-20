@@ -2,6 +2,8 @@ import { mkdirSync, realpathSync, writeFileSync } from 'fs';
 import { dirname, join, resolve } from 'path';
 import { fileURLToPath } from 'url';
 import { renderApp } from '../view/app';
+import { sidesOf } from '../workspace/sides';
+import { endpointHistory, mapSeries } from '../workspace/series';
 import { renderHub } from '../view/hub';
 import { workspaceRoot } from '../workspace/registry';
 import { bestKind, hubProjects } from '../workspace/hubData';
@@ -12,6 +14,9 @@ function main(): void {
   const positional = args.filter((a) => !a.startsWith('--'));
   const out = resolve(positional[0] ?? 'apiflow-maps');
   const projects = hubProjects();
+  // cm:guard One `now` for every page in the batch: reading it per page makes two files written a
+  // minute apart disagree about how old the same scan is.
+  const now = Date.now();
 
   mkdirSync(out, { recursive: true });
   const written: string[] = [];
@@ -22,7 +27,10 @@ function main(): void {
     if (map === null) continue;
     const file = join(out, `${project.id}.html`);
     mkdirSync(dirname(file), { recursive: true });
-    writeFileSync(file, renderApp({ map, sourcePath: mapPath(project.id, kind), live: false }));
+    writeFileSync(file, renderApp({
+      map, sourcePath: mapPath(project.id, kind), live: false, kind,
+      sides: sidesOf(project.id), now, series: mapSeries(project.id, kind), epHistory: endpointHistory(project.id, kind),
+    }));
     written.push(file);
   }
 
@@ -36,7 +44,7 @@ function main(): void {
         live: false,
         linkTo: (project) => (bestKind(project) === null ? null : `./${project.id}.html`),
       },
-      Date.now()
+      now
     )
   );
 

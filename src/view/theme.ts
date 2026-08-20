@@ -1,20 +1,30 @@
 // cm:edge lockstep -> src/view/hub.ts, src/cli/view.ts — one token set for every page apiflow
 // renders; a second copy is how the hub and the map view start looking like different products.
+// cm:guard One string, interpolated into BOTH dark selectors — the media query for a viewer who
+// never chose, and [data-theme=dark] for one who did. Two hand-written copies drift, and the drift
+// only shows up for the half of viewers on the other path.
+const DARK = `
+  --bg:#070b14; --surface:#101827; --surface-2:#0b111d; --surface-3:#18243a;
+  --ink:#e8eef8; --ink-2:#b3c1d6; --muted:#7d8da5; --line:#1e2a3e; --line-2:#2c3d58;
+  --exact:#34d399; --inferred:#60a5fa; --guess:#fbbf24; --dead:#f87171; --brand:#5b93ff;
+  --tint-exact:rgba(52,211,153,.14); --tint-inferred:rgba(96,165,250,.14);
+  --tint-guess:rgba(251,191,36,.14); --tint-dead:rgba(248,113,113,.14);
+  --tint-brand:rgba(91,147,255,.16);
+  --shadow:0 1px 2px rgba(0,0,0,.5), 0 10px 30px rgba(0,0,0,.4);
+`;
+
 export const STYLE = `
 :root {
-  --bg:#f6f8fb; --surface:#fff; --surface-2:#f1f5f9; --surface-3:#e8eef6;
-  --ink:#0f172a; --muted:#64748b; --line:#dde5ee;
-  --exact:#059669; --inferred:#2563eb; --guess:#d97706; --dead:#dc2626;
+  --bg:#f4f7fb; --surface:#fff; --surface-2:#f7f9fc; --surface-3:#eaf0f8;
+  --ink:#0d1526; --ink-2:#3c4a60; --muted:#64748b; --line:#dfe6ef; --line-2:#c6d2e2;
+  --exact:#059669; --inferred:#2563eb; --guess:#c2740a; --dead:#dc2626; --brand:#0360FB;
+  --tint-exact:rgba(5,150,105,.10); --tint-inferred:rgba(37,99,235,.09);
+  --tint-guess:rgba(194,116,10,.11); --tint-dead:rgba(220,38,38,.09);
+  --tint-brand:rgba(3,96,251,.09);
   --shadow:0 1px 2px rgba(15,23,42,.05), 0 8px 24px rgba(15,23,42,.06);
 }
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg:#0a1020; --surface:#111a2c; --surface-2:#0e1626; --surface-3:#16233a;
-    --ink:#e6edf6; --muted:#8fa2bb; --line:#223148;
-    --exact:#34d399; --inferred:#60a5fa; --guess:#fbbf24; --dead:#f87171;
-    --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px rgba(0,0,0,.35);
-  }
-}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { ${DARK} } }
+:root[data-theme="dark"] { ${DARK} }
 * { box-sizing:border-box; }
 body { margin:0; background:var(--bg); color:var(--ink);
   font:14px/1.55 ui-sans-serif,-apple-system,"Segoe UI",Roboto,sans-serif; -webkit-font-smoothing:antialiased; }
@@ -49,10 +59,13 @@ h1 { font-size:20px; margin:0 0 4px; font-weight:650; letter-spacing:-.01em; }
   border-bottom:1px solid var(--line); cursor:pointer; }
 .row:hover { background:var(--surface-2); }
 .row.on { background:var(--surface-3); }
-.verb { font:600 10.5px/1 ui-monospace,monospace; padding:4px 6px; border-radius:5px;
-  min-width:52px; text-align:center; border:1px solid var(--line); color:var(--muted); }
-.verb.GET { color:var(--inferred); } .verb.POST { color:var(--exact); }
-.verb.PUT, .verb.PATCH { color:var(--guess); } .verb.DELETE { color:var(--dead); }
+.verb { font:650 10.5px/1 ui-monospace,monospace; padding:5px 7px; border-radius:5px;
+  min-width:56px; text-align:center; border:1px solid transparent; color:var(--muted);
+  background:var(--surface-3); letter-spacing:.03em; }
+.verb.GET { color:var(--exact); background:var(--tint-exact); }
+.verb.POST { color:var(--inferred); background:var(--tint-inferred); }
+.verb.PUT, .verb.PATCH { color:var(--guess); background:var(--tint-guess); }
+.verb.DELETE { color:var(--dead); background:var(--tint-dead); }
 .p { font:12.5px/1.4 ui-monospace,monospace; word-break:break-all; }
 .tags { margin-left:auto; display:flex; gap:6px; align-items:center; flex-shrink:0; }
 .tag { font-size:10.5px; padding:2px 7px; border-radius:999px; border:1px solid var(--line); color:var(--muted); }
@@ -100,10 +113,14 @@ export const MARK = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"
 // network reference to anything auditing this page for outbound requests.
 export const FAVICON = 'data:image/svg+xml,%3Csvg xmlns=%22http%3A//www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22%3E %3Cg stroke=%22%230360FB%22 stroke-width=%221.5%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E %3Cpath d=%22M6.6 4.6 H8.4 L12.8 11.05%22/%3E %3Cpath d=%22M19.3 4.7 L12.8 11.05%22/%3E %3Cpath d=%22M4.9 12.7 L12.8 11.05%22/%3E %3Cpath d=%22M12.95 18.1 L12.8 11.05%22/%3E %3Cpath d=%22M12.8 11.05 H17.6 L19.6 16.2%22/%3E %3C/g%3E %3Cg fill=%22%230360FB%22%3E %3Ccircle cx=%2212.8%22 cy=%2211.05%22 r=%223%22/%3E %3Ccircle cx=%225.5%22 cy=%224.6%22 r=%221.45%22/%3E %3Ccircle cx=%2220.1%22 cy=%223.9%22 r=%221.45%22/%3E %3Ccircle cx=%223.9%22 cy=%2212.9%22 r=%221.45%22/%3E %3Ccircle cx=%2213%22 cy=%2219.3%22 r=%221.45%22/%3E %3Ccircle cx=%2220.1%22 cy=%2217.5%22 r=%221.45%22/%3E %3C/g%3E %3C/svg%3E';
 
+// cm:edge contract -> src/view/theme.ts STYLE — --brand is a token defined there, in both palettes.
 export const BRAND_STYLE = `
 .brandbar { display:flex; align-items:center; gap:10px; margin:0 0 4px; }
 .brandbar .mark { width:30px; height:30px; color:var(--brand); flex:none; }
 .brandbar h1 { margin:0; }
-:root { --brand:#0360FB; }
-@media (prefers-color-scheme: dark) { :root { --brand:#5b93ff; } }
 `;
+
+// cm:guard Runs in <head> BEFORE the body paints. Applying a stored theme from the end of the page
+// makes a light page flash white for one frame on a dark setup, which reads as a broken load.
+export const THEME_BOOT = `<script>(function(){try{var t=localStorage.getItem('apiflow-theme');
+if(t==='dark'||t==='light')document.documentElement.dataset.theme=t;}catch(e){}})();</script>`;

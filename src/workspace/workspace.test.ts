@@ -254,6 +254,12 @@ describe('diff', () => {
     expect(headlineFor(before, after)).toBe('Phủ rộng hơn, nhưng chắc chắn kém đi.');
   });
 
+  it('does not claim more certainty when only coverage moved', () => {
+    const before = mapWith({ calls: callsOf([['e', 'exact'], ['e', 'guess']]) });
+    const after = mapWith({ calls: callsOf([['e', 'exact'], ['e', 'guess'], ['e', 'exact'], ['e', 'guess']]) });
+    expect(headlineFor(before, after)).toBe('Phủ rộng hơn, độ chắc gần như không đổi.');
+  });
+
   it('calls a rescan that found the same thing twice unchanged', () => {
     const m = mapWith({ calls: callsOf([['e', 'exact'], ['e', 'guess']]) });
     expect(headlineFor(m, m)).toBe('Không thay đổi đáng kể.');
