@@ -23,6 +23,7 @@ const SUBCOMMANDS = {
   probe: 'probe.ts',
   link: 'link.ts',
   impact: 'impact.ts',
+  view: 'view.ts',
 };
 const subcommand = SUBCOMMANDS[args[0]];
 

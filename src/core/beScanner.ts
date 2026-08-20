@@ -91,10 +91,11 @@ const RESOURCE_ACTIONS: Array<[string, string, string]> = [
   ['DELETE', '/{id}', 'destroy'],
 ];
 
-// cm:guard Skips quoted strings: a route path like `companies/{id}` carries a brace, and counting
-// it as a block would unwind the group stack and report a guarded api as public.
+// cm:guard Skips quoted strings, and cuts each header at the previous statement boundary: a fixed
+// lookback window bleeds into the PRECEDING sibling group and borrows a guard that is not there.
 function openBlockHeaders(content: string, upTo: number): string[] {
   const stack: string[] = [];
+  let boundary = 0;
   let i = 0;
   while (i < upTo) {
     const ch = content[i];
@@ -115,8 +116,13 @@ function openBlockHeaders(content: string, upTo: number): string[] {
       i += 2;
       continue;
     }
-    if (ch === '{') stack.push(content.slice(Math.max(0, i - 260), i));
-    else if (ch === '}') stack.pop();
+    if (ch === '{') {
+      stack.push(content.slice(boundary, i));
+      boundary = i + 1;
+    } else if (ch === '}') {
+      stack.pop();
+      boundary = i + 1;
+    } else if (ch === ';') boundary = i + 1;
     i++;
   }
   return stack;
@@ -124,8 +130,27 @@ function openBlockHeaders(content: string, upTo: number): string[] {
 
 // cm:why Laravel guards a whole file in one line — `Route::group(['middleware' => ['auth']], …)`
 // wraps 500 routes, so a lookbehind window reports every one of them as unauthenticated.
-function laravelGuarded(content: string, upTo: number): boolean {
-  return openBlockHeaders(content, upTo).some((header) => AUTH_HINT.test(header));
+// cm:guard Reads the middleware SLOT only: `AuthController@signIn` puts the word auth in the handler
+// name, and matching that reported every login endpoint — genuinely open — as guarded.
+function middlewareNames(text: string): string[] {
+  const names: string[] = [];
+  for (const m of text.matchAll(/['"]middleware['"]\s*=>\s*(\[[^\]]*\]|['"][^'"]*['"])/g)) {
+    for (const name of m[1].matchAll(/['"]([^'"]+)['"]/g)) names.push(name[1]);
+  }
+  for (const m of text.matchAll(/(?:->|::)\s*middleware\s*\(\s*(\[[^\]]*\]|['"][^'"]*['"])/g)) {
+    for (const name of m[1].matchAll(/['"]([^'"]+)['"]/g)) names.push(name[1]);
+  }
+  return names;
+}
+
+// cm:why Middleware whose job is not authentication. Anything NOT on this list and not auth-shaped is
+// a gate we cannot classify, which is `undefined` — never `false`, or an unknown guard reads as open.
+const NEUTRAL_MIDDLEWARE = /^(api|web|throttle|cors|bindings|cache\.headers|signed|company|localization|locale|json|log)\b/i;
+
+function laravelGate(content: string, upTo: number, tail: string): boolean | undefined {
+  const names = [...openBlockHeaders(content, upTo).flatMap(middlewareNames), ...middlewareNames(tail)];
+  if (names.some((name) => AUTH_HINT.test(name))) return true;
+  return names.some((name) => !NEUTRAL_MIDDLEWARE.test(name)) ? undefined : false;
 }
 
 function laravelPrefix(content: string, upTo: number): string {
@@ -214,14 +239,14 @@ function scanLaravel(file: string, raw: string): BeFileScan {
       out.routes.push(
         route(m[1] === 'any' ? 'UNKNOWN' : m[1], `${prefix}/${m[3]}`, file, lineOf(content, m.index), {
           handler: handler ? `${handler[1].split('\\').pop()}@${handler[3]}` : undefined,
-          auth: AUTH_HINT.test(tail) || laravelGuarded(content, m.index),
+          auth: laravelGate(content, m.index, tail),
         })
       );
     }
     for (const m of content.matchAll(LARAVEL_RESOURCE)) {
       const prefix = laravelPrefix(content, m.index);
       const controller = m[4].split('\\').pop() as string;
-      const guarded = laravelGuarded(content, m.index);
+      const guarded = laravelGate(content, m.index, content.slice(m.index, m.index + 400).split(';')[0]);
       for (const [verb, suffix, action] of resourceActions(content, m.index + m[0].length)) {
         out.routes.push(
           route(verb, `${prefix}/${m[3]}${suffix}`, file, lineOf(content, m.index), {

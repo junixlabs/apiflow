@@ -533,3 +533,38 @@ Route::apiResource('plain', PlainController::class);`;
     expect(of('menus')).toEqual(['GET', 'GET', 'PATCH', 'POST', 'PUT']);
   });
 });
+
+describe('laravel auth is read from the middleware slot only', () => {
+  const ROUTES = `<?php
+Route::group(['prefix' => 'v1'], function () {
+    Route::post('sign-in', [\\App\\Http\\Controllers\\AuthController::class, 'signIn']);
+    Route::group(['middleware' => ['auth', 'company']], function () {
+        Route::get('orders', 'OrderController@index');
+    });
+    Route::group(['middleware' => 'webhook_managements'], function () {
+        Route::post('webhooks/{platform}/{shop}', 'WebhookController@handle');
+    });
+    Route::middleware('catalog_auth')->group(function () {
+        Route::get('ctl-sites', 'SiteController@index');
+    });
+});`;
+
+  const scan = scanBackendFile('routes/api.php', ROUTES, 'laravel');
+  const authOf = (path: string) => scan.routes.find((r) => r.path === path)?.auth;
+
+  it('does not call a login endpoint guarded just because its controller is named Auth', () => {
+    expect(authOf('/v1/sign-in')).toBe(false);
+  });
+
+  it('reads a guard out of the enclosing group', () => {
+    expect(authOf('/v1/orders')).toBe(true);
+  });
+
+  it('reads the fluent Route::middleware form too', () => {
+    expect(authOf('/v1/ctl-sites')).toBe(true);
+  });
+
+  it('leaves a gate it cannot classify undefined rather than calling it open', () => {
+    expect(authOf('/v1/webhooks/{param}/{param}')).toBeUndefined();
+  });
+});
