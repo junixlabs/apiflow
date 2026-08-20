@@ -4,7 +4,7 @@ import { fileURLToPath } from 'url';
 import type { ApiMapFile, FieldNode } from '../core/apimap';
 import { createApiMap, endpointId, fieldId, finalizeApiMap, normalizePath } from '../core/apimap';
 import type { ClassIndex, SchemaDef, Stack } from '../core/beScanner';
-import { detectStack, indexClasses, isBackendFile, resolveHandlerSchemas, scanBackendFile } from '../core/beScanner';
+import { detectStack, indexClasses, isBackendFile, laravelRouteFilePrefixes, resolveHandlerSchemas, scanBackendFile } from '../core/beScanner';
 import { enclosingSymbols, symbolAt } from '../core/feScanner';
 import { buildMountGraph, joinPrefix, prefixesFor } from '../core/mountGraph';
 import { buildResolver } from './scanFe';
@@ -106,6 +106,11 @@ export function scanBackend(root: string, name: string): BeScanResult {
   let routesWithRequest = 0;
   let routesWithResponse = 0;
   const mounted = mountPrefixes(root, stackAt, files);
+  const routeFilePrefixes = laravelRouteFilePrefixes(files);
+  const filePrefix = (file: string): string => {
+    for (const [suffix, prefix] of routeFilePrefixes) if (file.endsWith(suffix)) return prefix;
+    return '';
+  };
 
   for (const raw of routes) {
     const hit = resolveHandlerSchemas(raw, classes);
@@ -116,7 +121,7 @@ export function scanBackend(root: string, name: string): BeScanResult {
 
     // cm:guard One router mounted at two prefixes really does serve both — the fields must follow
     // every copy, or the second path lands in the map as a schema-less endpoint that never was.
-    for (const path of mounted(hit)) {
+    for (const path of mounted(hit).map((p) => normalizePath(`${filePrefix(hit.source.file)}${p}`))) {
       const eid = endpointId(hit.method, path);
       map.endpoints.push({
         id: eid,

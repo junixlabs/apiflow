@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { shapeOf, mergeShapes } from './shape';
-import { detectStack, indexClasses, isBackendFile, resolveHandlerSchemas, scanBackendFile } from './beScanner';
+import { detectStack, indexClasses, isBackendFile, laravelRouteFilePrefixes, resolveHandlerSchemas, scanBackendFile } from './beScanner';
 import { buildHarness, ingestSamples, reconcileWrappers } from './probeHarness';
 import { createApiMap, endpointId, endpointsWithTracedReads, fieldId, finalizeApiMap, linkMaps, matchEndpointBySuffix, unreadResponseFields, undeliveredFields } from './apimap';
 import type { ApiMapFile, FieldNode } from './apimap';
@@ -452,5 +452,81 @@ Route::group(['prefix' => 'v1'], function () {
 
   it('reports a route outside every guarded group as open', () => {
     expect(scan.routes.find((r) => r.path === '/v1/languages')?.auth).toBe(false);
+  });
+});
+
+describe('laravelRouteFilePrefixes', () => {
+  const PROVIDER = `<?php
+class RouteServiceProvider extends ServiceProvider
+{
+    public function boot()
+    {
+        $this->routes(function () {
+            Route::prefix('api')
+                ->middleware('api')
+                ->group(base_path('routes/api.php'));
+
+            Route::middleware('web')
+                ->group(base_path('routes/web.php'));
+
+            // Route::prefix('legacy')->group(base_path('routes/legacy.php'));
+        });
+    }
+}`;
+
+  const BOOTSTRAP = `<?php
+return Application::configure(basePath: dirname(__DIR__))
+    ->withRouting(
+        web: __DIR__.'/../routes/web.php',
+        api: __DIR__.'/../routes/api.php',
+        apiPrefix: 'api/v2',
+        commands: __DIR__.'/../routes/console.php',
+    )
+    ->create();`;
+
+  it('reads the prefix the provider mounts a route file under', () => {
+    const found = laravelRouteFilePrefixes([{ file: 'app/Providers/RouteServiceProvider.php', content: PROVIDER }]);
+    expect(found.get('routes/api.php')).toBe('/api');
+    expect(found.get('routes/web.php')).toBe('');
+  });
+
+  it('ignores a mount that is commented out', () => {
+    const found = laravelRouteFilePrefixes([{ file: 'app/Providers/RouteServiceProvider.php', content: PROVIDER }]);
+    expect(found.has('routes/legacy.php')).toBe(false);
+  });
+
+  it('reads the Laravel 11 bootstrap form, apiPrefix included', () => {
+    const found = laravelRouteFilePrefixes([{ file: 'bootstrap/app.php', content: BOOTSTRAP }]);
+    expect(found.get('routes/api.php')).toBe('/api/v2');
+    expect(found.get('routes/web.php')).toBe('');
+  });
+
+  it('defaults the api mount to /api when no apiPrefix is given', () => {
+    const plain = BOOTSTRAP.replace("        apiPrefix: 'api/v2',\n", '');
+    expect(laravelRouteFilePrefixes([{ file: 'bootstrap/app.php', content: plain }]).get('routes/api.php')).toBe('/api');
+  });
+});
+
+describe('resource actions restricted by only/except', () => {
+  const ROUTES = `<?php
+Route::apiResource('stocks', 'StockController', [
+    'parameters' => ['stocks' => 'stock_id']
+])->only(['index']);
+Route::apiResource('menus', MenuController::class)->except(['destroy']);
+Route::apiResource('plain', PlainController::class);`;
+
+  const scan = scanBackendFile('routes/api.php', ROUTES, 'laravel');
+  const of = (base: string) => scan.routes.filter((r) => r.path.startsWith(`/${base}`)).map((r) => r.method).sort();
+
+  it('emits only the actions named by ->only', () => {
+    expect(of('stocks')).toEqual(['GET']);
+  });
+
+  it('drops the actions named by ->except across a multi-line call', () => {
+    expect(of('menus')).toEqual(['GET', 'GET', 'POST', 'PUT']);
+  });
+
+  it('still emits all five when the resource is unrestricted', () => {
+    expect(of('plain')).toEqual(['DELETE', 'GET', 'GET', 'POST', 'PUT']);
   });
 });

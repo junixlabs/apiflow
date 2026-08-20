@@ -143,6 +143,59 @@ function laravelPrefix(content: string, upTo: number): string {
   return depth > 0 ? `/${parts.join('/')}` : '';
 }
 
+// cm:guard `->only(['show'])` means THREE of the five actions do not exist. Emitting all five puts
+// endpoints in the map that no request can ever reach, which is the one thing a map must not do.
+// cm:guard Laravel mounts the route FILE, not the routes: `Route::prefix('api')->group(routes/api.php)`
+// lives in RouteServiceProvider, so every path scanned out of that file is missing its real head.
+export function laravelRouteFilePrefixes(files: Array<{ file: string; content: string }>): Map<string, string> {
+  const prefixes = new Map<string, string>();
+
+  for (const { file, content } of files) {
+    if (!/RouteServiceProvider\.php$/.test(file)) continue;
+    for (const statement of blankComments(content).split(';')) {
+      const group = /->\s*group\s*\(\s*base_path\s*\(\s*(['"])([^'"]+)\1/.exec(statement);
+      if (!group) continue;
+      const prefix = /Route::\s*prefix\s*\(\s*(['"])([^'"]*)\1|->\s*prefix\s*\(\s*(['"])([^'"]*)\3/.exec(statement);
+      prefixes.set(normalizeRouteFile(group[2]), prefix ? `/${(prefix[2] ?? prefix[4]).replace(/^\/+|\/+$/g, '')}` : '');
+    }
+  }
+
+  // cm:why Laravel 11 moved the mount into `bootstrap/app.php` and made `api` imply the `api` prefix
+  // unless `apiPrefix` says otherwise — reading only the provider misses every app on that version.
+  for (const { file, content } of files) {
+    if (!/bootstrap\/app\.php$/.test(file)) continue;
+    const routing = /withRouting\s*\(([\s\S]*?)\)\s*(?:->|;)/.exec(blankComments(content));
+    if (!routing) continue;
+    const apiPrefix = /apiPrefix\s*:\s*(['"])([^'"]*)\1/.exec(routing[1]);
+    for (const m of routing[1].matchAll(/(\w+)\s*:\s*[^,]*?(['"])([^'"]*routes\/[\w.-]+\.php)\2/g)) {
+      const head = m[1] === 'api' ? (apiPrefix ? apiPrefix[2] : 'api') : '';
+      prefixes.set(normalizeRouteFile(m[3]), head ? `/${head.replace(/^\/+|\/+$/g, '')}` : '');
+    }
+  }
+  return prefixes;
+}
+
+function normalizeRouteFile(path: string): string {
+  const match = /routes\/[\w.-]+\.php$/.exec(path.replace(/\\/g, '/'));
+  return match ? match[0] : path;
+}
+
+function resourceActions(content: string, from: number): typeof RESOURCE_ACTIONS {
+  const tail = content.slice(from, from + 300).split(';')[0];
+  const only = /->\s*only\s*\(\s*\[([^\]]*)\]/.exec(tail);
+  const except = /->\s*except\s*\(\s*\[([^\]]*)\]/.exec(tail);
+  const listed = (m: RegExpExecArray) => new Set([...m[1].matchAll(/['"](\w+)['"]/g)].map((x) => x[1]));
+  if (only) {
+    const keep = listed(only);
+    return RESOURCE_ACTIONS.filter(([, , action]) => keep.has(action));
+  }
+  if (except) {
+    const drop = listed(except);
+    return RESOURCE_ACTIONS.filter(([, , action]) => !drop.has(action));
+  }
+  return RESOURCE_ACTIONS;
+}
+
 function scanLaravel(file: string, raw: string): BeFileScan {
   const out: BeFileScan = { schemas: [], routes: [], unresolved: [] };
   const isRouteFile = /(^|\/)routes\//.test(file);
@@ -166,7 +219,7 @@ function scanLaravel(file: string, raw: string): BeFileScan {
       const prefix = laravelPrefix(content, m.index);
       const controller = m[4].split('\\').pop() as string;
       const guarded = laravelGuarded(content, m.index);
-      for (const [verb, suffix, action] of RESOURCE_ACTIONS) {
+      for (const [verb, suffix, action] of resourceActions(content, m.index + m[0].length)) {
         out.routes.push(
           route(verb, `${prefix}/${m[3]}${suffix}`, file, lineOf(content, m.index), {
             handler: `${controller}@${action}`,
