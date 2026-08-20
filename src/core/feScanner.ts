@@ -1,5 +1,5 @@
 import type { CallEdge, Confidence, FieldNode, MapMethod, ReadEdge, ScreenNode, UnresolvedCall } from './apimap';
-import { endpointId, fieldId, normalizePath, screenId } from './apimap';
+import { endpointId, fieldId, normalizePath, screenId, stripInterpolations } from './apimap';
 import type { EndpointNode } from './apimap';
 
 // cm:edge contract -> skills/fe-map-extractor/skill.md — the skill writes this shape as hints.json
@@ -27,7 +27,9 @@ const SYMBOL_PATTERNS: RegExp[] = [
   /^\s*export\s+(?:async\s+)?function\s+([A-Za-z_$][\w$]*)/,
   /^\s*(?:export\s+)?(?:async\s+)?function\s+([A-Za-z_$][\w$]*)/,
   /^\s*export\s+(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*[:=]/,
-  /^\s*(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*(?:\([^)]*\)|[A-Za-z_$][\w$]*)\s*=>/,
+  // cm:guard Must swallow `async`, generics and a return type: `const f = async (p: P): Promise<R> =>`
+  // is the ordinary shape of a typed api function, and missing it makes the call site anonymous.
+  /^\s*(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*(?::\s*[^=]+)?=\s*(?:async\s+)?(?:<[^=]*>\s*)?(?:\([^)]*\)|[A-Za-z_$][\w$]*)\s*(?::\s*[^=]+)?=>/,
   /^\s*export\s+default\s+class\s+([A-Za-z_$][\w$]*)/,
   /^\s*(?:export\s+)?class\s+([A-Za-z_$][\w$]*)/,
 ];
@@ -155,6 +157,38 @@ export function firstArgument(text: string, openParenIdx: number): string | null
   return out.trim() ? out.trim() : null;
 }
 
+// cm:guard Splits on `+` at depth 0 only, and returns null unless some LITERAL part carries a `/` —
+// otherwise `page + 1` or `'?q=' + s` would be dressed up as a path this scanner never saw.
+function concatParts(raw: string): Array<string | null> | null {
+  const parts: Array<string | null> = [];
+  let depth = 0;
+  let quote: string | null = null;
+  let buf = '';
+  const flush = () => {
+    const text = buf.trim();
+    buf = '';
+    if (!text) return false;
+    const lit = LITERAL.exec(text);
+    parts.push(lit ? stripInterpolations(lit[2]) : null);
+    return true;
+  };
+  for (const ch of raw) {
+    if (quote) {
+      buf += ch;
+      if (ch === quote) quote = null;
+      continue;
+    }
+    if (ch === "'" || ch === '"' || ch === '`') { quote = ch; buf += ch; continue; }
+    if ('([{'.includes(ch)) depth++;
+    else if (')]}'.includes(ch)) depth--;
+    else if (ch === '+' && depth === 0) { if (!flush()) return null; continue; }
+    buf += ch;
+  }
+  if (!flush()) return null;
+  if (parts.length < 2) return null;
+  return parts.some((part) => part !== null && part.includes('/')) ? parts : null;
+}
+
 export interface ResolvedUrl {
   path: string;
   baseUrlVar?: string;
@@ -185,6 +219,15 @@ export function resolveUrl(expr: string): ResolvedUrl | { unresolved: string } {
   const concat = /^([A-Za-z_$][\w$.]*)\s*\+\s*(['"`])([\s\S]*?)\2/.exec(raw);
   if (concat) {
     return { path: normalizePath(concat[3]), baseUrlVar: concat[1], confidence: 'inferred', pathLike: concat[3].includes('/') };
+  }
+  const chain = concatParts(raw);
+  if (chain !== null) {
+    // cm:why `'api/v1/carriers/' + id` is how a whole codebase writes its detail routes — refusing it
+    // sends hundreds of real calls to Unresolved, while `{param}` is exactly what the route declares.
+    const joined = chain.map((part) => (part === null ? '{param}' : part)).join('');
+    if (joined.includes('/')) {
+      return { path: normalizePath(joined), confidence: 'inferred', pathLike: true };
+    }
   }
   const embedded = /(['"`])(\/[A-Za-z0-9_\-./{}$:]*)\1/.exec(raw);
   if (embedded) return { path: normalizePath(embedded[2]), confidence: 'guess', pathLike: true };

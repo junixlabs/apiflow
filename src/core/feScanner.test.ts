@@ -291,3 +291,38 @@ describe('reads through a project wrapper', () => {
     expect(scanFile('load.ts', plain).fields.map((f) => f.path)).toContain('items');
   });
 });
+
+describe('url built by concatenation', () => {
+  it('turns a literal prefix plus an expression into a path param', () => {
+    expect(resolveUrl("'api/v1/carriers/' + id")).toEqual({
+      path: '/api/v1/carriers/{param}',
+      confidence: 'inferred',
+      pathLike: true,
+    });
+  });
+
+  it('keeps the segment that follows the expression', () => {
+    const r = resolveUrl("'api/v1/orders/' + orderId + '/items'");
+    expect(r).toHaveProperty('path', '/api/v1/orders/{param}/items');
+  });
+
+  it('refuses a concatenation with no path in it', () => {
+    expect(resolveUrl("'?page=' + page")).toHaveProperty('unresolved');
+    expect(resolveUrl('total + 1')).toHaveProperty('unresolved');
+  });
+
+  it('does not mistake an arrow-function argument for a path', () => {
+    expect(resolveUrl('items.map((i) => i.id)')).toHaveProperty('unresolved');
+  });
+});
+
+describe('enclosingSymbols on typed arrow functions', () => {
+  it('names an async arrow with a return type', () => {
+    const src = 'const addUserBank = async (params: AddUserBank): Promise<FetcherResponse<any>> => {\n  return post();\n};\n';
+    expect(enclosingSymbols(src).map((s) => s.name)).toContain('addUserBank');
+  });
+
+  it('still ignores a call that merely takes an arrow', () => {
+    expect(enclosingSymbols('const ids = items.map((i) => i.id);\n').map((s) => s.name)).not.toContain('ids');
+  });
+});
