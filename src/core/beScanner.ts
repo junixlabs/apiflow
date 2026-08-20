@@ -1,5 +1,5 @@
 import type { MapMethod, SourceRef, UnresolvedCall } from './apimap';
-import { normalizePath } from './apimap';
+import { normalizePath, toMapMethod } from './apimap';
 import type { ShapeType } from './shape';
 import { blankComments } from './feScanner';
 
@@ -65,7 +65,7 @@ const AUTH_HINT = /(\w*auth\w*|jwt|passport|requireUser|requirePermission|guard|
 // `<int:id>` and `$id` all collapse to the same endpoint id the FE scanner produces.
 function route(method: string, path: string, file: string, line: number, extra: Partial<RouteHit> = {}): RouteHit {
   return {
-    method: method.toUpperCase() as MapMethod,
+    method: toMapMethod(method),
     path: normalizePath(path),
     source: { file, line },
     ...extra,

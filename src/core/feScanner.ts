@@ -1,5 +1,5 @@
 import type { CallEdge, Confidence, FieldNode, MapMethod, ReadEdge, ScreenNode, UnresolvedCall } from './apimap';
-import { endpointId, fieldId, normalizePath, screenId, stripInterpolations } from './apimap';
+import { endpointId, fieldId, normalizePath, screenId, stripInterpolations, toMapMethod } from './apimap';
 import type { EndpointNode } from './apimap';
 
 // cm:edge contract -> skills/fe-map-extractor/skill.md — the skill writes this shape as hints.json
@@ -378,7 +378,7 @@ export function callExpression(text: string, openParenIdx: number): string {
 
 function methodFromContext(window: string): MapMethod | null {
   const m = /\bmethod\s*:\s*(['"`])(GET|POST|PUT|PATCH|DELETE|HEAD)\1/i.exec(window);
-  return m ? (m[2].toUpperCase() as MapMethod) : null;
+  return m ? toMapMethod(m[2]) : null;
 }
 
 export function findCallSites(content: string, wrappers: readonly string[] = []): CallSite[] {
@@ -394,7 +394,7 @@ export function findCallSites(content: string, wrappers: readonly string[] = [])
     push({
       line: lineOf(idx),
       via: m[1],
-      method: m[2].toUpperCase() as MapMethod,
+      method: toMapMethod(m[2]),
       argIdx: idx,
       methodExplicit: true,
       definitelyHttp: HTTP_RECEIVER.test(m[1]),
@@ -440,7 +440,7 @@ export function findCallSites(content: string, wrappers: readonly string[] = [])
     push({
       line: lineOf(idx),
       via: 'xhr',
-      method: m[2].toUpperCase() as MapMethod,
+      method: toMapMethod(m[2]),
       argIdx: idx,
       methodExplicit: true,
       definitelyHttp: true,

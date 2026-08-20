@@ -1,8 +1,8 @@
 import { readFileSync, realpathSync } from 'fs';
 import { resolve } from 'path';
 import { fileURLToPath } from 'url';
-import type { ApiMapFile, ImpactAnswer, MapMethod } from '../core/apimap';
-import { endpointId, normalizePath, screensAffectedByEndpoint, screensAffectedByField } from '../core/apimap';
+import type { ApiMapFile, ImpactAnswer } from '../core/apimap';
+import { endpointId, normalizePath, screensAffectedByEndpoint, screensAffectedByField, toMapMethod } from '../core/apimap';
 
 export function loadMap(path: string): ApiMapFile {
   const map = JSON.parse(readFileSync(path, 'utf8')) as ApiMapFile;
@@ -13,7 +13,7 @@ export function loadMap(path: string): ApiMapFile {
 export function resolveEndpointQuery(map: ApiMapFile, query: string): string[] {
   const parts = query.trim().split(/\s+/);
   if (parts.length >= 2) {
-    const id = endpointId(parts[0].toUpperCase() as MapMethod, normalizePath(parts.slice(1).join(' ')));
+    const id = endpointId(toMapMethod(parts[0]), normalizePath(parts.slice(1).join(' ')));
     if (map.endpoints.some((e) => e.id === id)) return [id];
   }
   const needle = normalizePath(parts[parts.length - 1]);

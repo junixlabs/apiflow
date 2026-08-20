@@ -1,7 +1,16 @@
-import type { HttpMethod } from './types';
+// cm:why Declares its own verb set instead of borrowing HttpMethod from the request-runner side:
+// that union has no OPTIONS, while the Laravel and Express scanners both match `options`.
+export const MAP_METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS', 'HEAD', 'UNKNOWN'] as const;
 import type { ShapeType } from './shape';
 
-export type MapMethod = HttpMethod | 'UNKNOWN';
+export type MapMethod = (typeof MAP_METHODS)[number];
+
+// cm:guard Checked, never a cast: `Route::any(...)` and `router.all(...)` name a verb this map cannot
+// pin down, and `as MapMethod` let that through as a value the type says cannot exist.
+export function toMapMethod(raw: string): MapMethod {
+  const upper = raw.trim().toUpperCase();
+  return (MAP_METHODS as readonly string[]).includes(upper) ? (upper as MapMethod) : 'UNKNOWN';
+}
 
 // cm:why Three levels, not a boolean: a generic scanner resolves most call sites only partly, and
 // a map that cannot say how sure it is gets trusted for coverage it does not have.

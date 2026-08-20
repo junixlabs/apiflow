@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { shapeOf, mergeShapes } from './shape';
+import { toMapMethod } from './apimap';
 import { detectStack, indexClasses, isBackendFile, laravelRouteFilePrefixes, resolveHandlerSchemas, scanBackendFile } from './beScanner';
 import { buildHarness, ingestSamples, reconcileWrappers } from './probeHarness';
 import { createApiMap, endpointId, endpointsWithTracedReads, fieldId, finalizeApiMap, linkMaps, matchEndpointBySuffix, unreadResponseFields, undeliveredFields } from './apimap';
@@ -566,5 +567,22 @@ Route::group(['prefix' => 'v1'], function () {
 
   it('leaves a gate it cannot classify undefined rather than calling it open', () => {
     expect(authOf('/v1/webhooks/{param}/{param}')).toBeUndefined();
+  });
+});
+
+describe('verb outside the union', () => {
+  // cm:why `as MapMethod` used to let this through: HttpMethod had no OPTIONS, so the type claimed
+  // a value that could not exist while the scanner happily produced it.
+  it('keeps OPTIONS and turns an unpinnable verb into UNKNOWN', () => {
+    expect(toMapMethod('options')).toBe('OPTIONS');
+    expect(toMapMethod('GET')).toBe('GET');
+    expect(toMapMethod('any')).toBe('UNKNOWN');
+    expect(toMapMethod('all')).toBe('UNKNOWN');
+    expect(toMapMethod(' patch ')).toBe('PATCH');
+  });
+
+  it('emits OPTIONS from a Laravel route instead of a value off the union', () => {
+    const scan = scanBackendFile('routes/api.php', "<?php\nRoute::options('/ping', 'PingController@options');\n", 'laravel');
+    expect(scan.routes.map((r) => r.method)).toContain('OPTIONS');
   });
 });

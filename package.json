@@ -35,6 +35,10 @@
     "proxy/",
     "src/core/",
     "src/cli/",
+    "public/",
+    "src/view/",
+    "src/server/",
+    "src/workspace/",
     "src/mcp/",
     "skills/",
     "package.json",
@@ -55,7 +59,8 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "boundary": "depcruise --config .dependency-cruiser.cjs src"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.27.1",
