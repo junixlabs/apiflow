@@ -6,6 +6,24 @@ All notable changes to API View are documented here.
 
 ## [Unreleased]
 
+### Added — agent-native (the map as an MCP server)
+
+- `apiflow mcp-map` — a second MCP server, map-side only (the existing `--mcp` one is the request
+  runner and pulls the run half in; this one never touches it, enforced by the dependency-cruiser
+  boundary). Tools: `impact_endpoint` · `impact_field` · `screen_deps` · `find` · `map_health` ·
+  `map_check` · `map_list`. Answers are compact, carry the `file:line` that proves each screen, and
+  every one of them ends with the map it came from and the count of call sites the scanner could not
+  resolve — so `0 màn` cannot be read as "nothing calls this". Errors come back as tool text, never
+  thrown, so a typo in a route cannot kill the session. Target resolution: `project` (workspace id) →
+  `map` (a file path, e.g. one committed in the repo) → `APIFLOW_PROJECT` → the only project there is.
+- `skills/apiflow-impact/` — the companion skill: when to ask (before editing a route, handler, api
+  client or response field), how to read confidence, and what `0 màn` does and does not mean.
+- `apiflow --help` (and `-h`, and `help`) prints the whole command surface and exits. It is answered
+  before dispatch on purpose: `apiflow scan-fe --help` used to fall through with no positional
+  argument, which means "scan the current directory", and it wrote a map into the repo it was run in.
+- Subcommands no longer shell out through `npx`. Measured on a clean install of the tarball:
+  `project ls` 0.56s → 0.27s, MCP connect-to-first-tool 1.7s → 0.37s, per tool call 5ms.
+
 ### Added — team use (map as shared context)
 
 - **A `.apimap` no longer contains a machine path.** `metadata.root` is now the repo the scan came

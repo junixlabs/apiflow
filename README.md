@@ -216,6 +216,21 @@ Connect to Claude Code via 12 MCP tools. Let AI build and run flows for you.
 ### Laravel Analyzer
 Claude Code skill that auto-generates `.apiview` flow files from Laravel routes, controllers, and validation rules.
 
+### Map MCP server (for agents)
+
+`apiflow mcp-map` speaks MCP over stdio and answers from an existing `.apimap`: `impact_endpoint`,
+`impact_field`, `screen_deps`, `find`, `map_health`, `map_check`, `map_list`. Every answer carries the
+`file:line` that proves it and the count of call sites the scanner could not resolve, so an empty
+answer cannot be read as "nothing calls this". Register it per project:
+
+```json
+{ "mcpServers": { "apiflow-map": { "command": "npx", "args": ["-y", "@junixlabs/apiflow", "mcp-map"],
+  "env": { "APIFLOW_PROJECT": "my-project" } } } }
+```
+
+`skills/apiflow-impact/` is the companion skill — it tells an agent *when* to ask (before editing a
+route, a handler, an api client or a response field) and how to read confidence and unresolved.
+
 ### FE Map Extractor
 Claude Code skill that closes the gaps `scan-fe` cannot resolve on its own — see the dependency map section above.
 

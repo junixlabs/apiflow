@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import { spawn, spawnSync } from 'child_process';
+import { createRequire } from 'module';
 import { createServer } from 'http';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
@@ -10,30 +11,80 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = join(__dirname, '..');
 const distDir = join(root, 'dist');
 
+// cm:why Spawns tsx through its resolved entry instead of `npx tsx`: measured on a clean install,
+// npx costs ~0.3s of registry/bin resolution on EVERY subcommand, and the map MCP server pays it at
+// session start where it is felt most (1.7s → 1.1s to first tool). Falls back to npx only if tsx
+// cannot be resolved, which on a normal install means the dependency tree is broken anyway.
+function tsxRunner(script, rest) {
+  try {
+    const tsx = createRequire(import.meta.url).resolve('tsx/cli');
+    return [process.execPath, [tsx, script, ...rest]];
+  } catch {
+    return ['npx', ['tsx', script, ...rest]];
+  }
+}
+
 const args = process.argv.slice(2);
+const HELP = `apiflow — bản đồ màn hình ↔ endpoint ↔ field
+
+  apiflow                        mở app (proxy + UI đã build)
+  apiflow ui [--port=3030]       mở workspace nhiều project ở 127.0.0.1
+  apiflow hub --out=<dir>        xuất workspace ra HTML tĩnh
+
+  apiflow project add <tên> --fe=<dir> [--be=<dir>] [--id=<slug>]
+  apiflow project ls [--json]
+  apiflow project scan <id> [--fe] [--be]
+  apiflow project rm <id>
+
+  apiflow scan-fe <dir> [--name=] [--hints=] [--out=] [--json]
+  apiflow scan-be <dir> [--name=] [--out=] [--json]
+  apiflow probe <map> --emit[=<dir>] | --ingest=<results.json>
+  apiflow link <fe.apimap> <be.apimap> --out=<full.apimap>
+
+  apiflow impact <map> [--endpoint=… | --field=… | --screen=…] [--json]
+  apiflow check <map> [--root=<dir>] [--json] [--write]
+  apiflow view <map> --out=<file.html>
+
+  apiflow mcp-map                MCP server đọc bản đồ (cho agent)
+  apiflow --mcp                  MCP server chạy request (flow runner)
+
+Workspace: ~/.apiflow — apiflow không ghi gì vào project được scan trừ khi --out trỏ vào đó.`;
+
+// cm:guard --help must be answered BEFORE dispatch: `apiflow scan-fe --help` used to fall through
+// with no positional argument, which means "scan the current directory" — it scanned this repo and
+// wrote a map into it. A help flag must never be able to start a scan.
+if (args.includes('--help') || args.includes('-h') || args[0] === 'help') {
+  console.log(HELP);
+  process.exit(0);
+}
+
 const projectArg = args.find(a => a.startsWith('--project='));
 const projectDir = projectArg ? projectArg.split('=')[1] : null;
 const port = parseInt(args.find(a => a.startsWith('--port='))?.split('=')[1] || '3000', 10);
 
 // cm:edge protocol -> src/cli/scanFe.ts — subcommands are matched before the flag parsing below,
 // so `apiflow scan-fe <dir>` never falls through to the serve path and never needs dist/.
+// cm:guard Paths are relative to src/, not to src/cli/: the map MCP server lives outside cli/, and
+// spelling it as a ../ escape from cli/ is how a package layout change breaks one entry silently.
 const SUBCOMMANDS = {
-  'scan-fe': 'scanFe.ts',
-  'scan-be': 'scanBe.ts',
-  probe: 'probe.ts',
-  link: 'link.ts',
-  impact: 'impact.ts',
-  check: 'check.ts',
-  view: 'view.ts',
-  project: 'project.ts',
-  ui: 'ui.ts',
-  hub: 'hub.ts',
+  'scan-fe': 'cli/scanFe.ts',
+  'scan-be': 'cli/scanBe.ts',
+  probe: 'cli/probe.ts',
+  link: 'cli/link.ts',
+  impact: 'cli/impact.ts',
+  check: 'cli/check.ts',
+  'mcp-map': 'mcp/mapServer.ts',
+  view: 'cli/view.ts',
+  project: 'cli/project.ts',
+  ui: 'cli/ui.ts',
+  hub: 'cli/hub.ts',
 };
 const subcommand = SUBCOMMANDS[args[0]];
 
 if (subcommand) {
-  const script = join(root, 'src', 'cli', subcommand);
-  const child = spawn('npx', ['tsx', script, ...args.slice(1)], { stdio: 'inherit', cwd: root });
+  const script = join(root, 'src', subcommand);
+  const [cmd, argv] = tsxRunner(script, args.slice(1));
+  const child = spawn(cmd, argv, { stdio: 'inherit', cwd: root });
   child.on('exit', (code) => process.exit(code ?? 0));
   // cm:guard Forwards the signal: `apiflow ui` is long-running, and without this, killing this
   // wrapper leaves the tsx child holding the port with no parent left to stop it.
@@ -43,7 +94,8 @@ if (subcommand) {
 // --mcp mode: start MCP server
 else if (args.includes('--mcp')) {
   const mcpServer = join(root, 'src', 'mcp', 'server.ts');
-  const child = spawn('npx', ['tsx', mcpServer], { stdio: 'inherit', cwd: root });
+  const [cmd, argv] = tsxRunner(mcpServer, []);
+  const child = spawn(cmd, argv, { stdio: 'inherit', cwd: root });
   child.on('exit', (code) => process.exit(code ?? 0));
   process.on('SIGINT', () => { child.kill(); process.exit(); });
   process.on('SIGTERM', () => { child.kill(); process.exit(); });

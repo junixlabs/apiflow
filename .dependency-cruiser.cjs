@@ -1,6 +1,6 @@
 // cm:guard Hai vế của repo này chạm nhau 0 lần (đo 2026-08-20). Rule dưới đây làm cho con số 0 đó
 // được cưỡng chế, không phải một sự tình cờ — đó là lý do apiflow ở MỘT repo mà không rối.
-const MAP_SIDE = '^src/(cli|workspace|server|view)|^src/core/(apimap|feScanner|beScanner|callerGraph|mountGraph|wrappers|routeTable|probeHarness)';
+const MAP_SIDE = '^src/(cli|workspace|server|view)|^src/mcp/map|^src/core/(apimap|feScanner|beScanner|callerGraph|mountGraph|wrappers|routeTable|probeHarness)';
 const RUN_SIDE = '^src/(components|engine|store|hooks)|^src/App\\.tsx|^src/main\\.tsx|^proxy/';
 
 module.exports = {

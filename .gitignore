@@ -28,3 +28,7 @@ dist-ssr
 # Local agent config — chứa nội bộ (sidcorp / epodsystem), không được publish
 .claude/
 .mcp.json
+
+# cm:why apiflow's own scan output, when the tool is pointed at this repo while dogfooding.
+# Committing it would version a snapshot of this repo's own map that nothing reads.
+.apiview/
