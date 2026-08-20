@@ -1,5 +1,5 @@
 import type { MapKind } from '../workspace/store';
-import { STYLE } from './theme';
+import { BRAND_STYLE, FAVICON, MARK, STYLE } from './theme';
 
 export interface HubMap {
   kind: MapKind;
@@ -151,11 +151,12 @@ export function renderHub(projects: HubProject[], options: HubOptions, now: numb
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>apiflow — ${projects.length} project</title>
-<style>${STYLE}${HUB_STYLE}</style>
+<link rel="icon" href="${FAVICON}">
+<style>${STYLE}${BRAND_STYLE}${HUB_STYLE}</style>
 </head>
 <body>
 <div class="page">
-  <h1>apiflow</h1>
+  <div class="brandbar"><span class="mark">${MARK}</span><h1>apiflow</h1></div>
   <p class="sub">${projects.length} project · workspace <code>${escapeHtml(options.workspace)}</code>${options.live ? ' · bản sống' : ' · bản tĩnh'}</p>
   <p class="hint sub">Thanh màu là tỉ lệ <b>có màn gọi</b> / <b>không ai gọi</b> / <b>FE gọi mà API không khai</b> / <b>chưa đối chiếu được</b> (kẻ sọc — thiếu một trong hai phía) của bản đồ đầy đủ nhất trong project.</p>
   ${body}

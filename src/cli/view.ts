@@ -2,7 +2,7 @@ import { mkdirSync, readFileSync, realpathSync, writeFileSync } from 'fs';
 import { dirname, resolve } from 'path';
 import { fileURLToPath } from 'url';
 import type { ApiMapFile } from '../core/apimap';
-import { STYLE } from '../view/theme';
+import { BRAND_STYLE, FAVICON, MARK, STYLE } from '../view/theme';
 import { GRAPH_PANES, GRAPH_SCRIPT, GRAPH_STYLE, GRAPH_TABS, TAB_SCRIPT } from './viewGraph';
 
 // cm:guard `</script>` inside a field name or a snippet would close the tag and turn the payload into
@@ -187,11 +187,12 @@ export function renderViewer(map: ApiMapFile, sourcePath: string): string {
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>apiflow — ${escapeHtml(map.metadata.name)}</title>
-<style>${STYLE}${GRAPH_STYLE}</style>
+<link rel="icon" href="${FAVICON}">
+<style>${STYLE}${BRAND_STYLE}${GRAPH_STYLE}</style>
 </head>
 <body>
 <div class="page">
-  <h1>${escapeHtml(map.metadata.name)}</h1>
+  <div class="brandbar"><span class="mark">${MARK}</span><h1>${escapeHtml(map.metadata.name)}</h1></div>
   <p class="sub">
     <code>${escapeHtml(sourcePath)}</code> · gốc <code>${escapeHtml(map.metadata.root)}</code> · ${escapeHtml(map.metadata.generator)}
   </p>

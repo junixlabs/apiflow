@@ -59,3 +59,16 @@ describe('visual panes', () => {
     expect(html).toContain('MAX_ROWS');
   });
 });
+
+describe('favicon data URI', () => {
+  const html = renderViewer(mapWith('demo-api'), '/tmp/demo.apimap');
+
+  // cm:why A raw `"` from an SVG attribute would close the href and break every tag after it —
+  // the page still renders enough to look fine, which is exactly why this needs a test.
+  it('carries no character that would close the href attribute', () => {
+    const href = /<link rel="icon" href="([^"]*)">/.exec(html);
+    expect(href).not.toBeNull();
+    expect(href?.[1]).toContain('data:image/svg+xml,');
+    expect(href?.[1]).not.toMatch(/["<>]/);
+  });
+});
