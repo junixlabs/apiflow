@@ -29,10 +29,6 @@ export function useVariableAutocomplete(
   });
 
   const matchStartRef = useRef<number>(0);
-  const dropdownRef = useRef<boolean>(false);
-
-  // Keep ref in sync so the document listener can check it
-  dropdownRef.current = state.showDropdown;
 
   const environments = useEnvironmentStore((s) => s.environments);
   const activeEnvironmentName = useEnvironmentStore((s) => s.activeEnvironmentName);

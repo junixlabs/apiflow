@@ -1,25 +1,17 @@
-import { useRef, useEffect } from 'react';
-import { useExecutionStore } from '../../store/executionStore';
+import { useHistoryResultStore } from '../../store/historyResultStore';
 import { DiffViewer } from './DiffViewer';
-import type { ExecutionResult } from '../../types';
 
 interface Props {
   nodeId: string;
 }
 
 export function DiffTab({ nodeId }: Props) {
-  const currentResult = useExecutionStore((s) => s.nodeResults.get(nodeId)) ?? null;
-  const previousResultRef = useRef<ExecutionResult | null>(null);
-  const lastResultRef = useRef<ExecutionResult | null>(null);
-
-  useEffect(() => {
-    if (currentResult && currentResult !== lastResultRef.current) {
-      previousResultRef.current = lastResultRef.current;
-      lastResultRef.current = currentResult;
-    }
-  }, [currentResult]);
-
-  const previousResult = previousResultRef.current;
+  // cm:why Reads the run history rather than remembering the previous result itself. Running from this
+  // panel switches to the Response tab, which unmounts this component — so whatever it remembered was
+  // thrown away exactly when the second result arrived, and the diff never appeared at all.
+  // cm:edge contract -> src/store/historyResultStore.ts — newest result first, so [0] is the run just
+  // finished and [1] is the one to compare it against.
+  const [currentResult, previousResult] = useHistoryResultStore((s) => s.nodeHistory.get(nodeId)) ?? [];
 
   if (!currentResult) {
     return (

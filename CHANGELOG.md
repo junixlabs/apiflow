@@ -177,6 +177,27 @@ All notable changes to API View are documented here.
   chosen order is remembered between visits; a filter is not, because a hidden project is the kind of
   thing that should not survive a reload.
 
+### Fixed — request runner (the React half)
+
+Every one of these was found by taking the lint errors seriously instead of silencing them: the rules
+pointed at four mechanisms that were already broken.
+
+- The Diff tab could never show a diff. Its "previous result" lived in a ref inside the component,
+  and running a request switches the panel to the Response tab — which unmounts the component and
+  throws the memory away exactly when the second result arrives. It now reads the run history store,
+  which is where the last ten results per node already are, so the first thing you see after a second
+  run is the diff. Being keyed by node also stops one node's run being diffed against another's.
+- The inspector persisted the width of the last `mousemove`, not of the drag. Release the mouse after
+  a fast final move and the panel came back a few dozen pixels off. Mouseup now computes the final
+  width from its own coordinates, which also removes the ref that mirrored state during render.
+- The draft banner and the draft itself were two pieces of state that could disagree; they are now
+  one, so dismissing the banner cannot leave a draft behind for a later Restore to load. The draft is
+  read while rendering rather than in an effect.
+- The fullscreen JSON viewer had a suppression comment for an a11y rule this config does not even
+  load — a warning that could never fire. The modal now says it is a dialog instead.
+- `showSaveFilePicker` / `showOpenFilePicker` were reached through `window as any`. They are declared
+  with the shape actually used, so a typo in an option name fails to compile.
+
 ### Fixed
 
 - `[hidden]` was losing to the cards' own `display:flex`, so the first cut of the filter counted

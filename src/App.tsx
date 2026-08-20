@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { FlowCanvas } from './components/canvas/FlowCanvas';
 import { Toolbar } from './components/toolbar/Toolbar';
 import { InspectorPanel } from './components/inspector/InspectorPanel';
@@ -23,11 +23,11 @@ import { useThemeStore } from './store/themeStore';
 
 export default function App() {
   const [view, setView] = useState<'canvas' | 'library' | 'dashboard'>('canvas');
-  const [showDraftBanner, setShowDraftBanner] = useState(false);
+  const [draft, setDraft] = useState<ReturnType<typeof loadDraft>>(null);
+  const [draftFor, setDraftFor] = useState<boolean | null>(null);
   const [showImportCurl, setShowImportCurl] = useState(false);
   const [standaloneMode, setStandaloneMode] = useState(false);
   const [showEndpointLibrary, setShowEndpointLibrary] = useState(false);
-  const draftRef = useRef<ReturnType<typeof loadDraft>>(null);
 
   const isDirty = useFlowStore((s) => s.isDirty);
   const isProjectMode = useProjectStore((s) => s.isProjectMode);
@@ -64,15 +64,14 @@ export default function App() {
     init().catch(() => {});
   }, []);
 
-  // Check for draft on mount (standalone mode only)
-  useEffect(() => {
-    if (isProjectMode) return;
-    const draft = loadDraft();
-    if (draft && draft.nodes.length > 0) {
-      draftRef.current = draft;
-      setShowDraftBanner(true);
-    }
-  }, [isProjectMode]);
+  // cm:why The draft IS the banner: one piece of state, so dismissing the banner cannot leave a
+  // draft behind for a later Restore to load. Read while rendering rather than in an effect, guarded
+  // by the mode it was read for, which is what re-reads it when standalone mode comes back.
+  if (draftFor !== isProjectMode) {
+    setDraftFor(isProjectMode);
+    const found = isProjectMode ? null : loadDraft();
+    setDraft(found && found.nodes.length > 0 ? found : null);
+  }
 
   // Auto-save every 30s
   useEffect(() => {
@@ -104,22 +103,17 @@ export default function App() {
   }, [isDirty]);
 
   const handleRestoreDraft = () => {
-    if (draftRef.current) {
-      useFlowStore.getState().loadFlow(draftRef.current);
-      useEnvironmentStore.getState().loadEnvironments(
-        draftRef.current.environments,
-        draftRef.current.activeEnvironmentName
-      );
+    if (draft) {
+      useFlowStore.getState().loadFlow(draft);
+      useEnvironmentStore.getState().loadEnvironments(draft.environments, draft.activeEnvironmentName);
       useExecutionStore.getState().resetAll();
     }
-    setShowDraftBanner(false);
-    draftRef.current = null;
+    setDraft(null);
   };
 
   const handleDismissDraft = () => {
-    setShowDraftBanner(false);
     clearDraft();
-    draftRef.current = null;
+    setDraft(null);
   };
 
   const handleUndo = useCallback(() => {
@@ -191,7 +185,7 @@ export default function App() {
 
   return (
     <div className="h-full flex flex-col bg-canvas-bg">
-      {showDraftBanner && !isProjectMode && (
+      {draft !== null && !isProjectMode && (
         <div className="bg-method-put/20 border-b border-method-put/30 px-4 py-2 flex items-center gap-3 text-xs">
           <span className="text-canvas-text">Unsaved draft found from a previous session.</span>
           <button

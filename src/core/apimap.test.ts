@@ -211,7 +211,7 @@ describe('chain interning', () => {
   // cm:why Without this, every stored map without chains would look changed the first time it is
   // rewritten — and the byte-identical invariant is how apiflow proves a re-scan found nothing new.
   it('emits no chainNodes key at all when nothing has a chain', () => {
-    const bare = { ...withChain(), calls: withChain().calls.map(({ chain, ...c }) => c) };
+    const bare = { ...withChain(), calls: withChain().calls.map(({ chain: _chain, ...c }) => c) };
     const text = serializeMap(bare);
     expect(text).not.toContain('chainNodes');
     expect(text).toBe(`${JSON.stringify(bare, null, 2)}\n`);

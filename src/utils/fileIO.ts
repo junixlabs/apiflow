@@ -1,12 +1,37 @@
 import type { ApiViewFile } from '../types';
 
+// cm:why The File System Access API is not in the TS lib this project builds against, so the two
+// entry points it uses are declared here instead of being cast to `any` — narrow enough that a typo
+// in an option name still fails to compile.
+interface FilePickerOptions {
+  suggestedName?: string;
+  types?: Array<{ description: string; accept: Record<string, string[]> }>;
+}
+
+interface WritableFile {
+  write(data: Blob): Promise<void>;
+  close(): Promise<void>;
+}
+
+interface PickedFile {
+  createWritable(): Promise<WritableFile>;
+  getFile(): Promise<File>;
+}
+
+interface FilePickerWindow {
+  showSaveFilePicker?: (options: FilePickerOptions) => Promise<PickedFile>;
+  showOpenFilePicker?: (options: FilePickerOptions) => Promise<PickedFile[]>;
+}
+
+const picker = window as unknown as FilePickerWindow;
+
 export async function saveFlow(data: ApiViewFile): Promise<void> {
   const json = JSON.stringify(data, null, 2);
   const blob = new Blob([json], { type: 'application/json' });
 
-  if ('showSaveFilePicker' in window) {
+  if (picker.showSaveFilePicker) {
     try {
-      const handle = await (window as any).showSaveFilePicker({
+      const handle = await picker.showSaveFilePicker({
         suggestedName: `${data.metadata.name}.apiview`,
         types: [
           {
@@ -34,9 +59,9 @@ export async function saveFlow(data: ApiViewFile): Promise<void> {
 }
 
 export async function loadFlow(): Promise<ApiViewFile | null> {
-  if ('showOpenFilePicker' in window) {
+  if (picker.showOpenFilePicker) {
     try {
-      const [handle] = await (window as any).showOpenFilePicker({
+      const [handle] = await picker.showOpenFilePicker({
         types: [
           {
             description: 'API View File',

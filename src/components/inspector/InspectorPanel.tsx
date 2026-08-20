@@ -39,8 +39,6 @@ export function InspectorPanel() {
   const [isDragging, setIsDragging] = useState(false);
   const [curlCopied, setCurlCopied] = useState(false);
   const dragStartRef = useRef<{ x: number; width: number } | null>(null);
-  const widthRef = useRef(width);
-  widthRef.current = width;
 
   const selectedNodeId = useFlowStore((s) => s.selectedNodeId);
   const nodes = useFlowStore((s) => s.nodes);
@@ -58,17 +56,20 @@ export function InspectorPanel() {
 
   useEffect(() => {
     if (!isDragging) return;
+    // cm:why One expression owns the width, and mouseup recomputes it from its own coordinates
+    // instead of reading a ref that mirrored state — mirroring it meant writing a ref during render.
+    const widthAt = (clientX: number, start: { x: number; width: number }) =>
+      Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, start.width + start.x - clientX));
     const handleMouseMove = (e: MouseEvent) => {
       if (!dragStartRef.current) return;
-      const delta = dragStartRef.current.x - e.clientX;
-      const newWidth = Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, dragStartRef.current.width + delta));
-      setWidth(newWidth);
+      setWidth(widthAt(e.clientX, dragStartRef.current));
     };
-    const handleMouseUp = () => {
+    const handleMouseUp = (e: MouseEvent) => {
       setIsDragging(false);
-      // Persist width
       if (dragStartRef.current) {
-        try { localStorage.setItem(WIDTH_KEY, String(widthRef.current)); } catch { /* ignore */ }
+        const finalWidth = widthAt(e.clientX, dragStartRef.current);
+        setWidth(finalWidth);
+        try { localStorage.setItem(WIDTH_KEY, String(finalWidth)); } catch { /* ignore */ }
       }
       dragStartRef.current = null;
     };

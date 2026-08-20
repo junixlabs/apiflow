@@ -159,8 +159,9 @@ function JsonViewerModal({
 
   return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={onClose}>
-      {/* eslint-disable-next-line jsx-a11y/no-static-element-interactions */}
       <div
+        role="dialog"
+        aria-modal="true"
         tabIndex={-1}
         ref={(el) => el?.focus()}
         className="bg-surface border border-canvas-border rounded-lg shadow-2xl flex flex-col focus:outline-none"
