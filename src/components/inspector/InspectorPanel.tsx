@@ -17,6 +17,11 @@ import type { ApiNodeData } from '../../types';
 
 type Tab = 'config' | 'request' | 'response' | 'diff' | 'history';
 
+// cm:why The tabs that already say something about a finished run. A run started from one of these
+// must leave it alone: yanking someone off the diff they opened on purpose is how that tab came to
+// look broken, and the history list is watched while it grows.
+const SHOWS_A_RUN: Tab[] = ['response', 'diff', 'history'];
+
 const MIN_WIDTH = 320;
 const MAX_WIDTH = 800;
 const DEFAULT_WIDTH = 420;
@@ -129,7 +134,9 @@ export function InspectorPanel() {
   const handleRunNode = async () => {
     const variables = getActiveVariables();
     await runSingleNode(selectedNode, variables, undefined, nodeResults, nodes);
-    setActiveTab('response');
+    // cm:guard Reads the tab through the updater, not the one captured when Run was clicked — the
+    // request takes long enough to switch tabs during, and the choice made last is the one to keep.
+    setActiveTab((tab) => (SHOWS_A_RUN.includes(tab) ? tab : 'response'));
   };
 
   const handleChange = (data: Partial<ApiNodeData>) => {

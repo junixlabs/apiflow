@@ -182,6 +182,12 @@ All notable changes to API View are documented here.
 Every one of these was found by taking the lint errors seriously instead of silencing them: the rules
 pointed at four mechanisms that were already broken.
 
+- Running a request no longer yanks the panel to the Response tab from a tab that is already showing
+  the run. From Config or Request it still jumps — you clicked Run to see a response, and neither of
+  those says anything about one — but Response, Diff and History are left where they are, so a second
+  run fills in the diff you opened it for instead of throwing you off it. The tab is read at the
+  moment the request finishes, not the moment Run was clicked, so switching tabs during a slow
+  request keeps the choice made last.
 - The Diff tab could never show a diff. Its "previous result" lived in a ref inside the component,
   and running a request switches the panel to the Response tab — which unmounts the component and
   throws the memory away exactly when the second result arrives. It now reads the run history store,
