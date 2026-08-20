@@ -43,7 +43,12 @@ describe('renderApp offline', () => {
   it('aims every fetch at a relative apiflow route, and ships no control that fires one', () => {
     const calls = html.match(/fetch\([^,)]*/g) ?? [];
     expect(calls.length).toBeGreaterThan(0);
-    for (const call of calls) expect(call).toMatch(/fetch\('\/api\/projects/);
+    for (const call of calls) {
+      // cm:why Asserts the SHAPE of the target, not one literal: the target is a ternary now, and a
+      // test pinned to one spelling would go green the moment someone wrote fetch(url) instead.
+      expect(call, call).toMatch(/'\/api\//);
+      expect(call, call).not.toMatch(/:\/\/|'\/\//);
+    }
     expect(html).toContain('id="project">null<');
     for (const id of ['scan-fe', 'scan-be', 'add-open', 'add-dlg']) {
       expect(html).not.toContain(`id="${id}"`);

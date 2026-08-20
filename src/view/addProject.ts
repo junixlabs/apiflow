@@ -36,12 +36,12 @@ export const ADD_STYLE = `
 // overlay div would need all three written again, and the third one always gets skipped.
 export const ADD_DIALOG = `<dialog id="add-dlg" class="dlg">
   <form id="add-form" method="dialog">
-    <h3>Thêm project</h3>
-    <p class="dsub">apiflow chỉ ghi vào <code>~/.apiflow</code> — không bao giờ viết gì vào repo được đọc.</p>
+    <h3 id="add-title">Thêm project</h3>
+    <p class="dsub" id="add-sub">apiflow chỉ ghi vào <code>~/.apiflow</code> — không bao giờ viết gì vào repo được đọc.</p>
     <label>Tên<input name="name" autocomplete="off" required placeholder="Adminhub"></label>
     <label>Thư mục FE<input name="fe" autocomplete="off" placeholder="/home/ban/services/adminhub-ui"></label>
     <label>Thư mục BE<input name="be" autocomplete="off" placeholder="/home/ban/services/adminhub-api"></label>
-    <label>id <span class="opt">(bỏ trống thì rút từ tên)</span><input name="id" autocomplete="off" placeholder="adminhub"></label>
+    <label id="add-idrow">id <span class="opt">(bỏ trống thì rút từ tên)</span><input name="id" autocomplete="off" placeholder="adminhub"></label>
     <label>file hints <span class="opt">(không bắt buộc)</span><input name="hints" autocomplete="off"></label>
     <p class="dmsg" id="add-msg"></p>
     <div class="drow">
@@ -57,6 +57,7 @@ export const ADD_DIALOG = `<dialog id="add-dlg" class="dlg">
 // the `message` field this renders verbatim and the SSE shape it reads line by line.
 export const ADD_SCRIPT = String.raw`
 const $id = (id) => document.getElementById(id);
+let openEdit = () => undefined;
 const HERE = JSON.parse(($id('project') || { textContent: 'null' }).textContent);
 
 // cm:why Reads the stream line by line and never reloads on its own: a scan can fail halfway, and a
@@ -135,6 +136,15 @@ document.addEventListener('click', (ev) => {
   const scan = ev.target.closest && ev.target.closest('[data-scan]');
   if (scan) { streamScan(scan.dataset.scan, scan.dataset.id); return; }
 
+  const edit = ev.target.closest && ev.target.closest('[data-edit]');
+  if (edit) {
+    openEdit({
+      id: edit.dataset.edit, name: edit.dataset.name,
+      fe: edit.dataset.fe, be: edit.dataset.be, hints: edit.dataset.hints,
+    });
+    return;
+  }
+
   const rm = ev.target.closest && ev.target.closest('[data-rm]');
   if (!rm) return;
   const id = rm.dataset.rm;
@@ -165,9 +175,33 @@ if (addDlg) {
   const form = $id('add-form');
   const say = (text, cls) => { msg.className = 'dmsg ' + (cls || ''); msg.textContent = text; };
 
-  const open = () => { say(''); addDlg.showModal(); };
-  if ($id('add-open')) $id('add-open').onclick = open;
-  if ($id('add-open-2')) $id('add-open-2').onclick = open;
+  let editing = null;
+
+  // cm:why One dialog for both jobs: the fields are identical, and a second copy of a five-field form
+  // is a second place for the FE/BE validation wording to drift.
+  const open = (entry) => {
+    editing = entry || null;
+    for (const field of ['name', 'fe', 'be', 'id', 'hints']) form.elements[field].value = '';
+    $id('add-title').textContent = editing ? 'Sửa gốc — ' + editing.id : 'Thêm project';
+    $id('add-idrow').style.display = editing ? 'none' : '';
+    // cm:guard Says the id cannot change and WHY: the id is the directory the maps live in, so
+    // renaming it here would leave every scanned map behind under a name nothing points at.
+    $id('add-sub').textContent = editing
+      ? 'id giữ nguyên (' + editing.id + ') vì map đã scan nằm trong thư mục mang tên đó. Bỏ trống một ô thư mục là xoá phía đó.'
+      : 'apiflow chỉ ghi vào ~/.apiflow — không bao giờ viết gì vào repo được đọc.';
+    $id('add-save').textContent = editing ? 'Lưu' : 'Thêm';
+    if (editing) {
+      form.elements.name.value = editing.name || '';
+      form.elements.fe.value = editing.fe || '';
+      form.elements.be.value = editing.be || '';
+      form.elements.hints.value = editing.hints || '';
+    }
+    say('');
+    addDlg.showModal();
+  };
+  if ($id('add-open')) $id('add-open').onclick = () => open(null);
+  if ($id('add-open-2')) $id('add-open-2').onclick = () => open(null);
+  openEdit = open;
   $id('add-cancel').onclick = () => addDlg.close();
 
   // cm:guard Shows the server's own message verbatim and never invents one: the refusals that matter
@@ -180,22 +214,27 @@ if (addDlg) {
       const value = form.elements[field].value.trim();
       if (value !== '') body[field] = value;
     }
-    say('đang thêm…');
+    // cm:guard On edit, sends every root field even when empty — the server reads an empty string as
+    // "clear this side", and omitting it would make clearing a BE root impossible from this form.
+    if (editing) for (const field of ['fe', 'be', 'hints']) body[field] = form.elements[field].value.trim();
+
+    say(editing ? 'đang lưu…' : 'đang thêm…');
     $id('add-save').disabled = true;
-    fetch('/api/projects', {
-      method: 'POST',
+    fetch(editing ? '/api/projects/' + editing.id : '/api/projects', {
+      method: editing ? 'PATCH' : 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify(body),
     })
       .then((res) => res.json().then((data) => ({ ok: res.ok, data })))
       .then((result) => {
         $id('add-save').disabled = false;
-        if (!result.ok) { say(result.data.message || 'thêm thất bại', 'bad'); return; }
+        if (!result.ok) { say(result.data.message || 'không lưu được', 'bad'); return; }
         const entry = result.data.project;
         addDlg.close();
         say('');
         // cm:why Scans right away instead of linking to the new project: /p/<id> has no map yet and
-        // would answer with a bare "chưa có map nào", which reads as a failed add.
+        // would answer with a bare "chưa có map nào", which reads as a failed add. On an edit the map
+        // that exists was scanned from the OLD directory, so the same scan is what makes it true again.
         streamScan(entry.fe ? 'fe' : 'be', entry.id);
       })
       .catch((err) => {

@@ -5,6 +5,7 @@ import { BRAND_STYLE, FAVICON, MARK, STYLE, THEME_BOOT, THEME_SCRIPT, THEME_STYL
 export interface HubMap {
   kind: MapKind;
   scannedAt?: string;
+  scannedFrom?: string;
   endpoints: number;
   screens: number;
   calls: number;
@@ -29,6 +30,7 @@ export interface HubProject {
   name: string;
   fe?: string;
   be?: string;
+  hints?: string;
   rev?: HubRev[];
   maps: HubMap[];
 }
@@ -82,6 +84,9 @@ const HUB_STYLE = `
 .mapline .kind { font:600 10px/1 ui-monospace,monospace; border:1px solid var(--line);
   border-radius:5px; padding:4px 6px; color:var(--muted); min-width:50px; text-align:center; flex:none; }
 .mapline .when { margin-left:auto; color:var(--muted); font-size:11px; flex:none; }
+.mapline.stale .kind { color:var(--guess); border-color:var(--guess); }
+.stalenote { margin:2px 0 4px; font-size:11px; line-height:1.5; color:var(--guess); }
+.stalenote code { font:10.5px ui-monospace,monospace; word-break:break-all; }
 .flags { display:flex; gap:6px; flex-wrap:wrap; }
 .flag { font-size:10.5px; padding:2px 8px; border-radius:999px; border:1px solid var(--line); color:var(--muted); }
 .flag.warn { color:var(--guess); } .flag.bad { color:var(--dead); }
@@ -90,7 +95,7 @@ const HUB_STYLE = `
   border:1px solid var(--brand); border-radius:8px; padding:6px 12px; background:var(--brand); }
 .open-btn:hover { filter:brightness(1.08); }
 .cardfoot .btn { padding:5px 10px; font-size:11.5px; }
-.cardfoot .rm { margin-left:auto; color:var(--muted); }
+.cardfoot .rm { color:var(--muted); }
 .cardfoot .rm:hover { color:var(--dead); border-color:var(--dead); }
 .none { color:var(--muted); font-size:12.5px; margin:0; }
 .empty-box { border:1px dashed var(--line-2); border-radius:14px; background:var(--surface);
@@ -169,10 +174,15 @@ function card(project: HubProject, options: HubOptions, now: number): string {
     .join('');
 
   const best = project.maps.find((m) => m.kind === 'linked') ?? project.maps[0];
+  // cm:guard A map scanned from a directory the project no longer points at is labelled on its own
+  // line, not folded into the flags: the numbers next to it describe a different repo, so the reader
+  // has to see that before reading them.
   const lines = project.maps
-    .map((m) => `<div class="mapline"><span class="kind">${m.kind}</span>`
+    .map((m) => `<div class="mapline${m.scannedFrom === undefined ? '' : ' stale'}"><span class="kind">${m.kind}</span>`
       + `<span>${m.endpoints} endpoint · ${m.screens} màn · ${m.calls} lời gọi</span>`
-      + `<span class="when">${escapeHtml(relativeAge(m.scannedAt, now))}</span></div>`)
+      + `<span class="when">${escapeHtml(relativeAge(m.scannedAt, now))}</span></div>`
+      + (m.scannedFrom === undefined ? ''
+        : `<p class="stalenote">map này scan từ <code title="${escapeHtml(m.scannedFrom)}">${escapeHtml(m.scannedFrom)}</code> — không phải gốc hiện tại. Scan lại để khớp.</p>`))
     .join('');
 
   const href = options.linkTo(project);
@@ -181,6 +191,11 @@ function card(project: HubProject, options: HubOptions, now: number): string {
   const actions = options.live
     ? `${project.fe === undefined ? '' : `<button class="btn" data-scan="fe" data-id="${escapeHtml(project.id)}">Scan FE</button>`}
        ${project.be === undefined ? '' : `<button class="btn" data-scan="be" data-id="${escapeHtml(project.id)}">Scan BE</button>`}
+       <button class="btn" data-edit="${escapeHtml(project.id)}"
+         data-name="${escapeHtml(project.name)}"
+         data-fe="${escapeHtml(project.fe ?? '')}"
+         data-be="${escapeHtml(project.be ?? '')}"
+         data-hints="${escapeHtml(project.hints ?? '')}">Sửa gốc</button>
        <button class="btn rm" data-rm="${escapeHtml(project.id)}" data-name="${escapeHtml(project.name)}">Bỏ khỏi workspace</button>`
     : '';
 

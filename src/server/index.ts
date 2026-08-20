@@ -2,7 +2,7 @@ import express from 'express';
 import type { Express, Request } from 'express';
 import { renderApp } from '../view/app';
 import { renderHub } from '../view/hub';
-import { ID, addProject, findProject, removeProject, slug, workspaceRoot } from '../workspace/registry';
+import { ID, addProject, findProject, removeProject, slug, updateProject, workspaceRoot } from '../workspace/registry';
 import { localWritesOnly } from './guard';
 import type { ScanEvent } from '../workspace/runScan';
 import { scanInBackground } from '../workspace/runScan';
@@ -75,6 +75,8 @@ export function buildApp(): Express {
       sourcePath: mapPath(project.id, kind),
       live: true,
       kind,
+      projectName: project.name,
+      hints: findProject(project.id)?.hints,
       sides: sidesOf(project.id),
       now: Date.now(),
       series: mapSeries(project.id, kind),
@@ -115,6 +117,42 @@ export function buildApp(): Express {
     try {
       const entry = addProject({ name, fe, be, hints: text('hints'), id });
       res.status(201).json({ project: entry });
+    } catch (err) {
+      res.status(400).json({ error: 'REFUSED', message: err instanceof Error ? err.message : String(err) });
+    }
+  });
+
+  // cm:why Distinguishes "field absent" from "field empty": absent leaves a root alone, empty clears
+  // it. A form posts every field it has, so without that distinction editing the FE path would wipe
+  // the BE path of every project whose form did not happen to show it.
+  // cm:edge contract -> src/workspace/registry.ts updateProject() — null there means clear.
+  app.patch('/api/projects/:id', localWritesOnly, (req: Request<{ id: string }>, res) => {
+    const body = (req.body ?? {}) as Record<string, unknown>;
+    const field = (key: string): string | null | undefined => {
+      if (!(key in body)) return undefined;
+      const value = body[key];
+      if (typeof value !== 'string') return undefined;
+      return value.trim() === '' ? null : value.trim();
+    };
+    if (findProject(req.params.id) === undefined) {
+      res.status(404).json({ error: 'NO_PROJECT', message: `không có project nào tên ${req.params.id}` });
+      return;
+    }
+    const name = field('name');
+    // cm:guard Refuses an explicitly blank name instead of quietly treating it as "unchanged": the
+    // reader cleared that field on purpose, and silently keeping the old value hides the refusal.
+    if (name === null) {
+      res.status(400).json({ error: 'NO_NAME', message: 'tên không được để trống' });
+      return;
+    }
+    try {
+      const entry = updateProject(req.params.id, {
+        name,
+        fe: field('fe'),
+        be: field('be'),
+        hints: field('hints'),
+      });
+      res.json({ project: entry });
     } catch (err) {
       res.status(400).json({ error: 'REFUSED', message: err instanceof Error ? err.message : String(err) });
     }

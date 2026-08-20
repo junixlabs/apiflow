@@ -117,8 +117,13 @@ npx @junixlabs/apiflow ui
 ```
 
 `+ Thêm project` in the UI does the same thing as `project add`, then runs the first scan and streams
-its output. That route is the only one that accepts a path from a request, so it only answers on the
-loopback interface and rejects anything a cross-site page sends.
+its output. `Sửa gốc` moves a project's FE or BE directory, and `Bỏ khỏi workspace` drops the entry
+while leaving the scanned maps on disk. These are the only routes that accept a path from a request,
+so they answer on the loopback interface only and reject anything a cross-site page sends.
+
+A map records the directory it was scanned from. Move a project's root without re-scanning and the
+card says so, naming the directory the numbers actually came from — the map is not deleted, because
+it is still a true measurement of a different repo.
 
 `project add` records the roots under `~/.apiflow/` — nothing is written inside the repos being
 read. `apiflow ui` serves the project list on `127.0.0.1` and opens one project into eight panes:

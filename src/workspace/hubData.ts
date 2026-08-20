@@ -1,4 +1,5 @@
 import type { HubProject } from '../view/hub';
+import type { ProjectEntry } from './registry';
 import { readWorkspace } from './registry';
 import { gitHead } from './gitInfo';
 import type { MapKind } from './store';
@@ -15,6 +16,7 @@ export function hubProjects(): HubProject[] {
     name: entry.name,
     fe: entry.fe,
     be: entry.be,
+    hints: entry.hints,
     // cm:why The card names the revision each side sits on, same as a project header does. A list of
     // maps with no revision next to them cannot tell you which branch a stale one was taken from.
     rev: [
@@ -32,6 +34,7 @@ export function hubProjects(): HubProject[] {
         return [{
           kind: status.kind,
           scannedAt: status.scannedAt,
+          scannedFrom: staleRoot(entry, status.kind, map.metadata.root),
           endpoints: sum.endpoints,
           screens: sum.screens,
           calls: sum.calls,
@@ -47,6 +50,20 @@ export function hubProjects(): HubProject[] {
       })
       .sort((a, b) => PREFERRED.indexOf(a.kind) - PREFERRED.indexOf(b.kind)),
   }));
+}
+
+// cm:why Compares the root the map RECORDS against the root the registry now points at, and returns
+// the old one when they differ. Editing a project's FE directory does not move its map, so without
+// this the card would show numbers scanned from a different repo and say nothing about it.
+// cm:edge contract -> src/core/apimap.ts linkMaps() — a linked map's root is the two sides joined
+// by " + ", which is why this checks containment for that kind instead of equality.
+function staleRoot(entry: ProjectEntry, kind: MapKind, root: string): string | undefined {
+  if (kind === 'linked') {
+    const sides = [entry.fe, entry.be].filter((side): side is string => side !== undefined);
+    return sides.every((side) => root.includes(side)) ? undefined : root;
+  }
+  const now = entry[kind];
+  return now !== undefined && now !== root ? root : undefined;
 }
 
 export function bestKind(project: HubProject): MapKind | null {

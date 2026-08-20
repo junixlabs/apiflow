@@ -17,6 +17,8 @@ export interface AppPayload {
   sourcePath: string;
   live: boolean;
   kind?: string;
+  projectName?: string;
+  hints?: string;
   sides?: SideInfo[];
   now?: number;
   series?: MapSeries | null;
@@ -105,13 +107,21 @@ function sideLine(side: SideInfo, now: number): string {
 
 function header(payload: AppPayload, name: string): string {
   const now = payload.now ?? 0;
-  const sides = payload.sides ?? [];
   // cm:guard Every control here is gated on `live`: the same renderer writes the offline file that
   // `apiflow view` produces, and a form posting to a server that is not running is a dead button.
+  const sides = payload.sides ?? [];
+  const root = (kind: 'fe' | 'be') => sides.find((s) => s.kind === kind)?.root ?? '';
+  // cm:edge contract -> src/view/addProject.ts — it reads these data-* attributes to prefill the
+  // dialog in edit mode, so a renamed attribute here silently opens an empty form.
+  const editBtn = payload.projectId === undefined ? '' : `<button class="btn" data-edit="${escapeHtml(payload.projectId)}"
+        data-name="${escapeHtml(payload.projectName ?? payload.map.metadata.name)}"
+        data-fe="${escapeHtml(root('fe'))}" data-be="${escapeHtml(root('be'))}"
+        data-hints="${escapeHtml(payload.hints ?? '')}">Sửa gốc</button>`;
   const scanBtns = payload.live
     ? `<div class="btnrow">
         ${payload.projectId === undefined ? '' : `<button class="btn primary" id="scan-fe">Scan lại FE</button>
         <button class="btn" id="scan-be">Scan lại BE</button>`}
+        ${editBtn}
         <button class="btn" id="add-open">+ Thêm project</button>
       </div>`
     : '';

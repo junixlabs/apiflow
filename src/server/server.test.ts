@@ -132,6 +132,62 @@ describe('write guard', () => {
   });
 });
 
+describe('PATCH /api/projects/:id', () => {
+  const patch = async (id: string, body: unknown, headers: Record<string, string> = {}): Promise<Answer> => {
+    const res = await fetch(`${base}/api/projects/${id}`, {
+      method: 'PATCH',
+      headers: { 'content-type': 'application/json', ...headers },
+      body: JSON.stringify(body),
+    });
+    return { status: res.status, ...((await res.json()) as Omit<Answer, 'status'>) };
+  };
+
+  let other: string;
+  beforeEach(async () => {
+    other = mkdtempSync(join(tmpdir(), 'apiflow-other-'));
+    await post('/api/projects', { name: 'doi goc', fe: repo, be: repo });
+  });
+  afterEach(() => rmSync(other, { recursive: true, force: true }));
+
+  it('moves one root without touching the other', async () => {
+    const res = await patch('doi-goc', { fe: other });
+    expect(res.status).toBe(200);
+    expect(res.project?.fe).toBe(other);
+    expect(res.project?.be).toBe(repo);
+  });
+
+  // cm:why This is the case the field-vs-absent split exists for: a form posts every input it has, so
+  // if an empty string did not mean "clear", editing the FE path could never remove a BE path — and
+  // if an absent key did not mean "leave alone", the project view's form would wipe the hints file.
+  it('treats an empty field as clear and an absent field as unchanged', async () => {
+    expect((await patch('doi-goc', { be: '' })).project?.be).toBeUndefined();
+    expect((await patch('doi-goc', { name: 'tên mới' })).project?.fe).toBe(repo);
+  });
+
+  it('refuses to clear the last remaining side', async () => {
+    await patch('doi-goc', { be: '' });
+    const res = await patch('doi-goc', { fe: '' });
+    expect(res.status).toBe(400);
+    expect(findProject('doi-goc')?.fe).toBe(repo);
+  });
+
+  it('refuses a blank name instead of silently keeping the old one', async () => {
+    const res = await patch('doi-goc', { name: '  ' });
+    expect(res.status).toBe(400);
+    expect(res.error).toBe('NO_NAME');
+    expect(findProject('doi-goc')?.name).toBe('doi goc');
+  });
+
+  it('answers 404 for an id that was never registered', async () => {
+    expect((await patch('khong-co', { name: 'x' })).status).toBe(404);
+  });
+
+  it('is fenced like every other write route', async () => {
+    expect((await patch('doi-goc', { fe: other }, { origin: 'https://evil.example' })).status).toBe(403);
+    expect(findProject('doi-goc')?.fe).toBe(repo);
+  });
+});
+
 describe('DELETE /api/projects/:id', () => {
   const del = async (id: string, headers: Record<string, string> = {}): Promise<Answer> => {
     const res = await fetch(`${base}/api/projects/${id}`, { method: 'DELETE', headers });

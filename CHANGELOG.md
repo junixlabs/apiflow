@@ -147,6 +147,21 @@ All notable changes to API View are documented here.
   two pages cannot drift; previously a theme pinned on a project page could not be changed from the
   hub at all.
 
+### Added — editing a project's roots
+
+- `Sửa gốc` on each hub card and in the project header, and `PATCH /api/projects/:id` behind the same
+  write fence as the other two. The dialog is the add dialog reopened with the values filled in; the
+  id field disappears and says why, because the id is the directory the scanned maps live under.
+- Absent field and empty field mean different things: absent leaves a root alone, empty clears it.
+  A form posts every input it has, so without that split editing the FE path could never remove a BE
+  path, and the project view's form would wipe the hints file every time it saved.
+- A root can move but a map does not follow it, so a map whose recorded `metadata.root` no longer
+  matches the project is labelled on the card — the amber kind badge plus the directory it was really
+  scanned from. The map is not deleted: it is still a true measurement, of a different repo.
+  Saving an edit runs the scan that makes it true again.
+- Clearing the last remaining side is refused, and so is a blank name — the old value is kept and the
+  refusal is shown rather than the edit being silently dropped.
+
 ### Fixed
 
 - `headlineFor` called a scan "chắc chắn hơn" when coverage grew and every confidence share moved

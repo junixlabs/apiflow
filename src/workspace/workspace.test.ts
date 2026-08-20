@@ -4,7 +4,8 @@ import { join } from 'path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { ApiMapFile } from '../core/apimap';
 import { parseMap } from '../core/apimap';
-import { addProject, findProject, readWorkspace, removeProject, slug, workspaceRoot } from './registry';
+import { addProject, findProject, readWorkspace, removeProject, slug, updateProject, workspaceRoot } from './registry';
+import { hubProjects } from './hubData';
 import { contentHash, historyOf, mapPath, projectDir, readMap, statusOf, writeMap } from './store';
 import { endpointReliability, endpointState, summarize } from './summary';
 import { diffMaps, headlineFor } from './diff';
@@ -367,5 +368,69 @@ describe('history order', () => {
     rmSync(join(projectDir('legacy'), 'history', 'order'));
     writeMap('legacy', 'fe', withCalls(9));
     expect(historyOf('legacy', 'fe')).toHaveLength(3);
+  });
+});
+
+describe('updateProject', () => {
+  let other: string;
+
+  beforeEach(() => {
+    other = mkdtempSync(join(tmpdir(), 'apiflow-other-'));
+    addProject({ name: 'Đổi gốc', fe: repo, be: repo });
+  });
+
+  afterEach(() => rmSync(other, { recursive: true, force: true }));
+
+  it('moves a root and leaves the id alone, because the maps live under it', () => {
+    const before = mapPath('doi-goc', 'fe');
+    expect(updateProject('doi-goc', { fe: other }).fe).toBe(other);
+    expect(findProject('doi-goc')?.id).toBe('doi-goc');
+    expect(mapPath('doi-goc', 'fe')).toBe(before);
+  });
+
+  it('clears a side on null and leaves it alone on undefined', () => {
+    expect(updateProject('doi-goc', { be: null }).be).toBeUndefined();
+    expect(updateProject('doi-goc', { name: 'vẫn thế' }).fe).toBe(repo);
+  });
+
+  it('refuses to leave a project with neither side', () => {
+    updateProject('doi-goc', { be: null });
+    expect(() => updateProject('doi-goc', { fe: null })).toThrow(/thư mục FE hoặc BE/);
+  });
+
+  it('refuses a root that is not a directory, and keeps the old one', () => {
+    expect(() => updateProject('doi-goc', { fe: join(other, 'nope') })).toThrow(/không phải một thư mục/);
+    expect(findProject('doi-goc')?.fe).toBe(repo);
+  });
+
+  it('refuses an id that is not registered', () => {
+    expect(() => updateProject('khong-co', { name: 'x' })).toThrow(/không có project nào/);
+  });
+
+  it('refuses a blank name', () => {
+    expect(() => updateProject('doi-goc', { name: '   ' })).toThrow(/tên không được để trống/);
+  });
+});
+
+describe('hub staleness', () => {
+  it('reports the root a map was scanned from once the project points elsewhere', () => {
+    const moved = mkdtempSync(join(tmpdir(), 'apiflow-moved-'));
+    addProject({ name: 'lech', fe: repo });
+    writeMap('lech', 'fe', mapWith({ metadata: { name: 'lech', root: repo, generator: 'apiflow test' } }));
+    expect(hubProjects()[0].maps[0].scannedFrom).toBeUndefined();
+
+    updateProject('lech', { fe: moved });
+    // cm:why The map is NOT deleted when a root moves, so this flag is the only thing standing
+    // between the reader and a card of numbers measured on a different repo.
+    expect(hubProjects()[0].maps[0].scannedFrom).toBe(repo);
+    rmSync(moved, { recursive: true, force: true });
+  });
+
+  it('accepts a linked map whose root names both sides', () => {
+    addProject({ name: 'ghep', fe: repo, be: repo });
+    writeMap('ghep', 'linked', mapWith({
+      metadata: { name: 'ghep', root: `${repo} + ${repo}`, generator: 'apiflow link/1' },
+    }));
+    expect(hubProjects()[0].maps[0].scannedFrom).toBeUndefined();
   });
 });

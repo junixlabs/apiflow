@@ -96,6 +96,45 @@ export function addProject(options: AddOptions): ProjectEntry {
   return entry;
 }
 
+export interface UpdateOptions {
+  name?: string;
+  fe?: string | null;
+  be?: string | null;
+  hints?: string | null;
+}
+
+// cm:guard The id is NOT editable: it is the name of the directory the maps live in, so changing it
+// here would leave every scanned map behind under a name nothing points at any more.
+// cm:why `null` clears a side and `undefined` leaves it alone — a form that submits an empty text
+// field has to be able to say "remove the BE root", and "" cannot mean both that and "unchanged".
+export function updateProject(id: string, changes: UpdateOptions): ProjectEntry {
+  const workspace = readWorkspace();
+  const current = workspace.projects.find((p) => p.id === id);
+  if (current === undefined) throw new Error(`không có project nào tên ${id}`);
+
+  const next: ProjectEntry = { ...current };
+  if (changes.name !== undefined) {
+    if (changes.name.trim() === '') throw new Error('tên không được để trống');
+    next.name = changes.name.trim();
+  }
+  for (const side of ['fe', 'be'] as const) {
+    const value = changes[side];
+    if (value === undefined) continue;
+    if (value === null) delete next[side];
+    else next[side] = checkRoot(`thư mục ${side.toUpperCase()}`, value);
+  }
+  if (changes.hints !== undefined) {
+    if (changes.hints === null) delete next.hints;
+    else next.hints = resolve(changes.hints);
+  }
+  if (next.fe === undefined && next.be === undefined) {
+    throw new Error('cần ít nhất một thư mục FE hoặc BE');
+  }
+
+  writeWorkspace({ version: 1, projects: workspace.projects.map((p) => (p.id === id ? next : p)) });
+  return next;
+}
+
 export function removeProject(id: string): boolean {
   const workspace = readWorkspace();
   const kept = workspace.projects.filter((p) => p.id !== id);
