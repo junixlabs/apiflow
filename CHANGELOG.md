@@ -55,6 +55,34 @@ All notable changes to API View are documented here.
 - Import specifiers resolve through `tsconfig`/`jsconfig` path aliases (`@/*`), relative paths,
   extension guessing and `index.*`.
 
+### Added — workspace and UI (the reading half of the product)
+
+- `apiflow project add|ls|rm` + `~/.apiflow/` — a registry of projects, each with an FE root, a BE
+  root and the maps scanned from them. Nothing is ever written inside a scanned repo.
+  Maps are stored per project and per kind (`fe`/`be`/`linked`), and every distinct scan is kept in
+  `history/`, named by the content hash of the map itself: an unchanged repo re-scans to the same
+  bytes, so history only grows when something really changed.
+- `apiflow ui [--port=]` — a local server, bound to `127.0.0.1` with no flag to widen it. `/` lists
+  every project; `/p/<id>` opens one.
+- `apiflow hub <dir>` — the same project list as a self-contained HTML file, for a repo that has no
+  server to run.
+- The project view has six panes over one map: endpoints (facet-filtered, with a 5-tab inspector),
+  impact (an endpoint to the chain of hooks and components to the screens that break), screens (the
+  reverse direction), unresolved (grouped by reason), alerts, and compare.
+- `src/workspace/alerts.ts` — method mismatch, FE calling a path the API does not declare, an open
+  auth gate, an endpoint no screen calls. Severity is graded by the *confidence* of the call that
+  found it, so a `guess` never shouts.
+  Alerts and Unresolved are counted separately and never added together: an alert is something the
+  tool understood and finds dangerous, an unresolved is something it could not understand.
+- `src/workspace/diff.ts` — compares the last two scans of a map and leads with a sentence, not a
+  number: a scan that saw more call sites while resolving fewer of them exactly says
+  *"phủ rộng hơn, nhưng chắc chắn kém đi"* before it shows the counts.
+- A scan button in the project view, streaming the scanner's own output over SSE, then re-linking
+  the two halves. The scan writes to a staging file and only replaces the live map once the child
+  exits cleanly, so a scan that dies halfway cannot leave a truncated map in place.
+- `.dependency-cruiser.cjs` + `npm run boundary` — the map side and the request-runner side may not
+  import each other.
+
 ### Changed
 
 - `.apimap` fields now carry `kind` (`request`/`response`), `type`, and independent `declared` /

@@ -1,11 +1,15 @@
-import { mkdtempSync, readFileSync, rmSync } from 'fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { ApiMapFile } from '../core/apimap';
+import { parseMap } from '../core/apimap';
 import { addProject, findProject, readWorkspace, removeProject, slug, workspaceRoot } from './registry';
-import { contentHash, mapPath, projectDir, readMap, statusOf, writeMap } from './store';
+import { contentHash, historyOf, mapPath, projectDir, readMap, statusOf, writeMap } from './store';
 import { endpointReliability, endpointState, summarize } from './summary';
+import { diffMaps, headlineFor } from './diff';
+import { scanInBackground } from './runScan';
+import type { ScanEvent } from './runScan';
 import { alertCounts, alerts } from './alerts';
 
 let home: string;
@@ -233,5 +237,129 @@ describe('endpointReliability', () => {
       ],
     });
     expect(endpointReliability(m).get('e')).toEqual({ exact: 1, inferred: 0, guess: 2, calls: 3 });
+  });
+});
+
+const callsOf = (spec: Array<[string, ApiMapFile['calls'][number]['confidence']]>): ApiMapFile['calls'] =>
+  spec.map(([endpointId, confidence], i) => ({
+    screenId: 's', endpointId, via: 'f', confidence, source: { file: 'a.ts', line: i + 1 },
+  }));
+
+const screen = { id: 's', label: '/s', route: '/s', source: { file: 'p.tsx', line: 1 } };
+
+describe('diff', () => {
+  it('says coverage grew while certainty fell, not just that the number went up', () => {
+    const before = mapWith({ calls: callsOf([['e', 'exact'], ['e', 'exact']]) });
+    const after = mapWith({ calls: callsOf([['e', 'exact'], ['e', 'exact'], ['e', 'guess'], ['e', 'guess']]) });
+    expect(headlineFor(before, after)).toBe('Phủ rộng hơn, nhưng chắc chắn kém đi.');
+  });
+
+  it('calls a rescan that found the same thing twice unchanged', () => {
+    const m = mapWith({ calls: callsOf([['e', 'exact'], ['e', 'guess']]) });
+    expect(headlineFor(m, m)).toBe('Không thay đổi đáng kể.');
+  });
+
+  it('does not congratulate a scan that lost calls', () => {
+    const before = mapWith({ calls: callsOf([['e', 'exact'], ['e', 'guess'], ['e', 'guess']]) });
+    const after = mapWith({ calls: callsOf([['e', 'exact']]) });
+    expect(headlineFor(before, after)).toBe('Phủ hẹp hơn, phần còn lại chắc hơn.');
+  });
+
+  it('names the screens that lose an endpoint, so removal is actionable', () => {
+    const before = mapWith({
+      endpoints: [{ id: 'e', method: 'GET', path: '/a' }],
+      screens: [screen],
+      calls: callsOf([['e', 'exact']]),
+    });
+    const d = diffMaps(before, mapWith({ screens: [screen] }));
+    expect(d.endpoints.removed).toEqual([{ method: 'GET', path: '/a', screens: ['/s'] }]);
+    expect(d.endpoints.added).toEqual([]);
+  });
+
+  it('reports an auth gate that opened as a change, not as a new endpoint', () => {
+    const before = mapWith({ endpoints: [{ id: 'e', method: 'GET', path: '/a', auth: true }] });
+    const after = mapWith({ endpoints: [{ id: 'e', method: 'GET', path: '/a', auth: false }] });
+    const d = diffMaps(before, after);
+    expect(d.endpoints.added).toEqual([]);
+    expect(d.endpoints.changed[0].detail).toBe('cổng auth: có auth → không auth');
+  });
+});
+
+const collect = (id: string, kind: 'fe' | 'be'): Promise<ScanEvent[]> =>
+  new Promise((resolve) => {
+    const events: ScanEvent[] = [];
+    scanInBackground(id, kind, (event) => {
+      events.push(event);
+      if (event.kind !== 'log') resolve(events);
+    });
+    // cm:guard Resolves on the guard branches too — they answer synchronously, before this promise
+    // body finishes, so the callback above has already fired and nothing would ever settle it.
+    if (events.some((e) => e.kind !== 'log')) resolve(events);
+  });
+
+describe('scanInBackground', () => {
+  it('refuses an id that is not in the registry instead of scanning something else', async () => {
+    expect(await collect('khong-co', 'fe')).toEqual([{ kind: 'error', text: 'không có project nào tên khong-co' }]);
+  });
+
+  it('says which side was never declared rather than reporting an empty map', async () => {
+    addProject({ name: 'fe only', fe: repo });
+    expect(await collect('fe-only', 'be')).toEqual([{ kind: 'error', text: 'fe-only chưa khai thư mục BE' }]);
+  });
+
+  it('runs a real scan and leaves no staging file behind', async () => {
+    mkdirSync(join(repo, 'src'), { recursive: true });
+    writeFileSync(join(repo, 'src', 'api.ts'), "export const load = () => fetch('/api/v1/things');\n");
+    addProject({ name: 'tiny', fe: repo });
+
+    const events = await collect('tiny', 'fe');
+    expect(events[events.length - 1].kind).toBe('done');
+    expect(readMap('tiny', 'fe')?.endpoints.map((e) => e.path)).toEqual(['/api/v1/things']);
+    expect(existsSync(join(projectDir('tiny'), '.fe.scanning.apimap'))).toBe(false);
+  }, 60_000);
+});
+
+describe('history order', () => {
+  const withCalls = (n: number) =>
+    mapWith({ calls: callsOf(Array.from({ length: n }, () => ['e', 'exact'] as const)) });
+
+  it('keeps the scan order even when the newer map hashes lower than the older one', () => {
+    addProject({ name: 'ord', fe: repo });
+    const names: string[] = [];
+    // cm:guard These three counts hash out of alphabetical order on purpose — with counts that
+    // happen to hash ascending, the assertion below passes against the old sorted implementation.
+    for (const n of [1, 2, 7]) names.push(writeMap('ord', 'fe', withCalls(n)).history);
+    const seen = historyOf('ord', 'fe');
+    expect(seen).toEqual(names.map((h) => h.split('/').pop()));
+    // cm:why Asserts the alphabetical order differs, otherwise the test passes on both the sorted
+    // implementation and the ordered one and proves nothing.
+    expect([...seen].sort()).not.toEqual(seen);
+  });
+
+  it('reads a revert as a change back, not as the change itself', () => {
+    addProject({ name: 'rev', fe: repo });
+    writeMap('rev', 'fe', withCalls(1));
+    writeMap('rev', 'fe', withCalls(4));
+    writeMap('rev', 'fe', withCalls(1));
+    const entries = historyOf('rev', 'fe');
+    expect(entries).toHaveLength(3);
+    const read = (f: string) => parseMap(readFileSync(join(projectDir('rev'), 'history', f), 'utf8'));
+    expect(diffMaps(read(entries[1]), read(entries[2])).headline).toBe('Phủ hẹp hơn.');
+  });
+
+  it('does not log a re-scan that found exactly the same map', () => {
+    addProject({ name: 'same', fe: repo });
+    writeMap('same', 'fe', withCalls(2));
+    writeMap('same', 'fe', withCalls(2));
+    expect(historyOf('same', 'fe')).toHaveLength(1);
+  });
+
+  it('adopts a history written before the order log existed', () => {
+    addProject({ name: 'legacy', fe: repo });
+    writeMap('legacy', 'fe', withCalls(1));
+    writeMap('legacy', 'fe', withCalls(4));
+    rmSync(join(projectDir('legacy'), 'history', 'order'));
+    writeMap('legacy', 'fe', withCalls(9));
+    expect(historyOf('legacy', 'fe')).toHaveLength(3);
   });
 });

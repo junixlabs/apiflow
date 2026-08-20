@@ -1,5 +1,5 @@
 import { parseMap, serializeMap } from '../core/apimap';
-import { existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from 'fs';
+import { appendFileSync, existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from 'fs';
 import { join } from 'path';
 import type { ApiMapFile } from '../core/apimap';
 import { ID, workspaceRoot } from './registry';
@@ -35,9 +35,31 @@ export function writeMap(id: string, kind: MapKind, map: ApiMapFile): { file: st
   const body = serializeMap(map);
   const file = mapPath(id, kind);
   writeFileSync(file, body);
-  const history = join(dir, 'history', `${kind}-${contentHash(body)}.apimap`);
+  const name = `${kind}-${contentHash(body)}.apimap`;
+  const history = join(dir, 'history', name);
   if (!existsSync(history)) writeFileSync(history, body);
+  recordOrder(dir, kind, name);
   return { file, history };
+}
+
+// cm:guard The order log is the only record of WHEN each scan ran — the file names are content
+// hashes, so sorting them puts a revert before the change it reverted and reads the diff backwards.
+// cm:edge contract -> src/server/index.ts — diffFor() takes the last two entries as before/after.
+function recordOrder(dir: string, kind: MapKind, name: string): void {
+  const log = join(dir, 'history', 'order');
+  if (!existsSync(log)) {
+    const seed = readdirSync(join(dir, 'history'))
+      .filter((f) => f.endsWith('.apimap'))
+      .map((f) => ({ f, at: statSync(join(dir, 'history', f)).mtimeMs }))
+      .sort((a, b) => a.at - b.at)
+      .map((e) => e.f);
+    writeFileSync(log, seed.map((f) => `${f}\n`).join(''));
+  }
+  const lines = readFileSync(log, 'utf8').split('\n').filter((l) => l !== '');
+  const previous = [...lines].reverse().find((l) => l.startsWith(`${kind}-`));
+  // cm:why A re-scan that found nothing new is not an event: appending it would replace the last
+  // real change in the Compare pane with a diff of a map against itself.
+  if (previous !== name) appendFileSync(log, `${name}\n`);
 }
 
 // cm:why FNV-1a by hand rather than node:crypto — this hash names a file, it guards nothing, and a
@@ -68,7 +90,12 @@ export function statusOf(id: string): MapStatus[] {
 export function historyOf(id: string, kind: MapKind): string[] {
   const dir = join(projectDir(id), 'history');
   if (!existsSync(dir)) return [];
-  return readdirSync(dir)
-    .filter((f) => f.startsWith(`${kind}-`) && f.endsWith('.apimap'))
-    .sort();
+  const log = join(dir, 'order');
+  const names = existsSync(log)
+    ? readFileSync(log, 'utf8').split('\n')
+    : readdirSync(dir)
+        .map((f) => ({ f, at: statSync(join(dir, f)).mtimeMs }))
+        .sort((a, b) => a.at - b.at)
+        .map((e) => e.f);
+  return names.filter((f) => f.startsWith(`${kind}-`) && f.endsWith('.apimap') && existsSync(join(dir, f)));
 }

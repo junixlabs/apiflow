@@ -1,13 +1,31 @@
 import express from 'express';
 import type { Express } from 'express';
-import { renderViewer } from '../cli/view';
+import { renderApp } from '../view/app';
 import { renderHub } from '../view/hub';
-import { workspaceRoot } from '../workspace/registry';
+import { findProject, workspaceRoot } from '../workspace/registry';
+import type { ScanEvent } from '../workspace/runScan';
+import { scanInBackground } from '../workspace/runScan';
 import { bestKind, hubProjects } from '../workspace/hubData';
 import type { MapKind } from '../workspace/store';
-import { mapPath, readMap } from '../workspace/store';
+import { historyOf, mapPath, projectDir, readMap } from '../workspace/store';
+import type { MapDiff } from '../workspace/diff';
+import { diffMaps } from '../workspace/diff';
+import { parseMap } from '../core/apimap';
+import { readFileSync } from 'fs';
+import { join } from 'path';
 
 const KINDS: MapKind[] = ['fe', 'be', 'linked'];
+
+// cm:why Compares the two most recent stored scans, not "now vs a timestamp": history is keyed by
+// content hash, so two entries exist only when a re-scan actually found something different.
+function diffFor(id: string, kind: MapKind): MapDiff | undefined {
+  const entries = historyOf(id, kind);
+  if (entries.length < 2) return undefined;
+  const dir = join(projectDir(id), 'history');
+  const before = parseMap(readFileSync(join(dir, entries[entries.length - 2]), 'utf8'));
+  const after = parseMap(readFileSync(join(dir, entries[entries.length - 1]), 'utf8'));
+  return diffMaps(before, after);
+}
 
 // cm:guard Never reads a path from the request — an id is looked up in the registry and the path is
 // derived from it. Accepting a path here would hand the whole filesystem to anyone on the loopback.
@@ -46,7 +64,34 @@ export function buildApp(): Express {
       res.status(404).type('text/plain; charset=utf-8').send(`${project.id} không có map ${kind}`);
       return;
     }
-    res.type('html').send(renderViewer(map, mapPath(project.id, kind)));
+    res.type('html').send(renderApp({
+      map,
+      projectId: project.id,
+      sourcePath: mapPath(project.id, kind),
+      live: true,
+      diff: diffFor(project.id, kind),
+    }));
+  });
+
+  // cm:guard Server-Sent Events, and the response is flushed per line: a scan runs for tens of
+  // seconds, and a request that answers only at the end is indistinguishable from one that hung.
+  app.post('/api/projects/:id/scan', (req, res) => {
+    const kind = req.query.kind === 'be' ? 'be' : 'fe';
+    if (findProject(req.params.id) === undefined) {
+      res.status(404).json({ error: 'NO_PROJECT' });
+      return;
+    }
+    res.writeHead(200, {
+      'content-type': 'text/event-stream; charset=utf-8',
+      'cache-control': 'no-cache',
+      connection: 'keep-alive',
+    });
+    const send = (event: ScanEvent) => res.write(`data: ${JSON.stringify(event)}\n\n`);
+    const running = scanInBackground(req.params.id, kind, (event) => {
+      send(event);
+      if (event.kind !== 'log') res.end();
+    });
+    req.on('close', () => running.cancel());
   });
 
   app.get('/api/projects', (_req, res) => {

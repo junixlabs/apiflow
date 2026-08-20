@@ -109,6 +109,26 @@ Each is a candidate, not a verdict: another client may consume what this fronten
 project's fixtures, and classifying each mismatch. `skills/api-flow-analyzer/` remains the
 agent-only route mapper for stacks the CLI does not cover yet.
 
+## Managing more than one project
+
+```bash
+npx @junixlabs/apiflow project add "Adminhub" --fe=./adminhub-ui --be=./adminhub-api
+npx @junixlabs/apiflow ui
+```
+
+`project add` records the roots under `~/.apiflow/` — nothing is written inside the repos being
+read. `apiflow ui` serves the project list on `127.0.0.1` and opens one project into six panes:
+endpoints, impact, screens, unresolved, alerts, and a comparison of the last two scans. The scan
+button re-runs a scanner and streams its output; the map is only replaced when the scan finishes
+cleanly.
+
+Alerts and Unresolved are separate counts on purpose. An alert is something the tool understood and
+finds dangerous — a method mismatch, an endpoint with no auth, a route no screen calls. An
+unresolved is something it could not understand, and it is listed with the line it gave up on.
+
+For a repo with no server to run, `apiflow hub <dir>` writes the same project list as a single
+self-contained HTML file.
+
 ## Features
 
 ### Visual Canvas
