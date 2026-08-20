@@ -43,7 +43,10 @@ export function renderImpact(answer: ImpactAnswer, label: string): string {
   const order = { exact: 0, inferred: 1, guess: 2 };
   for (const s of [...answer.screens].sort((a, b) => order[a.confidence] - order[b.confidence])) {
     const via = s.screen.viaHops ? ` · via ${s.screen.viaHops} hop(s) → ${s.screen.source.file}:${s.screen.source.line}` : '';
-    lines.push(`- **${s.screen.label}** [${s.confidence}] — ${s.source.file}:${s.source.line}${via}`);
+    // cm:why A screen with no route never reached a route table — printing it like the others reads
+    // as "this URL breaks", when all that is known is the module the call sits in.
+    const label = s.screen.route ?? `${s.screen.label} (chưa gắn được vào route nào)`;
+    lines.push(`- **${label}** [${s.confidence}] — ${s.source.file}:${s.source.line}${via}`);
   }
   return lines.join('\n');
 }
