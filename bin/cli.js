@@ -24,6 +24,7 @@ const SUBCOMMANDS = {
   link: 'link.ts',
   impact: 'impact.ts',
   view: 'view.ts',
+  project: 'project.ts',
 };
 const subcommand = SUBCOMMANDS[args[0]];
 
