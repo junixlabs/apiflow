@@ -129,13 +129,45 @@ function streamScan(kind, id) {
 if ($id('scan-fe')) $id('scan-fe').onclick = () => streamScan('fe');
 if ($id('scan-be')) $id('scan-be').onclick = () => streamScan('be');
 
+// cm:why Delegated, not bound per card: the hub redraws its list on reload and a per-button listener
+// would have to be re-attached; one listener on the document survives every redraw.
+document.addEventListener('click', (ev) => {
+  const scan = ev.target.closest && ev.target.closest('[data-scan]');
+  if (scan) { streamScan(scan.dataset.scan, scan.dataset.id); return; }
+
+  const rm = ev.target.closest && ev.target.closest('[data-rm]');
+  if (!rm) return;
+  const id = rm.dataset.rm;
+  // cm:guard Says what is NOT deleted before asking: the maps stay on disk, so this is undoable by
+  // adding the project again — a confirm that implies data loss would be a lie in the other direction.
+  const sure = window.confirm('Bỏ ' + (rm.dataset.name || id) + ' khỏi workspace?\n\n'
+    + 'Chỉ xoá khai báo trong ~/.apiflow/workspace.json. Map đã scan vẫn còn trên đĩa, '
+    + 'và repo được đọc không bị chạm tới.');
+  if (!sure) return;
+  rm.disabled = true;
+  fetch('/api/projects/' + id, { method: 'DELETE' })
+    .then((res) => res.json().then((data) => ({ ok: res.ok, data })))
+    .then((result) => {
+      if (!result.ok) {
+        rm.disabled = false;
+        window.alert(result.data.message || 'không bỏ được');
+        return;
+      }
+      const card = rm.closest('.card');
+      if (card) card.remove();
+    })
+    .catch((err) => { rm.disabled = false; window.alert('không gọi được server: ' + err.message); });
+});
+
 const addDlg = $id('add-dlg');
 if (addDlg) {
   const msg = $id('add-msg');
   const form = $id('add-form');
   const say = (text, cls) => { msg.className = 'dmsg ' + (cls || ''); msg.textContent = text; };
 
-  $id('add-open').onclick = () => { say(''); addDlg.showModal(); };
+  const open = () => { say(''); addDlg.showModal(); };
+  if ($id('add-open')) $id('add-open').onclick = open;
+  if ($id('add-open-2')) $id('add-open-2').onclick = open;
   $id('add-cancel').onclick = () => addDlg.close();
 
   // cm:guard Shows the server's own message verbatim and never invents one: the refusals that matter

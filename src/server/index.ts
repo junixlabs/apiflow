@@ -2,7 +2,7 @@ import express from 'express';
 import type { Express, Request } from 'express';
 import { renderApp } from '../view/app';
 import { renderHub } from '../view/hub';
-import { ID, addProject, findProject, slug, workspaceRoot } from '../workspace/registry';
+import { ID, addProject, findProject, removeProject, slug, workspaceRoot } from '../workspace/registry';
 import { localWritesOnly } from './guard';
 import type { ScanEvent } from '../workspace/runScan';
 import { scanInBackground } from '../workspace/runScan';
@@ -14,7 +14,7 @@ import { diffMaps } from '../workspace/diff';
 import { parseMap } from '../core/apimap';
 import { sidesOf } from '../workspace/sides';
 import { endpointHistory, mapSeries } from '../workspace/series';
-import { readFileSync } from 'fs';
+import { existsSync, readFileSync } from 'fs';
 import { join } from 'path';
 
 const KINDS: MapKind[] = ['fe', 'be', 'linked'];
@@ -118,6 +118,20 @@ export function buildApp(): Express {
     } catch (err) {
       res.status(400).json({ error: 'REFUSED', message: err instanceof Error ? err.message : String(err) });
     }
+  });
+
+  // cm:guard Removes the WORKSPACE ENTRY only — the scanned maps under ~/.apiflow/projects/<id> stay
+  // on disk. Deleting a map here would make a mis-click destroy a 40-second scan of a real repo, and
+  // nothing in the UI would have warned that it was about to.
+  app.delete('/api/projects/:id', localWritesOnly, (req: Request<{ id: string }>, res) => {
+    if (!removeProject(req.params.id)) {
+      res.status(404).json({ error: 'NO_PROJECT', message: `không có project nào tên ${req.params.id}` });
+      return;
+    }
+    // cm:guard Only names the map directory when it actually exists: a project removed before its
+    // first scan has none, and pointing at a path that is not there reads as "your maps are over here".
+    const dir = projectDir(req.params.id);
+    res.json({ removed: req.params.id, mapsKept: existsSync(dir) ? dir : null });
   });
 
   // cm:guard Server-Sent Events, and the response is flushed per line: a scan runs for tens of

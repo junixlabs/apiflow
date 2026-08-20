@@ -9,7 +9,7 @@ import type { SideInfo } from '../workspace/sides';
 import type { EndpointHistory, MapSeries } from '../workspace/series';
 import { ADD_DIALOG, ADD_SCRIPT, ADD_STYLE } from './addProject';
 import { PANES_HTML, PANES_SCRIPT, PANES_SCRIPT_2, PANES_SCRIPT_3, PANES_SCRIPT_4, PANES_STYLE } from './panes';
-import { BRAND_STYLE, FAVICON, MARK, STYLE, THEME_BOOT } from './theme';
+import { BRAND_STYLE, FAVICON, MARK, STYLE, THEME_BOOT, THEME_SCRIPT, THEME_STYLE } from './theme';
 
 export interface AppPayload {
   map: ApiMapFile;
@@ -149,7 +149,7 @@ function rail(payload: AppPayload, counts: { alerts: number; high: number }, unr
     ${link('compare', 'So sánh')}
   </nav>
   <div class="railfoot">
-    <button class="thbtn" id="theme-btn" type="button" title="đổi nền sáng / tối">
+    <button class="thbtn" id="theme-btn" type="button" title="đổi nền sáng / tối" style="width:100%">
       <span class="sw2"></span><span id="theme-label">theo hệ điều hành</span>
     </button>
     <p class="foot">${escapeHtml(payload.sourcePath)}</p>
@@ -236,7 +236,7 @@ export function renderApp(payload: AppPayload): string {
 <title>apiflow — ${escapeHtml(name)}</title>
 <link rel="icon" href="${FAVICON}">
 ${THEME_BOOT}
-<style>${STYLE}${BRAND_STYLE}${APP_STYLE}${ADD_STYLE}${PANES_STYLE}</style>
+<style>${STYLE}${BRAND_STYLE}${THEME_STYLE}${APP_STYLE}${ADD_STYLE}${PANES_STYLE}</style>
 </head>
 <body>
 <div class="app-shell">
@@ -256,7 +256,7 @@ ${PANES_HTML}
 <script type="application/json" id="ephist">${embedJson(payload.epHistory ?? null)}</script>
 <script type="application/json" id="series">${embedJson(payload.series ?? null)}</script>
 <script type="application/json" id="diff">${embedJson(payload.diff ?? null)}</script>
-<script>${PANES_SCRIPT}${PANES_SCRIPT_2}${PANES_SCRIPT_4}${PANES_SCRIPT_3}${ADD_SCRIPT}</script>
+<script>${PANES_SCRIPT}${PANES_SCRIPT_2}${PANES_SCRIPT_4}${PANES_SCRIPT_3}${ADD_SCRIPT}${THEME_SCRIPT}</script>
 </body>
 </html>
 `;

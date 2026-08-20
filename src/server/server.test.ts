@@ -1,10 +1,18 @@
-import { mkdtempSync, rmSync } from 'fs';
+import { existsSync, mkdtempSync, rmSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { request } from 'http';
 import { serve } from './index';
 import { findProject } from '../workspace/registry';
+import { mapPath, writeMap } from '../workspace/store';
+import type { ApiMapFile } from '../core/apimap';
+
+const mapWith = (): ApiMapFile => ({
+  version: 1,
+  metadata: { name: 'demo', root: '/tmp/demo', generator: 'apiflow test' },
+  screens: [], endpoints: [], fields: [], calls: [], reads: [], unresolved: [],
+});
 
 let home: string;
 let repo: string;
@@ -44,18 +52,29 @@ const rawPost = (path: string, headers: Record<string, string>): Promise<number>
     req.end('{}');
   });
 
-const post = (path: string, body: unknown, headers: Record<string, string> = {}) =>
-  fetch(`${base}${path}`, {
+interface Answer {
+  status: number;
+  error?: string;
+  message?: string;
+  project?: { id: string; fe?: string; be?: string };
+  removed?: string;
+  mapsKept?: string | null;
+}
+
+const post = async (path: string, body: unknown, headers: Record<string, string> = {}): Promise<Answer> => {
+  const res = await fetch(`${base}${path}`, {
     method: 'POST',
     headers: { 'content-type': 'application/json', ...headers },
     body: JSON.stringify(body),
   });
+  return { status: res.status, ...((await res.json()) as Omit<Answer, 'status'>) };
+};
 
 describe('POST /api/projects', () => {
   it('registers a project and stores the root absolute', async () => {
     const res = await post('/api/projects', { name: 'Hoá đơn nội bộ', fe: repo });
     expect(res.status).toBe(201);
-    expect((await res.json()).project.id).toBe('hoa-don-noi-bo');
+    expect(res.project?.id).toBe('hoa-don-noi-bo');
     expect(findProject('hoa-don-noi-bo')?.fe).toBe(repo);
   });
 
@@ -64,21 +83,20 @@ describe('POST /api/projects', () => {
     expect(res.status).toBe(400);
     // cm:why Asserts the message reads as prose: the same text is shown in the browser form, where
     // an error naming the CLI flag `--fe` points at a field that does not exist on screen.
-    const body = await res.json();
-    expect(body.message).toContain('thư mục FE');
-    expect(body.message).not.toContain('--fe');
+    expect(res.message).toContain('thư mục FE');
+    expect(res.message).not.toContain('--fe');
   });
 
   it('refuses a name it cannot turn into an id, and says which field to fill', async () => {
     const res = await post('/api/projects', { name: '日本語', fe: repo });
     expect(res.status).toBe(400);
-    expect((await res.json()).message).toContain('điền ô id');
+    expect(res.message).toContain('điền ô id');
   });
 
   it('refuses a project with neither side', async () => {
     const res = await post('/api/projects', { name: 'empty' });
     expect(res.status).toBe(400);
-    expect((await res.json()).error).toBe('NO_ROOT');
+    expect(res.error).toBe('NO_ROOT');
   });
 });
 
@@ -94,13 +112,13 @@ describe('write guard', () => {
   it('rejects a cross-site Origin', async () => {
     const res = await post('/api/projects', { name: 'x', fe: repo }, { origin: 'https://evil.example' });
     expect(res.status).toBe(403);
-    expect((await res.json()).error).toBe('BAD_ORIGIN');
+    expect(res.error).toBe('BAD_ORIGIN');
   });
 
   it('rejects a request the browser labelled cross-site', async () => {
     const res = await post('/api/projects', { name: 'x', fe: repo }, { 'sec-fetch-site': 'cross-site' });
     expect(res.status).toBe(403);
-    expect((await res.json()).error).toBe('CROSS_SITE');
+    expect(res.error).toBe('CROSS_SITE');
   });
 
   it('lets the page apiflow itself served through', async () => {
@@ -114,11 +132,44 @@ describe('write guard', () => {
   });
 });
 
+describe('DELETE /api/projects/:id', () => {
+  const del = async (id: string, headers: Record<string, string> = {}): Promise<Answer> => {
+    const res = await fetch(`${base}/api/projects/${id}`, { method: 'DELETE', headers });
+    return { status: res.status, ...((await res.json()) as Omit<Answer, 'status'>) };
+  };
+
+  it('removes the workspace entry and keeps the scanned maps', async () => {
+    await post('/api/projects', { name: 'bo di', fe: repo });
+    writeMap('bo-di', 'fe', mapWith());
+    const res = await del('bo-di');
+    expect(res.status).toBe(200);
+    expect(findProject('bo-di')).toBeUndefined();
+    // cm:guard The map file must still be there: the confirm text in the browser promises exactly
+    // this, and a delete that quietly took the maps too would make that text a lie.
+    expect(existsSync(mapPath('bo-di', 'fe'))).toBe(true);
+  });
+
+  it('names no map directory for a project removed before its first scan', async () => {
+    await post('/api/projects', { name: 'chua scan', fe: repo });
+    expect((await del('chua-scan')).mapsKept).toBeNull();
+  });
+
+  it('answers 404 for an id that was never registered', async () => {
+    expect((await del('khong-co')).status).toBe(404);
+  });
+
+  it('is fenced like every other write route', async () => {
+    await post('/api/projects', { name: 'giu lai', fe: repo });
+    expect((await del('giu-lai', { origin: 'https://evil.example' })).status).toBe(403);
+    expect(findProject('giu-lai')).toBeDefined();
+  });
+});
+
 describe('read routes', () => {
   it('names the kinds it accepts instead of guessing', async () => {
     const res = await fetch(`${base}/api/map/anything/sideways`);
     expect(res.status).toBe(400);
-    expect((await res.json()).message).toContain('fe, be, linked');
+    expect(((await res.json()) as { message: string }).message).toContain('fe, be, linked');
   });
 
   it('answers 404 for a project that is not registered', async () => {

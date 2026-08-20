@@ -129,10 +129,31 @@ All notable changes to API View are documented here.
 - The dialog, the SSE reader and the scan buttons live in one module shared by the hub and the
   project view — a hub with no projects is exactly where someone needs the button most.
 
+### Added — the hub is a workspace, not a listing
+
+- Totals across every project (endpoints, screens, open auth gates, FE-only paths, unresolved), with
+  unresolved kept out of the other counts the way every other page keeps it out.
+- Each card names the project's own name, its id, both roots clipped to one line each, and the branch
+  and short sha each side sits on — the same revision line a project header carries.
+- Per-card actions: `Scan FE` / `Scan BE` streaming into the page, and `Bỏ khỏi workspace`. A project
+  with no map gets a scan button instead of an instruction to go and type the CLI — the page can run
+  the scan itself, so the state it describes is the state it can fix.
+- `DELETE /api/projects/:id` removes the workspace entry only; the scanned maps stay on disk, which
+  is what the confirmation text promises. It answers with the directory it kept, or null when the
+  project was removed before its first scan and there is no such directory to name.
+- The empty state points at the button instead of at a CLI command, and drops the legend that
+  explains numbers no card is showing yet.
+- The light/dark control is now on the hub too. Its styles and behaviour moved into `theme.ts` so the
+  two pages cannot drift; previously a theme pinned on a project page could not be changed from the
+  hub at all.
+
 ### Fixed
 
 - `headlineFor` called a scan "chắc chắn hơn" when coverage grew and every confidence share moved
   0.0pp. It now says coverage grew and certainty held, which is what the panel underneath shows.
+- A literal newline inside a quoted string in an embedded script broke the whole script in the
+  browser, and the only symptom was one console error on a page that still rendered. `scripts.test.ts`
+  now compiles every embedded script, alone and concatenated the way the page ships them.
 
 ### Changed
 

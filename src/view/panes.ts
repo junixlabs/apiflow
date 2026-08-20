@@ -1510,36 +1510,6 @@ el('un-q')?.addEventListener('input', () => { state.alPage = 1; });
 bind('un-q', 'unQ');
 bind('cv-q', 'cvQ');
 
-// cm:why Three states, not a boolean: "theo hệ điều hành" has to stay reachable, otherwise the first
-// click permanently pins the page to whatever it looked like at that moment.
-// cm:edge contract -> src/view/theme.ts THEME_BOOT — same localStorage key, same two valid values.
-const THEME_LABEL = { system: 'theo hệ điều hành', light: 'nền sáng', dark: 'nền tối' };
-const THEME_NEXT = { system: 'light', light: 'dark', dark: 'system' };
-function themeNow() {
-  const stored = (() => { try { return localStorage.getItem('apiflow-theme'); } catch (e) { return null; } })();
-  return stored === 'light' || stored === 'dark' ? stored : 'system';
-}
-function paintTheme() {
-  const mode = themeNow();
-  if (mode === 'system') delete document.documentElement.dataset.theme;
-  else document.documentElement.dataset.theme = mode;
-  const label = el('theme-label');
-  if (label) label.textContent = THEME_LABEL[mode];
-}
-if (el('theme-btn')) {
-  el('theme-btn').onclick = () => {
-    const next = THEME_NEXT[themeNow()];
-    try {
-      if (next === 'system') localStorage.removeItem('apiflow-theme');
-      else localStorage.setItem('apiflow-theme', next);
-    } catch (e) { /* trang mở bằng file:// vẫn phải đổi được nền */ }
-    if (next === 'system') delete document.documentElement.dataset.theme;
-    else document.documentElement.dataset.theme = next;
-    el('theme-label').textContent = THEME_LABEL[next];
-  };
-  paintTheme();
-}
-
 // cm:edge contract -> src/view/addProject.ts — the scan buttons, the add dialog and the SSE reader
 // all live there now, shared with the hub. This pane only needs to know which project it shows.
 const PROJECT = JSON.parse(el0('project'));

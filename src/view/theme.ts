@@ -120,6 +120,49 @@ export const BRAND_STYLE = `
 .brandbar h1 { margin:0; }
 `;
 
+// cm:edge lockstep -> src/view/app.ts, src/view/hub.ts — both pages ship this control, so the styles
+// and the behaviour live here rather than in either page's own stylesheet.
+export const THEME_STYLE = `
+.thbtn { text-align:left; font:500 11.5px/1.3 inherit; color:var(--muted);
+  background:var(--surface); border:1px solid var(--line); border-radius:8px; padding:7px 9px;
+  cursor:pointer; display:flex; align-items:center; gap:7px; }
+.thbtn:hover { color:var(--ink); background:var(--surface-3); }
+.thbtn .sw2 { width:11px; height:11px; border-radius:50%; flex:none;
+  background:linear-gradient(90deg,var(--ink) 50%,var(--surface-3) 50%); border:1px solid var(--line-2); }
+`;
+
+// cm:why Three states, not a boolean: "theo hệ điều hành" has to stay reachable, otherwise the first
+// click pins the page forever to whatever it happened to look like at that moment.
+// cm:edge contract -> THEME_BOOT below — same localStorage key, same two valid stored values.
+export const THEME_SCRIPT = String.raw`
+(function () {
+  const btn = document.getElementById('theme-btn');
+  if (!btn) return;
+  const LABEL = { system: 'theo hệ điều hành', light: 'nền sáng', dark: 'nền tối' };
+  const NEXT = { system: 'light', light: 'dark', dark: 'system' };
+  const stored = () => {
+    try {
+      const value = localStorage.getItem('apiflow-theme');
+      return value === 'light' || value === 'dark' ? value : 'system';
+    } catch (err) { return 'system'; }
+  };
+  const paint = (mode) => {
+    if (mode === 'system') delete document.documentElement.dataset.theme;
+    else document.documentElement.dataset.theme = mode;
+    document.getElementById('theme-label').textContent = LABEL[mode];
+  };
+  btn.onclick = () => {
+    const next = NEXT[stored()];
+    try {
+      if (next === 'system') localStorage.removeItem('apiflow-theme');
+      else localStorage.setItem('apiflow-theme', next);
+    } catch (err) { /* trang mở bằng file:// vẫn phải đổi được nền */ }
+    paint(next);
+  };
+  paint(stored());
+})();
+`;
+
 // cm:guard Runs in <head> BEFORE the body paints. Applying a stored theme from the end of the page
 // makes a light page flash white for one frame on a dark setup, which reads as a broken load.
 export const THEME_BOOT = `<script>(function(){try{var t=localStorage.getItem('apiflow-theme');

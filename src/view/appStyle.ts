@@ -19,12 +19,6 @@ export const APP_STYLE = `
 .rail { display:flex; flex-direction:column; }
 .rail .railfoot { margin-top:auto; padding:14px 16px 0; border-top:1px solid var(--line); }
 .rail .foot { margin:9px 0 0; font-size:10.5px; color:var(--muted); word-break:break-all; line-height:1.5; }
-.thbtn { width:100%; text-align:left; font:500 11.5px/1.3 inherit; color:var(--muted);
-  background:var(--surface); border:1px solid var(--line); border-radius:8px; padding:7px 9px;
-  cursor:pointer; display:flex; align-items:center; gap:7px; }
-.thbtn:hover { color:var(--ink); background:var(--surface-3); }
-.thbtn .sw2 { width:11px; height:11px; border-radius:50%; flex:none;
-  background:linear-gradient(90deg,var(--ink) 50%,var(--surface-3) 50%); border:1px solid var(--line-2); }
 
 .main { min-width:0; padding:18px 24px 60px; display:flex; flex-direction:column; }
 .phead { display:grid; grid-template-columns:auto 1fr auto; align-items:start; gap:8px 20px;

@@ -1,5 +1,6 @@
 import type { HubProject } from '../view/hub';
 import { readWorkspace } from './registry';
+import { gitHead } from './gitInfo';
 import type { MapKind } from './store';
 import { readMap, statusOf } from './store';
 import { summarize } from './summary';
@@ -14,6 +15,12 @@ export function hubProjects(): HubProject[] {
     name: entry.name,
     fe: entry.fe,
     be: entry.be,
+    // cm:why The card names the revision each side sits on, same as a project header does. A list of
+    // maps with no revision next to them cannot tell you which branch a stale one was taken from.
+    rev: [
+      ...(entry.fe === undefined ? [] : [{ kind: 'fe' as const, ...(gitHead(entry.fe) ?? {}) }]),
+      ...(entry.be === undefined ? [] : [{ kind: 'be' as const, ...(gitHead(entry.be) ?? {}) }]),
+    ],
     maps: statusOf(entry.id)
       .filter((status) => status.exists)
       // cm:guard A map that cannot be read is DROPPED, never zero-filled — "0 endpoint" on the card
