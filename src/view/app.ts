@@ -7,6 +7,7 @@ import { APP_STYLE } from './appStyle';
 import { relativeAge } from './hub';
 import type { SideInfo } from '../workspace/sides';
 import type { EndpointHistory, MapSeries } from '../workspace/series';
+import { ADD_DIALOG, ADD_SCRIPT, ADD_STYLE } from './addProject';
 import { PANES_HTML, PANES_SCRIPT, PANES_SCRIPT_2, PANES_SCRIPT_3, PANES_SCRIPT_4, PANES_STYLE } from './panes';
 import { BRAND_STYLE, FAVICON, MARK, STYLE, THEME_BOOT } from './theme';
 
@@ -105,10 +106,13 @@ function sideLine(side: SideInfo, now: number): string {
 function header(payload: AppPayload, name: string): string {
   const now = payload.now ?? 0;
   const sides = payload.sides ?? [];
-  const scanBtns = payload.live && payload.projectId !== undefined
+  // cm:guard Every control here is gated on `live`: the same renderer writes the offline file that
+  // `apiflow view` produces, and a form posting to a server that is not running is a dead button.
+  const scanBtns = payload.live
     ? `<div class="btnrow">
-        <button class="btn primary" id="scan-fe">Scan lại FE</button>
-        <button class="btn" id="scan-be">Scan lại BE</button>
+        ${payload.projectId === undefined ? '' : `<button class="btn primary" id="scan-fe">Scan lại FE</button>
+        <button class="btn" id="scan-be">Scan lại BE</button>`}
+        <button class="btn" id="add-open">+ Thêm project</button>
       </div>`
     : '';
   return `  <div class="phead">
@@ -232,7 +236,7 @@ export function renderApp(payload: AppPayload): string {
 <title>apiflow — ${escapeHtml(name)}</title>
 <link rel="icon" href="${FAVICON}">
 ${THEME_BOOT}
-<style>${STYLE}${BRAND_STYLE}${APP_STYLE}${PANES_STYLE}</style>
+<style>${STYLE}${BRAND_STYLE}${APP_STYLE}${ADD_STYLE}${PANES_STYLE}</style>
 </head>
 <body>
 <div class="app-shell">
@@ -241,6 +245,7 @@ ${rail(payload, { alerts: counts.total, high: counts.high }, payload.map.unresol
 ${header(payload, name)}
 ${overview(payload, list)}
   <pre class="scanlog" id="scanlog"></pre>
+${payload.live ? ADD_DIALOG : ''}
 ${PANES_HTML}
 </div>
 </div>
@@ -251,7 +256,7 @@ ${PANES_HTML}
 <script type="application/json" id="ephist">${embedJson(payload.epHistory ?? null)}</script>
 <script type="application/json" id="series">${embedJson(payload.series ?? null)}</script>
 <script type="application/json" id="diff">${embedJson(payload.diff ?? null)}</script>
-<script>${PANES_SCRIPT}${PANES_SCRIPT_2}${PANES_SCRIPT_4}${PANES_SCRIPT_3}</script>
+<script>${PANES_SCRIPT}${PANES_SCRIPT_2}${PANES_SCRIPT_4}${PANES_SCRIPT_3}${ADD_SCRIPT}</script>
 </body>
 </html>
 `;

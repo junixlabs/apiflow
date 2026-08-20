@@ -116,6 +116,10 @@ npx @junixlabs/apiflow project add "Adminhub" --fe=./adminhub-ui --be=./adminhub
 npx @junixlabs/apiflow ui
 ```
 
+`+ Thêm project` in the UI does the same thing as `project add`, then runs the first scan and streams
+its output. That route is the only one that accepts a path from a request, so it only answers on the
+loopback interface and rejects anything a cross-site page sends.
+
 `project add` records the roots under `~/.apiflow/` — nothing is written inside the repos being
 read. `apiflow ui` serves the project list on `127.0.0.1` and opens one project into eight panes:
 endpoints, a coverage map of every endpoint as one cell, the impact ring (screens on the left,

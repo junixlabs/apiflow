@@ -59,7 +59,7 @@ describe('registry', () => {
   });
 
   it('refuses a project with neither side', () => {
-    expect(() => addProject({ name: 'empty' })).toThrow(/--fe hoặc --be/);
+    expect(() => addProject({ name: 'empty' })).toThrow(/thư mục FE hoặc BE/);
   });
 
   it('refuses a duplicate id', () => {

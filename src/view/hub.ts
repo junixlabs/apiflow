@@ -1,4 +1,5 @@
 import type { MapKind } from '../workspace/store';
+import { ADD_DIALOG, ADD_SCRIPT, ADD_STYLE } from './addProject';
 import { BRAND_STYLE, FAVICON, MARK, STYLE, THEME_BOOT } from './theme';
 
 export interface HubMap {
@@ -153,16 +154,22 @@ export function renderHub(projects: HubProject[], options: HubOptions, now: numb
 <title>apiflow — ${projects.length} project</title>
 <link rel="icon" href="${FAVICON}">
 ${THEME_BOOT}
-<style>${STYLE}${BRAND_STYLE}${HUB_STYLE}</style>
+<style>${STYLE}${BRAND_STYLE}${ADD_STYLE}${HUB_STYLE}</style>
 </head>
 <body>
 <div class="page">
-  <div class="brandbar"><span class="mark">${MARK}</span><h1>apiflow</h1></div>
+  <div class="brandbar"><span class="mark">${MARK}</span><h1>apiflow</h1>
+    ${options.live ? '<button class="btn primary" id="add-open" style="margin-left:auto">+ Thêm project</button>' : ''}
+  </div>
   <p class="sub">${projects.length} project · workspace <code>${escapeHtml(options.workspace)}</code>${options.live ? ' · bản sống' : ' · bản tĩnh'}</p>
   <p class="hint sub">Thanh màu là tỉ lệ <b>có màn gọi</b> / <b>không ai gọi</b> / <b>FE gọi mà API không khai</b> / <b>chưa đối chiếu được</b> (kẻ sọc — thiếu một trong hai phía) của bản đồ đầy đủ nhất trong project.</p>
+  ${options.live ? '<pre class="scanlog" id="scanlog"></pre>' : ''}
   ${body}
   <p class="note">Mỗi con số là <b>ứng viên, không phải phán quyết</b>. “không auth” nghĩa là không thấy cổng chặn nào trong code. “unresolved” là những lời gọi apiflow thấy nhưng không giải được đường dẫn — chúng <b>không</b> nằm trong các con số còn lại.</p>
 </div>
+${options.live ? ADD_DIALOG : ''}
+<script type="application/json" id="project">null</script>
+${options.live ? `<script>${ADD_SCRIPT}</script>` : ''}
 </body>
 </html>
 `;

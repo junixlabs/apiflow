@@ -37,14 +37,17 @@ describe('renderApp offline', () => {
     }
   });
 
-  // cm:guard The page ships the scan code even offline, so the ONLY thing keeping a file:// page from
-  // posting at a server that is not there is this guard — assert the guard, not the absence of fetch.
-  it('keeps the only fetch behind the live-project guard, and aims it at a relative path', () => {
-    for (const call of html.match(/fetch\([^)]*/g) ?? []) {
-      expect(call).toContain("'/api/projects/'");
+  // cm:guard The page ships the scan and add-project code even offline, so the ONLY thing keeping a
+  // file:// page from posting at a server that is not there is the live gate — assert the gate and
+  // the relative target, not the absence of fetch.
+  it('aims every fetch at a relative apiflow route, and ships no control that fires one', () => {
+    const calls = html.match(/fetch\([^,)]*/g) ?? [];
+    expect(calls.length).toBeGreaterThan(0);
+    for (const call of calls) expect(call).toMatch(/fetch\('\/api\/projects/);
+    expect(html).toContain('id="project">null<');
+    for (const id of ['scan-fe', 'scan-be', 'add-open', 'add-dlg']) {
+      expect(html).not.toContain(`id="${id}"`);
     }
-    expect(html).toContain("id=\"project\">null<");
-    expect(html).not.toContain('id="scan-fe"');
   });
 
   it('carries the map inline and names it in the title', () => {
@@ -124,6 +127,13 @@ describe('live extras', () => {
     expect(live).toContain('id="scan-fe"');
     expect(live).toContain('id="scan-be"');
     expect(live).toContain('id="project">"demo"<');
+  });
+
+  it('offers Thêm project on a live page even when no project backs it', () => {
+    const bare = renderApp({ map: mapWith('demo-api'), sourcePath: '/tmp/demo.apimap', live: true });
+    expect(bare).toContain('id="add-open"');
+    expect(bare).toContain('id="add-dlg"');
+    expect(bare).not.toContain('id="scan-fe"');
   });
 });
 

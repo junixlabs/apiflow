@@ -112,6 +112,23 @@ All notable changes to API View are documented here.
   derived from the stored history. Dates come from file mtime — a `.apimap` deliberately carries no
   timestamp inside it.
 
+### Added — adding a project from the UI
+
+- `+ Thêm project` on the hub and in a project header, backed by `POST /api/projects`. It registers
+  the project and immediately runs the first scan into the same streamed log, because `/p/<id>` with
+  no map yet answers "chưa có map nào", and that reads as a failed add.
+- `src/server/guard.ts` — this is the only route that takes a filesystem path from a request, so it
+  is fenced: the `Host` header must be loopback (a hostname that resolves to 127.0.0.1 is what DNS
+  rebinding produces, and Origin agrees with the attacker in that case), `Sec-Fetch-Site` must not
+  say cross-site, and any `Origin` must itself be loopback. The scan route is fenced the same way.
+  Without it, any page open in the same browser could register the user's home directory as a
+  project and have it scanned.
+- Refusals are shown verbatim from the server: a directory that does not exist, an id already taken,
+  a name no id can be derived from. The registry's messages now read as prose ("thư mục FE") instead
+  of naming CLI flags, because the same text appears in a form that has no `--fe`.
+- The dialog, the SSE reader and the scan buttons live in one module shared by the hub and the
+  project view — a hub with no projects is exactly where someone needs the button most.
+
 ### Fixed
 
 - `headlineFor` called a scan "chắc chắn hơn" when coverage grew and every confidence share moved

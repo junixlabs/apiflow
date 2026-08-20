@@ -1540,61 +1540,9 @@ if (el('theme-btn')) {
   paintTheme();
 }
 
-const PROJECT = JSON.parse(el('project')?.textContent || 'null');
-
-// cm:why Reads the stream line by line and never reloads on its own: a scan can fail halfway, and a
-// page that refreshed itself would replace the error text with a map that did not change.
-function startScan(kind, button) {
-  const box = el('scanlog');
-  box.classList.add('on');
-  box.textContent = 'đang scan ' + kind.toUpperCase() + '…\n';
-  for (const b of document.querySelectorAll('.btn')) b.disabled = true;
-  fetch('/api/projects/' + PROJECT + '/scan?kind=' + kind, { method: 'POST' })
-    .then((res) => {
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = '';
-      const pump = () => reader.read().then(({ done, value }) => {
-        if (done) return;
-        buffer += decoder.decode(value, { stream: true });
-        const parts = buffer.split('\n\n');
-        buffer = parts.pop();
-        for (const part of parts) {
-          const line = part.replace(/^data: /, '');
-          if (!line) continue;
-          let event;
-          try { event = JSON.parse(line); } catch (err) { continue; }
-          const span = document.createElement('span');
-          span.className = event.kind === 'error' ? 'err' : event.kind === 'done' ? 'ok' : '';
-          span.textContent = event.text + '\n';
-          box.appendChild(span);
-          box.scrollTop = box.scrollHeight;
-          if (event.kind === 'done') {
-            const note = document.createElement('span');
-            note.className = 'ok';
-            note.textContent = 'Tải lại trang để xem bản đồ mới.\n';
-            box.appendChild(note);
-          }
-          if (event.kind !== 'log') for (const b of document.querySelectorAll('.btn')) b.disabled = false;
-        }
-        return pump();
-      });
-      return pump();
-    })
-    .catch((err) => {
-      const span = document.createElement('span');
-      span.className = 'err';
-      span.textContent = 'không gọi được scan: ' + err.message + '\n';
-      box.appendChild(span);
-      for (const b of document.querySelectorAll('.btn')) b.disabled = false;
-    });
-}
-if (PROJECT) {
-  const fe = el('scan-fe');
-  const be = el('scan-be');
-  if (fe) fe.onclick = () => startScan('fe', fe);
-  if (be) be.onclick = () => startScan('be', be);
-}
+// cm:edge contract -> src/view/addProject.ts — the scan buttons, the add dialog and the SSE reader
+// all live there now, shared with the hub. This pane only needs to know which project it shows.
+const PROJECT = JSON.parse(el0('project'));
 
 const fromHash = location.hash.replace('#', '');
 if (fromHash) state.section = fromHash;

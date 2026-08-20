@@ -80,14 +80,16 @@ export function addProject(options: AddOptions): ProjectEntry {
   const id = options.id !== undefined && options.id !== '' ? options.id : slug(options.name);
   if (!ID.test(id)) throw new Error(`id không hợp lệ (chỉ a-z, 0-9, dấu gạch): ${id}`);
   if (options.fe === undefined && options.be === undefined) {
-    throw new Error('cần ít nhất một trong --fe hoặc --be');
+    throw new Error('cần ít nhất một thư mục FE hoặc BE');
   }
   const workspace = readWorkspace();
   if (workspace.projects.some((p) => p.id === id)) throw new Error(`project đã tồn tại: ${id}`);
 
   const entry: ProjectEntry = { id, name: options.name };
-  if (options.fe !== undefined) entry.fe = checkRoot('--fe', options.fe);
-  if (options.be !== undefined) entry.be = checkRoot('--be', options.be);
+  // cm:why Labels read as prose, not as CLI flags: the same message is shown in the Thêm project
+  // form in the browser, where "--fe không phải một thư mục" names a flag that has no field there.
+  if (options.fe !== undefined) entry.fe = checkRoot('thư mục FE', options.fe);
+  if (options.be !== undefined) entry.be = checkRoot('thư mục BE', options.be);
   if (options.hints !== undefined) entry.hints = resolve(options.hints);
 
   writeWorkspace({ version: 1, projects: [...workspace.projects, entry] });
