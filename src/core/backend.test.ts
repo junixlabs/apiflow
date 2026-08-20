@@ -400,3 +400,57 @@ describe('lambdaReads', () => {
     expect(lambdaReads('.length', 0, 'rows')).toEqual([]);
   });
 });
+
+describe('scanBackendFile — laravel route file shapes', () => {
+  const ROUTES = `<?php
+
+Route::group(['prefix' => 'v1'], function () {
+    Route::group(['middleware' => ['auth', 'company']], function () {
+        Route::apiResource('my-files', 'MyFileController', [
+            'parameters' => ['my-files' => 'my_file_id']
+        ]);
+        // Route::post('products/{id}/update-sku', 'ProductController@updateSku');
+        # Route::get('legacy', 'LegacyController@index');
+        Route::get('reports/{id}', [ReportController::class, 'show']);
+    });
+
+    Route::group(['middleware' => 'dodgeprint_auth'], function () {
+        Route::post('webhook/{platform}/{shop}', 'WebhookController@handle');
+    });
+
+    Route::get('languages', 'TranslationController@languages');
+});`;
+
+  const scan = scanBackendFile('routes/api.php', ROUTES, 'laravel');
+  const paths = scan.routes.map((r) => `${r.method} ${r.path}`);
+
+  it('expands a resource whose controller is a quoted string', () => {
+    expect(paths).toEqual(
+      expect.arrayContaining([
+        'GET /v1/my-files',
+        'POST /v1/my-files',
+        'GET /v1/my-files/{param}',
+        'PUT /v1/my-files/{param}',
+        'DELETE /v1/my-files/{param}',
+      ])
+    );
+  });
+
+  it('leaves a commented-out route out of the map', () => {
+    expect(paths.some((p) => p.includes('update-sku'))).toBe(false);
+    expect(paths.some((p) => p.includes('legacy'))).toBe(false);
+  });
+
+  it('reads auth from the enclosing group, however far above it sits', () => {
+    expect(scan.routes.find((r) => r.path === '/v1/reports/{param}')?.auth).toBe(true);
+    expect(scan.routes.find((r) => r.path === '/v1/my-files')?.auth).toBe(true);
+  });
+
+  it('counts a project-named guard like `dodgeprint_auth` as auth', () => {
+    expect(scan.routes.find((r) => r.path === '/v1/webhook/{param}/{param}')?.auth).toBe(true);
+  });
+
+  it('reports a route outside every guarded group as open', () => {
+    expect(scan.routes.find((r) => r.path === '/v1/languages')?.auth).toBe(false);
+  });
+});

@@ -57,9 +57,9 @@ function lineOf(content: string, index: number): number {
   return content.slice(0, index).split('\n').length;
 }
 
-// cm:guard `auth\w*`, not `auth`: the idiom in the wild is `dependencies.authenticate`, and an exact
-// word match silently reports a fully guarded api as wide open.
-const AUTH_HINT = /\b(auth\w*|jwt|passport|requireUser|requirePermission|guard|Protected|RequireLogin|sanctum|login_required|permission_classes)\b/i;
+// cm:guard `\w*auth\w*`, not `\bauth\b`: the idioms in the wild are `dependencies.authenticate` and
+// `['middleware' => 'dodgeprint_auth']`, and an exact word match calls a guarded api wide open.
+const AUTH_HINT = /(\w*auth\w*|jwt|passport|requireUser|requirePermission|guard|Protected|RequireLogin|sanctum|login_required|permission_classes)/i;
 
 // cm:guard Every extractor below returns a NORMALIZED path via normalizePath, so `:id`, `{id}`,
 // `<int:id>` and `$id` all collapse to the same endpoint id the FE scanner produces.
@@ -73,7 +73,9 @@ function route(method: string, path: string, file: string, line: number, extra: 
 }
 
 const LARAVEL_VERB = /Route::(get|post|put|patch|delete|options|any)\s*\(\s*(['"])([^'"]*)\2\s*,?([^;]*)/g;
-const LARAVEL_RESOURCE = /Route::(apiResource|resource)\s*\(\s*(['"])([^'"]*)\2\s*,\s*([\w\\]+)/g;
+// cm:guard The controller is often a STRING — `Route::apiResource('my-files', 'MyFileController')`.
+// Demanding a bare class name dropped 64 of 107 resources here, a third of the api, in silence.
+const LARAVEL_RESOURCE = /Route::(apiResource|resource)\s*\(\s*(['"])([^'"]*)\2\s*,\s*['"]?([\w\\]+)/g;
 const LARAVEL_PREFIX = /->prefix\s*\(\s*(['"])([^'"]*)\1\s*\)|['"]prefix['"]\s*=>\s*(['"])([^'"]*)\3/g;
 
 // cm:why Route::resource is one line that registers five endpoints. Expanding it is not a nicety —
@@ -85,6 +87,43 @@ const RESOURCE_ACTIONS: Array<[string, string, string]> = [
   ['PUT', '/{id}', 'update'],
   ['DELETE', '/{id}', 'destroy'],
 ];
+
+// cm:guard Skips quoted strings: a route path like `companies/{id}` carries a brace, and counting
+// it as a block would unwind the group stack and report a guarded api as public.
+function openBlockHeaders(content: string, upTo: number): string[] {
+  const stack: string[] = [];
+  let i = 0;
+  while (i < upTo) {
+    const ch = content[i];
+    if (ch === "'" || ch === '"') {
+      const quote = ch;
+      i++;
+      while (i < upTo && content[i] !== quote) i += content[i] === '\\\\' ? 2 : 1;
+      i++;
+      continue;
+    }
+    if (ch === '/' && content[i + 1] === '/') {
+      while (i < upTo && content[i] !== '\\n') i++;
+      continue;
+    }
+    if (ch === '/' && content[i + 1] === '*') {
+      i += 2;
+      while (i < upTo && !(content[i] === '*' && content[i + 1] === '/')) i++;
+      i += 2;
+      continue;
+    }
+    if (ch === '{') stack.push(content.slice(Math.max(0, i - 260), i));
+    else if (ch === '}') stack.pop();
+    i++;
+  }
+  return stack;
+}
+
+// cm:why Laravel guards a whole file in one line — `Route::group(['middleware' => ['auth']], …)`
+// wraps 500 routes, so a lookbehind window reports every one of them as unauthenticated.
+function laravelGuarded(content: string, upTo: number): boolean {
+  return openBlockHeaders(content, upTo).some((header) => AUTH_HINT.test(header));
+}
 
 function laravelPrefix(content: string, upTo: number): string {
   const head = content.slice(0, upTo);
@@ -104,9 +143,12 @@ function laravelPrefix(content: string, upTo: number): string {
   return depth > 0 ? `/${parts.join('/')}` : '';
 }
 
-function scanLaravel(file: string, content: string): BeFileScan {
+function scanLaravel(file: string, raw: string): BeFileScan {
   const out: BeFileScan = { schemas: [], routes: [], unresolved: [] };
   const isRouteFile = /(^|\/)routes\//.test(file);
+  // cm:guard A commented-out route is not a route: `// Route::post('/x', …)` was landing in the map
+  // as a live endpoint, and `#` is a PHP line comment that the shared blanker does not know.
+  const content = isRouteFile ? blankComments(raw).replace(/#[^\n]*/g, (m) => ' '.repeat(m.length)) : raw;
 
   if (isRouteFile) {
     for (const m of content.matchAll(LARAVEL_VERB)) {
@@ -116,14 +158,14 @@ function scanLaravel(file: string, content: string): BeFileScan {
       out.routes.push(
         route(m[1] === 'any' ? 'UNKNOWN' : m[1], `${prefix}/${m[3]}`, file, lineOf(content, m.index), {
           handler: handler ? `${handler[1].split('\\').pop()}@${handler[3]}` : undefined,
-          auth: AUTH_HINT.test(tail) || AUTH_HINT.test(content.slice(Math.max(0, m.index - 400), m.index)),
+          auth: AUTH_HINT.test(tail) || laravelGuarded(content, m.index),
         })
       );
     }
     for (const m of content.matchAll(LARAVEL_RESOURCE)) {
       const prefix = laravelPrefix(content, m.index);
       const controller = m[4].split('\\').pop() as string;
-      const guarded = AUTH_HINT.test(content.slice(Math.max(0, m.index - 400), m.index));
+      const guarded = laravelGuarded(content, m.index);
       for (const [verb, suffix, action] of RESOURCE_ACTIONS) {
         out.routes.push(
           route(verb, `${prefix}/${m[3]}${suffix}`, file, lineOf(content, m.index), {

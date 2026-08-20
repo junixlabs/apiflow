@@ -162,7 +162,9 @@ export function normalizePath(raw: string): string {
     })
     .join('/');
   if (p.length > 1) p = p.replace(/\/+$/, '');
-  return p.replace(/\/{2,}/g, '/');
+  // cm:guard Never returns '': `Route::get('/')` under an empty prefix collapses to `//`, and an
+  // empty path breaks every id, every suffix match and every lookup that assumes a leading slash.
+  return p.replace(/\/{2,}/g, '/') || '/';
 }
 
 export function createApiMap(name: string, root: string, generator: string): ApiMapFile {

@@ -150,3 +150,11 @@ describe('unreadResponseFields kinship', () => {
     expect(unread).toEqual(['meta']);
   });
 });
+
+describe('normalizePath root', () => {
+  it('never returns an empty path', () => {
+    expect(normalizePath('//')).toBe('/');
+    expect(normalizePath('/')).toBe('/');
+    expect(normalizePath('')).toBe('/');
+  });
+});
