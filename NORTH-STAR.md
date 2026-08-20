@@ -136,8 +136,12 @@ Thứ tự này thay cho danh sách cũ (bản trước xếp canvas vào nhóm 
 6. **Bản đồ dùng chung được cho team và cho agent** (chen lên trước canvas — xem §9, 20/08).
    ✅ `.apimap` không còn đường dẫn máy (`metadata.root` là id repo) nên commit và review được ·
    ✅ `apiflow impact --json` + exit code · ✅ `apiflow check` làm cổng CI.
-   Còn lại: MCP tool đọc bản đồ, và một chỗ giữ bản đồ dùng chung (server giữ **bản đồ**, không giữ
-   code — scan vẫn chạy nơi có code; fence loopback phải được **thay** bằng auth, không phải bỏ).
+   ✅ `apiflow mcp-map` (7 tool đọc bản đồ) + `skills/apiflow-impact` · ✅ đã cắm vào hai dự án thật
+   (`.mcp.json` + khối trong `CLAUDE.md` + skill, cả ba đều là file per-machine/gitignored nên không
+   đụng vào lịch sử repo của họ).
+   Còn lại: **một chỗ giữ bản đồ dùng chung** (server giữ **bản đồ**, không giữ code — scan vẫn chạy
+   nơi có code; fence loopback phải được **thay** bằng auth, không phải bỏ), và cổng CI + bản đồ
+   commit trong repo — hai việc này chờ quyết định chỗ giữ, vì server thay chỗ cho map-commit.
 
 7. **Canvas đọc bản đồ.** Chỉ sau khi có §8.6 — layout bằng elkjs/dagre, collapse mặc định, focus
    một node rồi bung theo bậc. Không render cả bản đồ.
