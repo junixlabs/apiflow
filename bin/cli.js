@@ -46,6 +46,7 @@ const HELP = `apiflow — a screen ↔ endpoint ↔ field map
   apiflow probe <map> --emit[=<dir>] | --ingest=<results.json>
   apiflow probe <map> --live=<baseUrl> [--fill=<v>…] [--header='K: V'] [--methods=GET]
                                  [--only=<pattern>…]  scope the walk; substring, or * to glob
+                                 [--skip=<pattern>…]  exclude endpoints (wins over --only)
                                  walks the map against a RUNNING api and records what came back.
                                  GET/HEAD only unless --methods and --unsafe say otherwise, and a
                                  non-localhost host needs --yes-remote.

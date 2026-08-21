@@ -27,11 +27,18 @@ its `{param}`. `url` is what was actually sent. Both are needed: without `url`, 
 | `--header='K: V'` | repeatable; an auth header goes here |
 | `--methods=GET,POST` | default is `GET` alone |
 | `--only=<pattern>` | repeatable; scope the walk. A plain string matches as a substring of `METHOD PATH`, and `*` globs. Refuses with exit 2 when it matches nothing, rather than reporting a clean run over zero endpoints. |
+| `--skip=<pattern>` | repeatable; the exclusion `--only` cannot express. Same matching. An endpoint must pass the include **and** clear every skip — skip wins ties, because the safe default when the two disagree is *do not send*. |
 | `--out=<file>` | default `apiflow-probe.json` beside the map |
 
 `--only` exists because a fill is positional: `--fill=laravel.log` would otherwise reach the one route
 that wants a filename by way of the 189 that want an id. It narrows the walk; it does **not** relax the
 two refusals below — `--only=orders` over a resource with six verbs still sends only the GETs.
+
+`--skip` is for the case `--only` cannot cover: a GET route with a side effect. Three routes in one real
+Laravel app (`/supervisor` → `exec('sudo supervisorctl …')`, `/restart-queue`, `/call-artisan`) are GET,
+so the method guard does not stop them, and they sit outside `/api/` so an API-surface `--only` cannot
+leave them out by pattern. `--skip=/supervisor --skip=/restart-queue --skip=/call-artisan` — or here,
+`--only=/api/`, which excludes all three by covering only the API prefix.
 
 ```bash
 apiflow probe ~/.apiflow/projects/demo/be.apimap --live=http://127.0.0.1:8000 \

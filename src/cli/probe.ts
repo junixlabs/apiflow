@@ -30,8 +30,7 @@ function stackOf(root: string, override?: string): Stack {
 // cm:why `--only` exists because a fill is positional: `--fill=laravel.log` reaches the one route that
 // wants a filename by way of the other 189 that do not. Without a scope the only way to probe one
 // endpoint was to leave the tool and use curl, and a sample taken by hand is not in the samples file.
-export function matchesOnly(method: string, path: string, patterns: string[]): boolean {
-  if (patterns.length === 0) return true;
+function matchesAny(method: string, path: string, patterns: string[]): boolean {
   const subject = `${method} ${path}`.toLowerCase();
   return patterns.some((raw) => {
     const pattern = raw.toLowerCase();
@@ -39,6 +38,25 @@ export function matchesOnly(method: string, path: string, patterns: string[]): b
     const rx = new RegExp(`^${pattern.split('*').map((s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('.*')}$`);
     return rx.test(subject) || rx.test(path.toLowerCase());
   });
+}
+
+export function matchesOnly(method: string, path: string, patterns: string[]): boolean {
+  if (patterns.length === 0) return true;
+  return matchesAny(method, path, patterns);
+}
+
+// cm:why `--skip` is the exclusion `--only` cannot express. The three GET routes that run
+// `sudo supervisorctl` / `queue:restart` sit at the END of the walk, so an --only that covers the API
+// surface still can't leave them out by pattern — and the one time this was a manual "remember not
+// to", the full walk was launched straight at them. A subtractive filter is the guard that does not
+// depend on remembering.
+// cm:edge protocol -> matchesOnly() — skip is applied AFTER only: an endpoint must pass the include
+// (if any) AND clear every skip pattern. Skip wins ties, because the safe default when the two
+// filters disagree is "do not send".
+export function passesScope(method: string, path: string, only: string[], skip: string[]): boolean {
+  if (!matchesOnly(method, path, only)) return false;
+  if (skip.length > 0 && matchesAny(method, path, skip)) return false;
+  return true;
 }
 
 const SAFE_METHODS = new Set(['GET', 'HEAD']);
@@ -101,9 +119,10 @@ async function runLive(map: ApiMapFile, base: string, args: string[], mapPath: s
   }
 
   const only = args.filter((a) => a.startsWith('--only=')).map((a) => a.slice('--only='.length));
-  const scoped = map.endpoints.filter((e) => matchesOnly(e.method, e.path, only));
-  if (only.length > 0 && scoped.length === 0) {
-    console.error(`--only=${only.join(',')} matched no endpoint in the map. Nothing was sent.`);
+  const skip = args.filter((a) => a.startsWith('--skip=')).map((a) => a.slice('--skip='.length));
+  const scoped = map.endpoints.filter((e) => passesScope(e.method, e.path, only, skip));
+  if ((only.length > 0 || skip.length > 0) && scoped.length === 0) {
+    console.error(`--only/--skip left no endpoint in the map. Nothing was sent.`);
     process.exit(2);
   }
   const { ready, unfilled } = liveTargets(scoped, fills, asked);
@@ -131,8 +150,9 @@ async function runLive(map: ApiMapFile, base: string, args: string[], mapPath: s
   console.log('');
   console.log(`**Base**: ${base} · **methods**: ${[...asked].join(', ')}`);
   // cm:why A scope that is not printed reads as a whole-map run that found two endpoints.
-  if (only.length > 0) {
-    console.log(`**Scoped by \`--only=${only.join(',')}\`**: ${scoped.length} of ${map.endpoints.length} endpoints`);
+  if (only.length > 0 || skip.length > 0) {
+    const by = [only.length ? `--only=${only.join(',')}` : '', skip.length ? `--skip=${skip.join(',')}` : ''].filter(Boolean).join(' ');
+    console.log(`**Scoped by \`${by}\`**: ${scoped.length} of ${map.endpoints.length} endpoints`);
   }
   console.log(`**Sent**: ${ready.length} · **answered**: ${samples.length} · **unreachable**: ${failed}`);
   console.log(`**Skipped for an unfilled \`{param}\`**: ${unfilled.length}${unfilled.length > 0 ? ` — pass --fill=<value>` : ''}`);

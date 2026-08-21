@@ -4,6 +4,29 @@ All notable changes to API View are documented here.
 
 ---
 
+## [1.1.12] — 2026-08-21
+
+`--only` is an include filter, and a live authenticated probe showed why that is not enough: the guard
+had no way to say *everything except these*.
+
+### Added — `--skip=<pattern>`, the exclusion `--only` cannot express
+
+Three GET routes in a real Laravel app run side effects — `/supervisor` calls
+`exec('sudo supervisorctl …')`, `/restart-queue` calls `queue:restart`, `/call-artisan`. They are GET,
+so the method guard does not stop them, and they sit outside `/api/`, so an API-surface `--only` cannot
+leave them out by pattern. The one time this was left to "remember not to hit them", a full authenticated
+walk was launched straight at them (caught and killed before it reached position 376 of 382 — they sort
+to the end — so nothing fired).
+
+- `--skip` takes the same substring/glob patterns as `--only`, and is **subtractive**: an endpoint must
+  pass the include (if any) **and** clear every skip. Skip wins ties, because the safe default when the
+  two filters disagree is *do not send*.
+- The scope line prints both filters. Matching nothing still exits 2.
+
+A guard that depends on remembering is not a guard; this is the one that does not.
+
+---
+
 ## [1.1.11] — 2026-08-21
 
 Two gaps found by using `probe` rather than by reading it, plus a silent break in `--help` introduced

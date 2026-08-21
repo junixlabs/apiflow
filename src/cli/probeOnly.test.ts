@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { matchesOnly, liveTargets } from './probe';
+import { matchesOnly, passesScope, liveTargets } from './probe';
 
 const ENDPOINTS = [
   { method: 'GET', path: '/api/v1/color-statuses' },
@@ -51,5 +51,39 @@ describe('liveTargets records the url it actually sends', () => {
     expect(ready).toEqual([
       { method: 'GET', path: '/api/v1/orders/{param}/lines/{param}', url: '/api/v1/orders/7/lines/3' },
     ]);
+  });
+});
+
+describe('passesScope — --skip is the exclusion --only cannot express', () => {
+  const danger = ['/restart-queue', '/supervisor', '/call-artisan'];
+  const all = [
+    ...ENDPOINTS,
+    ...danger.map((path) => ({ method: 'GET', path })),
+  ];
+
+  it('with no filter, everything passes', () => {
+    expect(all.every((e) => passesScope(e.method, e.path, [], []))).toBe(true);
+  });
+
+  // cm:why The exact case that bit: an --only covering the API surface still cannot leave the three
+  // side-effect GET routes out, because they are not under /api/. --skip does.
+  it('skip removes the side-effect routes an /api/ include would still miss', () => {
+    const sent = all.filter((e) => passesScope(e.method, e.path, ['/api/'], []));
+    expect(sent.some((e) => danger.includes(e.path))).toBe(false);
+  });
+
+  it('skip wins when only and skip disagree — the safe default is do-not-send', () => {
+    expect(passesScope('GET', '/api/v1/orders', ['/api/'], ['orders'])).toBe(false);
+  });
+
+  it('skip alone excludes just its matches', () => {
+    const sent = all.filter((e) => passesScope(e.method, e.path, [], ['/supervisor', '/restart-queue', '/call-artisan']));
+    expect(sent.some((e) => danger.includes(e.path))).toBe(false);
+    expect(sent).toContainEqual({ method: 'GET', path: '/api/v1/color-statuses' });
+  });
+
+  it('skip globs, like only', () => {
+    const sent = all.filter((e) => passesScope(e.method, e.path, [], ['get /storage/*']));
+    expect(sent.some((e) => e.path.startsWith('/storage/'))).toBe(false);
   });
 });
