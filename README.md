@@ -1,18 +1,33 @@
 # apiflow
 
-> **Product goal, and what must not be built:** [`NORTH-STAR.md`](./NORTH-STAR.md) — read it before proposing a feature.
-
 **A dependency map for systems that talk over HTTP** — screen ↔ endpoint ↔ field. It answers one
 question, before you edit: **if I change this endpoint or this field, which screens break?**
 
 Postman stores requests; it does not know your screens exist. OpenAPI describes the API, not who
 consumes it. Grepping a field name returns a thousand lines that cannot tell a definition from a
-consumption. Local-first, git-friendly, open source.
+consumption. apiflow reads both sides of the wire and keeps the `file:line` for every hop, so an
+answer is checkable in thirty seconds rather than taken on trust.
+
+Local-first, git-friendly, open source.
 
 [![npm version](https://img.shields.io/npm/v/@junixlabs/apiflow.svg)](https://www.npmjs.com/package/@junixlabs/apiflow)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 ![How apiflow builds and reads a dependency map](docs/img/workflow.svg)
+
+## What each part is worth
+
+| Capability | The value, stated plainly |
+|---|---|
+| `impact` | The blast radius of a change **before** you make it — which screens, through which client → hook → component chain, at which line. This is the product; everything else exists to make this answer trustworthy. |
+| `scan-fe` | You learn which screens consume an API without reading the frontend yourself. Framework-agnostic: it reads call sites, not conventions. |
+| `scan-be` | The API's own declared surface, so the two halves get compared instead of assumed. |
+| `probe` | Response shapes **confirmed by running**, inside the project's own test suite. Turns "the code declares this field" into "the API actually sent it" — the only version safe to build on. |
+| `link` | Three questions neither half can answer alone: a field the API sends that no screen reads · a field declared but never sent · an endpoint no screen calls. |
+| `check` | The map cannot go stale quietly. A CI gate: exit 0 clean · 1 drifted · 2 cannot check. |
+| `mcp map` | Your agent asks before it edits a route, a handler, an api client or a response field. 0.4s to connect, 5ms per call on a clean install. |
+| `map-audit` | "How much can I trust this map" becomes a **measured number** for your repo instead of a label. |
+| `ui` · `hub` · `view` | A page you can hand to someone who will never run a CLI. |
 
 ## Quick start
 
@@ -56,7 +71,10 @@ apiflow impact $MAP --screen=/users/:id               # what one screen depends 
   ↳ screen    UserPage    src/pages/users/[id].tsx:14
 ```
 
-Every answer comes with two qualifiers, and both are part of the answer:
+## Why the labels are the point
+
+An answer without its confidence is a liability, so every claim carries one and they are
+load-bearing:
 
 | | |
 |---|---|
@@ -64,6 +82,14 @@ Every answer comes with two qualifiers, and both are part of the answer:
 | `inferred` | one half was derived — a template string, an implicit verb |
 | `guess` | the path was assembled, or the screen was reached through a wide module hop |
 | **unresolved** | call sites the scanner could **not** read. `0 screens` means *nothing in this map calls it* — never *nothing calls it* |
+
+Unresolved is never folded into another number, and an alert (understood, and dangerous) is never
+counted together with an unresolved (not understood at all).
+
+Audited on a real Next.js app — 28 `guess`-level claims sampled with
+[`skills/apiflow-map-audit`](skills/apiflow-map-audit/): the **endpoint was right 28/28**, the
+**screen 17/28**. Both numbers matter. Read `exact` and `inferred` as answers, `guess` as a lead
+worth thirty seconds — and run the audit against your own repo rather than trusting ours.
 
 ## For an agent
 
@@ -77,14 +103,13 @@ From a clone, or when the agent's environment has a trimmed `PATH`, spell it out
 `"command": "node", "args": ["/path/to/apiflow/bin/cli.js", "mcp", "map"]`.
 
 Seven read-only tools — `impact_endpoint` · `impact_field` · `screen_deps` · `find` · `map_health` ·
-`map_check` · `map_list`. Measured on a clean install: 0.4s to connect, 5ms per call. Pair it with
-[`skills/apiflow-impact/`](skills/apiflow-impact/), which tells the agent to ask *before* editing a
-route, a handler, an api client or a response field.
+`map_check` · `map_list`. Every answer ends with the map it came from and its unresolved count, so an
+agent cannot quote a number without its caveat.
 
-Two more skills close the loop: [`fe-map-extractor`](skills/fe-map-extractor/) resolves what the
-scanner could not read, and [`apiflow-map-audit`](skills/apiflow-map-audit/) samples the map's own
-`guess`-level claims and checks them against the code — so "how much can I trust this" gets a
-measured answer instead of a label.
+Four skills, each with one job: [`apiflow-impact`](skills/apiflow-impact/) tells the agent *when* to
+ask · [`fe-map-extractor`](skills/fe-map-extractor/) and
+[`be-map-extractor`](skills/be-map-extractor/) resolve what the scanner could not read ·
+[`apiflow-map-audit`](skills/apiflow-map-audit/) measures how often the map is right.
 
 ## Keep the map honest
 
@@ -96,7 +121,8 @@ apiflow project scan web
 
 A scan of an unchanged repo is **byte-identical**, and the file records the repo it came from
 (`github.com/acme/app//apps/web`) rather than the machine it ran on — so it can be committed,
-reviewed in a pull request, and gated in CI.
+reviewed in a pull request, and gated in CI. Two people scanning the same commit get the same bytes,
+which is why sharing a map needs no server.
 
 ## What it reads
 
@@ -105,6 +131,16 @@ reviewed in a pull request, and gated in CI.
 | Frontend | framework-agnostic — it reads call sites, not conventions, then walks the import graph back to the screen (`client → hook → component → route`), keeping `file:line` for every hop |
 | Backend | Laravel · Strapi · NestJS/Express · Go (gin/chi/echo/fiber) · FastAPI/Flask, plus a generic pass on every file |
 | Response shapes | from code (Resource / DTO / `response_model` / struct tags), then **confirmed by running** — the probe harness runs inside the project's own test suite (PHPUnit · vitest+supertest · Go `httptest` · pytest), so it never touches a real database |
+
+## What it does not answer yet
+
+**"If I change API A, which other APIs are affected — and which value does B take from A?"**
+
+The map connects screens to endpoints and endpoints to fields. It does not yet record that a value
+read from A's response is later sent to B, so it cannot walk an API-to-API chain. `screen_deps`
+shows which endpoints travel together on one screen, which is a weak proxy and should not be read as
+a data dependency. The explicit form of that relationship exists only in the hand-built flows of the
+request runner (`{{nodes["Get Product"].response.body.id}}`), never inferred from code.
 
 ## Commands
 
@@ -138,7 +174,6 @@ npm run dev                       # from a clone
 - [Getting started](docs/getting-started.md) — the same path with real output, and what to do when a map looks thin
 - [File formats](docs/formats.md) — `.apimap`, `.apiview`, and the `.apiflow` layout
 - [Request runner](docs/request-runner.md) — the canvas half, in full
-- [`NORTH-STAR.md`](./NORTH-STAR.md) — what this is for, and what will not be built
 - [`CHANGELOG.md`](./CHANGELOG.md)
 
 ## Contributing
@@ -150,6 +185,10 @@ npm run lint
 npm run boundary  # the two halves must not import each other
 npm run build
 ```
+
+**Read [`NORTH-STAR.md`](./NORTH-STAR.md) before proposing a feature** — §2 is the pain this exists
+for, §7 is what will not be built. A proposal that cannot be traced back to §2 is refused, including
+the API-to-API question above.
 
 PRs welcome. Please read the [Code of Conduct](CODE_OF_CONDUCT.md) first.
 
