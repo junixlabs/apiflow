@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { createApiMap, endpointId, fieldId, finalizeApiMap, screenId, screensAffectedByEndpoint, screensAffectedByField } from '../core/apimap';
 import type { ApiMapFile } from '../core/apimap';
-import { impactJson, mapJson, resolveEndpointQuery, screenDepsJson } from './impact';
+import { impactJson, mapJson, otherMethodsOn, resolveEndpointQuery, screenDepsJson } from './impact';
 
 function demo(): ApiMapFile {
   const map = createApiMap('demo', 'github.com/acme/app', 'test');
@@ -63,5 +63,26 @@ describe('impact --json', () => {
 
   it('says found=false for a screen route the map does not have', () => {
     expect(screenDepsJson(demo(), '/nope').found).toBe(false);
+  });
+});
+
+describe('resolving what the user typed', () => {
+  it('keeps the verb when it widens the path search', () => {
+    const map = demo();
+    map.endpoints.push({ id: endpointId('DELETE', '/users/{param}'), method: 'DELETE', path: '/users/{param}' });
+    // cm:why The bug this locks: asking for a verb the map does not have on that path used to return
+    // the OTHER verbs' endpoints, and the answer read as if the verb asked for broke those screens.
+    expect(resolveEndpointQuery(map, 'POST /users/:id')).toEqual([]);
+    expect(resolveEndpointQuery(map, 'DELETE /users/:id')).toEqual([endpointId('DELETE', '/users/{param}')]);
+    expect(resolveEndpointQuery(map, 'GET /users')).toEqual([endpointId('GET', '/users/{param}')]);
+  });
+
+  it('still matches on the path alone when no verb was given', () => {
+    expect(resolveEndpointQuery(demo(), '/users')).toEqual([endpointId('GET', '/users/{param}')]);
+  });
+
+  it('can say which verbs the path does have', () => {
+    expect(otherMethodsOn(demo(), 'POST /users/:id')).toEqual(['GET /users/{param}']);
+    expect(otherMethodsOn(demo(), 'POST /nope')).toEqual([]);
   });
 });

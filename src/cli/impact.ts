@@ -1,8 +1,9 @@
 import { readFileSync, realpathSync } from 'fs';
 import { resolve } from 'path';
 import { fileURLToPath } from 'url';
-import type { ApiMapFile, Confidence, ImpactAnswer, SourceRef } from '../core/apimap';
+import type { ApiMapFile, Confidence, ImpactAnswer, MapMethod, SourceRef } from '../core/apimap';
 import { endpointId, endpointsForScreen, normalizePath, parseMap, screenIdsForRoute, screensAffectedByEndpoint, screensAffectedByField, toMapMethod } from '../core/apimap';
+import { tolerateClosedPipe } from './stdio';
 
 export function loadMap(path: string): ApiMapFile {
   const map = parseMap(readFileSync(path, 'utf8'));
@@ -10,14 +11,34 @@ export function loadMap(path: string): ApiMapFile {
   return map;
 }
 
+// cm:guard A query that names a verb keeps that verb through the fuzzy fallback. It used to drop it:
+// asking for `POST /mcp` on a map that has only DELETE and GET /mcp printed those two as the answer,
+// so the reader — or an agent — concluded that POST /mcp breaks those screens. Widen the PATH, never
+// the method: the method is the half the user was explicit about.
 export function resolveEndpointQuery(map: ApiMapFile, query: string): string[] {
   const parts = query.trim().split(/\s+/);
-  if (parts.length >= 2) {
-    const id = endpointId(toMapMethod(parts[0]), normalizePath(parts.slice(1).join(' ')));
+  const verb = parts.length >= 2 ? toMapMethod(parts[0]) : undefined;
+  if (verb !== undefined) {
+    const id = endpointId(verb, normalizePath(parts.slice(1).join(' ')));
     if (map.endpoints.some((e) => e.id === id)) return [id];
   }
   const needle = normalizePath(parts[parts.length - 1]);
-  return map.endpoints.filter((e) => e.path === needle || e.path.includes(needle)).map((e) => e.id);
+  const hit = (e: { method: MapMethod; path: string }) => e.path === needle || e.path.includes(needle);
+  const withVerb = map.endpoints.filter((e) => hit(e) && e.method === verb);
+  return (withVerb.length > 0 ? withVerb : map.endpoints.filter((e) => (verb === undefined ? hit(e) : false))).map((e) => e.id);
+}
+
+// cm:why Separate from the resolver so the caller can SAY why it found nothing: "no POST on this
+// path, but DELETE and GET exist" is a different fact from "this path does not exist", and the
+// second one sends someone looking for a typo that isn't there.
+export function otherMethodsOn(map: ApiMapFile, query: string): string[] {
+  const parts = query.trim().split(/\s+/);
+  if (parts.length < 2) return [];
+  const needle = normalizePath(parts.slice(1).join(' '));
+  return map.endpoints
+    .filter((e) => e.path === needle || e.path.includes(needle))
+    .map((e) => `${e.method} ${e.path}`)
+    .sort();
 }
 
 export function resolveFieldQuery(map: ApiMapFile, query: string): string[] {
@@ -162,6 +183,7 @@ export function mapJson(map: ApiMapFile): ImpactJson {
 }
 
 function main(): void {
+  tolerateClosedPipe();
   const args = process.argv.slice(2);
   const positional = args.filter((a) => !a.startsWith('--'));
   const flag = (n: string): string | undefined => args.find((a) => a.startsWith(`--${n}=`))?.split('=').slice(1).join('=');
@@ -210,7 +232,9 @@ function main(): void {
   );
   if (asJson) emit(impactJson(map, kind, query, answers));
   if (ids.length === 0) {
-    console.error(`No match for ${query} in ${map.metadata.name}.`);
+    console.error(`Không có gì khớp ${query} trong ${map.metadata.name}.`);
+    const others = endpointQuery ? otherMethodsOn(map, query) : [];
+    if (others.length > 0) console.error(`Cùng đường dẫn đó, bản đồ có: ${others.join(' · ')}`);
     process.exit(2);
   }
   console.log(answers.map((a, i) => renderImpact(a, ids[i])).join('\n\n'));

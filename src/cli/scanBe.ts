@@ -9,6 +9,7 @@ import { detectStack, indexClasses, isBackendFile, laravelRouteFilePrefixes, res
 import { enclosingSymbols, symbolAt } from '../core/feScanner';
 import { buildMountGraph, joinPrefix, prefixesFor } from '../core/mountGraph';
 import { buildResolver } from './scanFe';
+import { tolerateClosedPipe } from './stdio';
 
 const GENERATOR = 'apiflow scan-be/1';
 const MANIFESTS = ['artisan', 'composer.json', 'package.json', 'go.mod', 'pyproject.toml', 'requirements.txt'];
@@ -211,6 +212,7 @@ export function renderBeReport(result: BeScanResult, outPath: string): string {
 }
 
 function main(): void {
+  tolerateClosedPipe();
   const args = process.argv.slice(2);
   const positional = args.filter((a) => !a.startsWith('--'));
   const flag = (n: string): string | undefined => args.find((a) => a.startsWith(`--${n}=`))?.split('=').slice(1).join('=');

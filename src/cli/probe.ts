@@ -8,6 +8,7 @@ import { detectStack } from '../core/beScanner';
 import type { ProbeSample } from '../core/probeHarness';
 import { buildHarness, ingestSamples } from '../core/probeHarness';
 import { localRootFor } from '../workspace/registry';
+import { tolerateClosedPipe } from './stdio';
 
 const RESULT_FILE = 'apiflow-probe.json';
 const MANIFESTS = ['artisan', 'composer.json', 'package.json', 'go.mod', 'pyproject.toml', 'requirements.txt'];
@@ -26,6 +27,7 @@ function stackOf(root: string, override?: string): Stack {
 }
 
 function main(): void {
+  tolerateClosedPipe();
   const args = process.argv.slice(2);
   const positional = args.filter((a) => !a.startsWith('--'));
   const flag = (n: string): string | undefined => args.find((a) => a.startsWith(`--${n}=`))?.split('=').slice(1).join('=');

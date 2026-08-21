@@ -3,7 +3,7 @@ import { resolve } from 'path';
 import type { ApiMapFile, Confidence, ImpactAnswer } from '../core/apimap';
 import { endpointsForScreen, parseMap, screenIdsForRoute, screensAffectedByEndpoint, screensAffectedByField } from '../core/apimap';
 import { checkAgainst, rescan, sideOf } from '../cli/check';
-import { resolveEndpointQuery, resolveFieldQuery } from '../cli/impact';
+import { otherMethodsOn, resolveEndpointQuery, resolveFieldQuery } from '../cli/impact';
 import { alertCounts, alerts } from '../workspace/alerts';
 import { findProject, localRootFor, readWorkspace } from '../workspace/registry';
 import type { MapKind } from '../workspace/store';
@@ -80,7 +80,13 @@ function renderImpact(target: Target, label: string, answers: ImpactAnswer[], ve
 
 export function impactEndpointText(target: Target, endpoint: string, verbose = false): string {
   const ids = resolveEndpointQuery(target.map, endpoint);
-  if (ids.length === 0) return `Không có endpoint nào khớp "${endpoint}".${footer(target)}`;
+  if (ids.length === 0) {
+    // cm:why Names the verbs that DO exist on that path. "Không khớp" alone sends the agent hunting
+    // for a typo in the path when the real answer is that this path has no POST.
+    const others = otherMethodsOn(target.map, endpoint);
+    const hint = others.length > 0 ? ` Cùng đường dẫn đó, bản đồ có: ${others.join(' · ')}.` : '';
+    return `Không có endpoint nào khớp "${endpoint}".${hint}${footer(target)}`;
+  }
   return renderImpact(target, endpoint, ids.map((id) => screensAffectedByEndpoint(target.map, id)), verbose);
 }
 

@@ -6,6 +6,24 @@ All notable changes to API View are documented here.
 
 ## [Unreleased]
 
+### Fixed — the first ten minutes for someone who just installed it
+
+- **`apiflow … | head` no longer crashes.** A closed pipe reached node as an unhandled `error` event:
+  a 20-line stack trace and exit 1 on the most ordinary command a newcomer types. Every CLI now
+  tolerates EPIPE. The test drives the real binary through a real closed pipe — a unit test on the
+  handler passes while the CLI still crashes, and the reproduction needs output past the ~64KB pipe
+  buffer plus `PIPESTATUS[0]` (after a pipeline, `$?` is head's status and is always 0).
+- **`impact --endpoint="POST /x"` no longer answers with the wrong verb.** When the exact
+  method+path was absent, the fuzzy fallback dropped the method and returned every verb on that
+  path — so asking about `POST /mcp` printed the screens of `DELETE /mcp` and `GET /mcp` as if they
+  were the answer. The fallback now widens the path only, and when nothing matches it says which
+  verbs that path does have (CLI and `impact_endpoint` alike).
+- **README leads with the map.** The Quick Start pointed a new reader at `npx @junixlabs/apiflow`,
+  which opens the request-runner canvas — the half NORTH-STAR §3 deprioritized — so someone
+  following it never reached the dependency map at all. It now starts with clone → `project add` →
+  `project scan` → ask, states plainly that the published npm package predates the map commands, and
+  shows the MCP block for an agent.
+
 ### Added — agent-native (the map as an MCP server)
 
 - **Both MCP servers are now spelled the same way**: `apiflow mcp map` (reads the map) and

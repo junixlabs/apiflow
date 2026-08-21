@@ -6,6 +6,7 @@ import { scanInBackground } from '../workspace/runScan';
 import type { MapKind } from '../workspace/store';
 import { readMap, statusOf } from '../workspace/store';
 import { summarize } from '../workspace/summary';
+import { tolerateClosedPipe } from './stdio';
 
 const USAGE = `Usage:
   apiflow project add <tên> --fe=<thư mục> [--be=<thư mục>] [--id=<slug>] [--hints=<file>]
@@ -95,6 +96,7 @@ function runSides(id: string, sides: Array<'fe' | 'be'>): void {
 }
 
 function main(): void {
+  tolerateClosedPipe();
   const args = process.argv.slice(2);
   const verb = args[0];
   const positional = args.slice(1).filter((a) => !a.startsWith('--'));

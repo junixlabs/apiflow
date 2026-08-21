@@ -9,6 +9,7 @@ import { localRootFor } from '../workspace/registry';
 import { scanOrigin } from '../workspace/scanOrigin';
 import { scanBackend } from './scanBe';
 import { scanDirectory } from './scanFe';
+import { tolerateClosedPipe } from './stdio';
 
 export type Side = 'fe' | 'be';
 
@@ -79,6 +80,7 @@ export function renderCheck(result: CheckResult, mapPath: string): string {
 }
 
 function main(): void {
+  tolerateClosedPipe();
   const args = process.argv.slice(2);
   const positional = args.filter((a) => !a.startsWith('--'));
   const flag = (n: string): string | undefined => args.find((a) => a.startsWith(`--${n}=`))?.split('=').slice(1).join('=');

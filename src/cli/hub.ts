@@ -8,8 +8,10 @@ import { renderHub } from '../view/hub';
 import { workspaceRoot } from '../workspace/registry';
 import { bestKind, hubProjects } from '../workspace/hubData';
 import { mapPath, readMap } from '../workspace/store';
+import { tolerateClosedPipe } from './stdio';
 
 function main(): void {
+  tolerateClosedPipe();
   const args = process.argv.slice(2);
   const positional = args.filter((a) => !a.startsWith('--'));
   const out = resolve(positional[0] ?? 'apiflow-maps');

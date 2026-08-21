@@ -2,36 +2,72 @@
 
 > **Mục tiêu & cái không được làm:** [`NORTH-STAR.md`](./NORTH-STAR.md) — đọc trước khi thêm tính năng.
 
-**Visual API flow testing tool.** Build flows, chain requests, test assertions. Local-first, git-friendly, open source.
+**A dependency map for systems that talk over HTTP** — screen ↔ endpoint ↔ field. It answers one
+question, before you edit: **if I change this endpoint or this field, which screens break?**
 
-The only API testing tool where you can **see** how your APIs connect.
+Postman stores requests; it does not know your screens exist. OpenAPI describes the API, not who
+consumes it. Grepping a field name returns a thousand lines that cannot tell a definition from a
+consumption. Local-first, git-friendly, open source.
 
 [![npm version](https://img.shields.io/npm/v/@junixlabs/apiflow.svg)](https://www.npmjs.com/package/@junixlabs/apiflow)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-## Quick Start
+## Quick Start — four commands to an answer
 
 ```bash
-npx @junixlabs/apiflow
+git clone https://github.com/junixlabs/apiflow.git && cd apiflow && npm install   # ~10s
+node bin/cli.js project add "web" --fe=/path/to/frontend [--be=/path/to/api]
+node bin/cli.js project scan web
+node bin/cli.js ui                      # http://127.0.0.1:3030
 ```
 
-That's it. Opens in your browser. No account, no cloud, no setup.
-
-### With a project
+Nothing is written into the project being scanned — maps live in `~/.apiflow/`. Then ask, from a
+terminal or from an agent:
 
 ```bash
-npx @junixlabs/apiflow --project=/path/to/your-api-project
+node bin/cli.js impact ~/.apiflow/projects/web/fe.apimap                          # what is in the map
+node bin/cli.js impact ~/.apiflow/projects/web/fe.apimap --endpoint="GET /users/:id"
+node bin/cli.js impact ~/.apiflow/projects/web/fe.apimap --field=email
 ```
 
-Flows are stored in `your-project/.apiview/` and can be committed to git.
+Read the answer with its two qualifiers: every edge carries `exact` / `inferred` / `guess`, and
+every answer carries the number of call sites the scanner could **not** resolve. `0 screens` means
+"nothing in this map calls it" — never "nothing calls it".
 
-### From source
+> **npm install is not the way in yet.** The published `@junixlabs/apiflow` on npm predates the map
+> half, so `npx @junixlabs/apiflow scan-fe` does not exist there. Clone until the next release.
+
+### For an agent (Claude Code, or any MCP client)
+
+```json
+{ "mcpServers": { "apiflow-map": {
+  "command": "node", "args": ["/path/to/apiflow/bin/cli.js", "mcp", "map"],
+  "env": { "APIFLOW_PROJECT": "web" } } } }
+```
+
+Seven read-only tools — `impact_endpoint` · `impact_field` · `screen_deps` · `find` · `map_health` ·
+`map_check` · `map_list`. Pair it with `skills/apiflow-impact/`, which tells the agent to ask
+*before* editing a route, a handler, an api client or a response field.
+
+### Keep the map honest
 
 ```bash
-git clone https://github.com/junixlabs/apiflow.git
-cd apiflow
-npm install
-npm run dev
+node bin/cli.js check ~/.apiflow/projects/web/fe.apimap      # exit 0 clean · 1 drifted · 2 cannot check
+node bin/cli.js project scan web                             # refresh
+```
+
+A scan of an unchanged repo is byte-identical and records the repo it came from, not the machine it
+ran on — so the file can be committed, reviewed in a pull request, and gated in CI.
+
+### The other half — running requests
+
+The visual flow runner (canvas, chaining, assertions) is the older half of this repo and is
+deliberately second in line; see [`NORTH-STAR.md`](./NORTH-STAR.md) §3.
+
+```bash
+npx @junixlabs/apiflow                       # canvas + proxy
+npx @junixlabs/apiflow --project=/path/to/project
+npm run dev                                  # from a clone
 ```
 
 ## Dependency map — which screens break if I change this?

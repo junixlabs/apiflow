@@ -3,6 +3,7 @@ import { mkdirSync, readFileSync, realpathSync, writeFileSync } from 'fs';
 import { dirname, resolve } from 'path';
 import { fileURLToPath } from 'url';
 import { renderApp } from '../view/app';
+import { tolerateClosedPipe } from './stdio';
 
 // cm:why Renders the SAME app as `apiflow ui`, only with `live: false`. Two renderers over one
 // .apimap drifted within a week: the served page grew a coverage map and an impact graph that the
@@ -10,6 +11,7 @@ import { renderApp } from '../view/app';
 // cm:edge lockstep -> src/view/app.ts — every live-only control hangs off `live`/`projectId` there,
 // so a control added without that guard ships into this offline file too.
 function main(): void {
+  tolerateClosedPipe();
   const args = process.argv.slice(2);
   const positional = args.filter((a) => !a.startsWith('--'));
   const flag = (n: string): string | undefined => args.find((a) => a.startsWith(`--${n}=`))?.split('=').slice(1).join('=');

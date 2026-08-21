@@ -3,6 +3,7 @@ import { dirname, resolve } from 'path';
 import { fileURLToPath } from 'url';
 import type { ApiMapFile } from '../core/apimap';
 import { endpointsWithTracedReads, linkMaps, orphanEndpoints, parseMap, serializeMap, undeliveredFields, unreadResponseFields } from '../core/apimap';
+import { tolerateClosedPipe } from './stdio';
 
 function loadMap(path: string): ApiMapFile {
   const map = parseMap(readFileSync(path, 'utf8'));
@@ -53,6 +54,7 @@ export function renderAudit(map: ApiMapFile): string {
 }
 
 function main(): void {
+  tolerateClosedPipe();
   const args = process.argv.slice(2);
   const positional = args.filter((a) => !a.startsWith('--'));
   const flag = (n: string): string | undefined => args.find((a) => a.startsWith(`--${n}=`))?.split('=').slice(1).join('=');

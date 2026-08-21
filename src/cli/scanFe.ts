@@ -11,6 +11,7 @@ import { MAX_FAN_OUT, attributeToScreens, buildCallerGraph, parseModule, stripJs
 import type { ChainStep } from '../core/callerGraph';
 import { findHttpWrappers } from '../core/wrappers';
 import { buildRouteTable } from '../core/routeTable';
+import { tolerateClosedPipe } from './stdio';
 
 const GENERATOR = 'apiflow scan-fe/1';
 
@@ -314,6 +315,7 @@ export function renderReport(map: ApiMapFile, outPath: string): string {
 }
 
 function main(): void {
+  tolerateClosedPipe();
   const args = process.argv.slice(2);
   const positional = args.filter((a) => !a.startsWith('--'));
   const flag = (n: string): string | undefined => args.find((a) => a.startsWith(`--${n}=`))?.split('=').slice(1).join('=');
