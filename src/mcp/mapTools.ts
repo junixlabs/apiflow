@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from 'fs';
 import { resolve } from 'path';
 import type { ApiMapFile, Confidence, ImpactAnswer } from '../core/apimap';
-import { endpointsForScreen, parseMap, screenIdsForRoute, screensAffectedByEndpoint, screensAffectedByField, sideOf } from '../core/apimap';
+import { endpointsForScreen, parseMap, screenIdsForRoute, screensAffectedByEndpoint, screensAffectedByField, sideOf, unresolvedKinds } from '../core/apimap';
 import { checkAgainst, rescan } from '../cli/check';
 import { otherMethodsOn, resolveEndpointQuery, resolveFieldQuery } from '../cli/impact';
 import { alertCounts, alerts } from '../workspace/alerts';
@@ -53,7 +53,7 @@ function counts(list: Array<{ confidence: Confidence }>): string {
 // cm:guard Every answer ends with the unresolved count and the map it came from. An agent reading
 // "0 screens" without those two facts will report "nothing uses this endpoint" as if it were measured.
 export function footer(target: Target): string {
-  return `\n(map ${target.label} · ${target.map.metadata.root} · ${target.map.unresolved.length} calls whose path could not be resolved — not part of the numbers above)`;
+  return `\n(map ${target.label} · ${target.map.metadata.root} · ${unresolvedKinds(target.map).paths} calls whose path could not be resolved, ${unresolvedKinds(target.map).schemas} endpoints with no schema read — neither is part of the numbers above)`;
 }
 
 function renderImpact(target: Target, label: string, answers: ImpactAnswer[], verbose: boolean): string {

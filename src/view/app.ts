@@ -237,7 +237,8 @@ function overview(payload: AppPayload, list: Alert[]): string {
         ${counts.byKind['fe-only-path'] > 0 ? `<a href="#alerts" data-section="alerts" data-kind="fe-only-path" class="bad"><span class="num">${counts.byKind['fe-only-path']}</span><span class="txt">FE calls a path the API does not declare</span></a>` : ''}
         ${counts.byKind['open-auth'] > 0 ? `<a href="#alerts" data-section="alerts" data-kind="open-auth" class="bad"><span class="num">${counts.byKind['open-auth']}</span><span class="txt">no auth gate found</span></a>` : ''}
         ${counts.byKind.uncalled > 0 ? `<a href="#alerts" data-section="alerts" data-kind="uncalled" class="txt"><span class="num">${counts.byKind.uncalled}</span><span class="txt">declared by the API, called by no screen</span></a>` : ''}
-        ${sum.unresolved > 0 ? `<a href="#unresolved" data-section="unresolved" class="warn"><span class="num">${sum.unresolved}</span><span class="txt">calls whose path could not be resolved</span></a>` : ''}
+        ${sum.unresolvedPaths > 0 ? `<a href="#unresolved" data-section="unresolved" class="warn"><span class="num">${sum.unresolvedPaths}</span><span class="txt">calls whose path could not be resolved</span></a>` : ''}
+        ${sum.unresolvedSchemas > 0 ? `<a href="#unresolved" data-section="unresolved" class="warn"><span class="num">${sum.unresolvedSchemas}</span><span class="txt">endpoints with no request/response schema in the code</span></a>` : ''}
       </div>
     </div>
   </div>

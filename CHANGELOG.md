@@ -4,6 +4,61 @@ All notable changes to API View are documented here.
 
 ---
 
+## [1.1.6] — 2026-08-21
+
+The BE half was the weak one. On a real Hono API it understood **2 of 106 routes**; the reconciliation
+for that project read "BE not scanned — nothing to reconcile" and the whole cross-side half of the
+tool was dark.
+
+### Fixed — a route declared as data is still a route
+
+- **Routes written as `{ method, path }` object literals are read for any node/generic repo**, not only
+  for Strapi. That reader existed and was locked behind one stack. On the API measured, every mount is
+  `.get(declared(SPEC), h)` with no literal at the call site, so the verb-call readers found 2 routes
+  while the other 104 sat in a plain exported array. **2 → 106 endpoints**, which is exactly the
+  number its own manifest declares.
+- **A mount that names its path through a const is followed.** `const HEALTH = { method: 'GET', path:
+  '/health', … }` then `.get(declared(HEALTH), h)` now resolves, and the mount site wins the source
+  line over the manifest entry — it is where the route is actually served.
+- Requires the path to start with `/`, unlike the Strapi form: this runs over every file in a backend
+  repo, and `{ method: 'POST', path: 'upload' }` in an SDK call config is not a route.
+
+### Fixed — a declared protection beats the name heuristic
+
+- **~100 fully guarded routes were about to be reported as "no auth gate found".** That API declares a
+  protection on every route and gates them through `middlewareFor(SPEC.protection)`, which matches no
+  auth-sounding name. Reading the declaration gives **100 behind auth, 6 public** — the 6 being
+  `/health`, the four `/auth/*` endpoints that cannot require a session, and a signed media route.
+  Against the manifest: exact.
+- Only `public`-shaped words clear the gate (`public`, `none`, `anonymous`, `open`, `guest`). An
+  unrecognised kind counts as **guarded**, so a vocabulary this does not know cannot manufacture an
+  open endpoint — the direction of the error matters on that particular number.
+
+### Fixed — three ways the BE numbers overstated themselves
+
+- **A test file beside the code it tests is never read.** `src/surface.test.ts` held a
+  `{ method: 'GET', path: '/nope-not-declared' }` fixture and it was published as an endpoint. Skips
+  `*.test.*`, `*.spec.*`, `*.stories.*`, `*_test.go`, `conftest.py`.
+- **One schema gap per endpoint, not per route hit.** A route legitimately gets seen twice now
+  (manifest plus mount), and 106 endpoints were reporting **317** missing schemas.
+- **`unresolved` was one number wearing the label of one of its two halves.** 881 of adminhub's 900
+  entries are endpoints whose path is perfectly well known and whose schema was not found — printed
+  everywhere as "calls whose path could not be resolved", which is untrue. Every count now separates
+  *N calls whose path could not be resolved* from *M endpoints with no request/response schema in the
+  code*: the CLI, the rail, the hub rows, the workspace card and the MCP footer.
+
+### Result on a real pair
+
+getcontent went from `BE not scanned` to **107 endpoints, 88 seen from both sides, 1 FE-only,
+18 declared-but-uncalled**. The one FE-only is real: the frontend builds the last path segment
+dynamically where the API enumerates the actions. Re-scanning twice is still byte-identical.
+
+Still open: **fields**. 127 schemas are found in that repo and attached to 0 endpoints, because the
+handler lives in another module than the mount — attaching them needs the import-following the FE side
+already has.
+
+---
+
 ## [1.1.5] — 2026-08-21
 
 ### Added — a project side can live on another machine

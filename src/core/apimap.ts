@@ -243,6 +243,18 @@ export function finalizeApiMap(map: ApiMapFile): ApiMapFile {
   };
 }
 
+// cm:why Two different gaps were being counted as one number and labelled with the wording of the
+// first. On a real Laravel API 881 of 900 "unresolved" entries were endpoints whose PATH is known and
+// whose schema was not found — printed as "calls whose path could not be resolved", which is simply
+// untrue. The bucket stays one list (the format is version 1), the counting does not.
+// cm:edge lockstep -> src/view/hub.ts · src/view/app.ts · src/mcp/mapTools.ts — every place that
+// prints an unresolved COUNT must print these two separately or say which one it means.
+export function unresolvedKinds(map: ApiMapFile): { paths: number; schemas: number } {
+  let schemas = 0;
+  for (const u of map.unresolved) if (/no request or response schema/.test(u.reason)) schemas++;
+  return { paths: map.unresolved.length - schemas, schemas };
+}
+
 export type Side = 'fe' | 'be';
 
 // cm:why Which half a map is comes from the generator string, not from the file name: the same map

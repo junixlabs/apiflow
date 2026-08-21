@@ -1,5 +1,5 @@
 import type { ApiMapFile, Confidence } from '../core/apimap';
-import { bePartial } from '../core/apimap';
+import { bePartial, unresolvedKinds } from '../core/apimap';
 
 export interface ProjectSummary {
   endpoints: number;
@@ -7,6 +7,8 @@ export interface ProjectSummary {
   calls: number;
   fields: number;
   unresolved: number;
+  unresolvedPaths: number;
+  unresolvedSchemas: number;
   auth: number;
   open: number;
   murky: number;
@@ -64,6 +66,8 @@ export function summarize(map: ApiMapFile): ProjectSummary {
     calls: map.calls.length,
     fields: map.fields.length,
     unresolved: map.unresolved.length,
+    unresolvedPaths: unresolvedKinds(map).paths,
+    unresolvedSchemas: unresolvedKinds(map).schemas,
     auth: map.endpoints.filter((e) => e.auth === true).length,
     open: map.endpoints.filter((e) => e.auth === false).length,
     murky: map.endpoints.filter((e) => e.auth === undefined).length,

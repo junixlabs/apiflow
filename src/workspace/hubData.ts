@@ -40,6 +40,8 @@ export function hubProjects(): HubProject[] {
           screens: sum.screens,
           calls: sum.calls,
           unresolved: sum.unresolved,
+          unresolvedPaths: sum.unresolvedPaths,
+          unresolvedSchemas: sum.unresolvedSchemas,
           open: sum.open,
           both: sum.both,
           uncalled: sum.uncalled,

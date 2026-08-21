@@ -586,3 +586,59 @@ describe('verb outside the union', () => {
     expect(scan.routes.map((r) => r.method)).toContain('OPTIONS');
   });
 });
+
+// cm:why A route declared as DATA is not a Strapi peculiarity. Measured on a real Hono API, every
+// mount is `.get(declared(SPEC), h)` with no literal at the call site: the verb-call readers found 2
+// of 106 routes, and the other 104 sat in a plain exported array the reader never looked at.
+describe('routes declared as object literals', () => {
+  it('reads a manifest of { method, path } literals in a node repo', () => {
+    const src = [
+      "export const ROUTES = [",
+      "  { method: 'GET', path: '/health', protection: { kind: 'public', reason: 'liveness' } },",
+      "  { method: 'POST', path: '/auth/login', protection: { kind: 'public', reason: 'mints a session' } },",
+      "  { method: 'PATCH', path: '/projects/:id/policy', protection: { kind: 'project', action: 'policy.write' } },",
+      "]",
+    ].join('\n');
+    const out = scanBackendFile('src/surface.ts', src, 'node');
+    const seen = out.routes.map((r) => `${r.method} ${r.path}`).sort();
+    expect(seen).toEqual(['GET /health', 'PATCH /projects/{param}/policy', 'POST /auth/login']);
+  });
+
+  // cm:guard A declared protection beats the name heuristic: this API states the gate on every route,
+  // and reading `middlewareFor(SPEC.protection)` as nothing reported guarded routes as open.
+  it('takes the gate from the declared protection, and only public clears it', () => {
+    const src = [
+      "const A = { method: 'GET', path: '/health', protection: { kind: 'public', reason: 'probe' } }",
+      "const B = { method: 'GET', path: '/me', protection: { kind: 'session' } }",
+      "const C = { method: 'GET', path: '/x', protection: { kind: 'somethingNew' } }",
+    ].join('\n');
+    const gate = new Map(scanBackendFile('src/surface.ts', src, 'node').routes.map((r) => [r.path, r.auth]));
+    // cm:why `false` and undefined are different answers: a route DECLARED public is known to have no
+    // gate, which is not the same as a route whose gate could not be found.
+    expect(gate.get('/health')).toBe(false);
+    expect(gate.get('/me')).toBe(true);
+    expect(gate.get('/x')).toBe(true);
+  });
+
+  it('follows a const to its path when the mount takes no literal', () => {
+    const src = [
+      "const HEALTH = { method: 'GET', path: '/health', protection: { kind: 'public', reason: 'probe' } }",
+      "const PATCH_POLICY = { method: 'PATCH', path: '/projects/:id/policy', protection: { kind: 'project' } }",
+      "const app = new Hono()",
+      "  .get(declared(HEALTH), (c) => c.json({ ok: true }))",
+      "  .patch(declared(PATCH_POLICY), ...patchPolicyRoute)",
+    ].join('\n');
+    const out = scanBackendFile('src/index.ts', src, 'node');
+    const mounted = out.routes.filter((r) => r.source.line >= 4);
+    expect(mounted.map((r) => `${r.method} ${r.path}`)).toEqual(['GET /health', 'PATCH /projects/{param}/policy']);
+  });
+
+  // cm:guard A fixture must never become part of the surface: `src/surface.test.ts` held a
+  // { method: 'GET', path: '/nope-not-declared' } literal, and it was published as an endpoint.
+  it('never reads a test file beside the code it tests', () => {
+    expect(isBackendFile('src/surface.test.ts')).toBe(false);
+    expect(isBackendFile('src/routes/policy.spec.tsx')).toBe(false);
+    expect(isBackendFile('internal/api/server_test.go')).toBe(false);
+    expect(isBackendFile('src/surface.ts')).toBe(true);
+  });
+});

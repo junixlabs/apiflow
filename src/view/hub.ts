@@ -4,6 +4,8 @@ import { APP_STYLE } from './appStyle';
 import { BRAND_STYLE, FAVICON, MARK, STYLE, THEME_BOOT, THEME_SCRIPT, THEME_STYLE } from './theme';
 
 export interface HubMap {
+  unresolvedPaths?: number;
+  unresolvedSchemas?: number;
   kind: MapKind;
   scannedAt?: string;
   scannedFrom?: string;
@@ -283,7 +285,8 @@ function watch(map: HubMap, href: string | null): string {
   if (map.open > 0) row(map.open, 'no auth gate found', 'bad', '#alerts');
   if (map.hasBe && map.feOnly > 0) row(map.feOnly, 'FE calls it, API does not declare it', 'bad', '#alerts');
   if (map.hasFe && map.uncalled > 0) row(map.uncalled, 'declared by the API, called by no screen', '', '#alerts');
-  if (map.unresolved > 0) row(map.unresolved, 'calls whose path could not be resolved', 'warn', '#unresolved');
+  if ((map.unresolvedPaths ?? map.unresolved) > 0) row(map.unresolvedPaths ?? map.unresolved, 'calls whose path could not be resolved', 'warn', '#unresolved');
+  if ((map.unresolvedSchemas ?? 0) > 0) row(map.unresolvedSchemas ?? 0, 'endpoints with no request/response schema in the code', 'warn', '#unresolved');
   if (!map.hasBe) rows.push('<div class="none">BE not scanned — nothing to reconcile against.</div>');
   if (!map.hasFe) rows.push('<div class="none">FE not scanned — no idea which screens call it.</div>');
   return rows.length === 0
@@ -379,7 +382,7 @@ function detail(project: HubProject, options: HubOptions, now: number): string {
     ${kpi('calls', best.calls, from)}
     ${kpi('no auth', best.open, 'no gate found', true)}
     ${kpi('FE-only', best.hasBe ? best.feOnly : 0, best.hasBe ? from : 'BE not scanned', true)}
-    ${kpi('unresolved', best.unresolved, 'not part of the numbers above', true)}
+    ${kpi('unresolved', best.unresolved, (best.unresolvedSchemas ?? 0) > 0 ? `${best.unresolvedPaths ?? best.unresolved} path · ${best.unresolvedSchemas ?? 0} schema` : 'not part of the numbers above', true)}
   </div>`;
 
   return `<section class="detail" data-detail="${escapeHtml(project.id)}">
@@ -437,7 +440,8 @@ function todos(projects: HubProject[], options: HubOptions): Todo[] {
     if (!best.hasBe) add(30, '', 0, 'BE not scanned — nothing to reconcile', '');
     if (!best.hasFe) add(30, '', 0, 'FE not scanned — no idea which screens call it', '');
     if (best.hasFe && best.uncalled > 0) add(20, '', best.uncalled, 'declared by the API, called by no screen', '#alerts');
-    if (best.unresolved > 0) add(10, 'warn', best.unresolved, 'calls whose path could not be resolved', '#unresolved');
+    if ((best.unresolvedPaths ?? best.unresolved) > 0) add(10, 'warn', best.unresolvedPaths ?? best.unresolved, 'calls whose path could not be resolved', '#unresolved');
+    if ((best.unresolvedSchemas ?? 0) > 0) add(10, 'warn', best.unresolvedSchemas ?? 0, 'endpoints with no request/response schema in the code', '#unresolved');
   }
   return out.sort((a, b) => b.weight - a.weight);
 }
@@ -483,7 +487,7 @@ function overview(projects: HubProject[], options: HubOptions, live: boolean): s
     ${kpi('calls', sum((m) => m.calls), 'FE → endpoint')}
     ${kpi('no auth', sum((m) => m.open), 'no gate found', true)}
     ${kpi('FE-only', sum((m) => (m.hasBe ? m.feOnly : 0)), 'only projects scanned on both sides', true)}
-    ${kpi('unresolved', sum((m) => m.unresolved), 'not part of the numbers above', true)}
+    ${kpi('unresolved', sum((m) => m.unresolved), `${sum((m) => m.unresolvedPaths ?? m.unresolved)} path · ${sum((m) => m.unresolvedSchemas ?? 0)} schema`, true)}
   </div>
   <div class="panel"><h3>Worth a look${list.length === 0 ? '' : ` (${list.length})`}</h3>
     ${list.length === 0

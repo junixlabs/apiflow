@@ -95,6 +95,7 @@ export function scanBackend(root: string, name: string): BeScanResult {
 
   const schemas = new Map<string, SchemaDef>();
   const map = createApiMap(name, scanOrigin(root), GENERATOR);
+  const schemaGaps = new Set<string>();
   const routes = [];
 
   for (const { file, content } of files) {
@@ -152,12 +153,20 @@ export function scanBackend(root: string, name: string): BeScanResult {
 
       // cm:why An endpoint whose two shapes are unknown is exactly what the probe stage exists to
       // fill — recording it here is what makes the probe list finite instead of "every route".
+      // cm:guard One entry per ENDPOINT, not per route hit. The same route is legitimately seen more
+      // than once — a manifest entry plus its mount site, or a resource macro expanding into a file
+      // already scanned — and 106 endpoints were reporting 317 schema gaps, which reads as three
+      // times the work outstanding.
       if (!request && !response && hit.method !== 'UNKNOWN') {
-        map.unresolved.push({
-          source: hit.source,
-          reason: `${hit.method} ${path} — no request or response schema found in code`,
-          snippet: hit.handler ?? '(no named handler)',
-        });
+        const reason = `${hit.method} ${path} — no request or response schema found in code`;
+        if (!schemaGaps.has(reason)) {
+          schemaGaps.add(reason);
+          map.unresolved.push({
+            source: hit.source,
+            reason,
+            snippet: hit.handler ?? '(no named handler)',
+          });
+        }
       }
     }
   }

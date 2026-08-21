@@ -47,9 +47,13 @@ export function detectStack(manifests: Record<string, string>): Stack {
 // type — excluding it would leave the whole Strapi stack with routes and no shapes.
 const BE_EXT = /(\.(php|[jt]sx?|mjs|cjs|go|py|rb)|content-types\/[^/]+\/schema\.json)$/;
 const BE_SKIP = /(^|\/)(node_modules|vendor|dist|build|storage|__pycache__|\.git|migrations|tests?|spec)(\/|$)/;
+// cm:guard A test FILE beside the code it tests, not in a tests/ directory: `src/surface.test.ts`
+// held a `{ method: 'GET', path: '/nope-not-declared' }` fixture, and the route-object reader turned
+// it into an endpoint the API does not serve. A fixture must never become part of the surface.
+const BE_SKIP_FILE = /\.(test|spec|stories|fixture|mock)\.[jt]sx?$|(^|\/)(conftest\.py|.*_test\.go)$/;
 
 export function isBackendFile(file: string): boolean {
-  if (BE_SKIP.test(file)) return false;
+  if (BE_SKIP.test(file) || BE_SKIP_FILE.test(file)) return false;
   return BE_EXT.test(file);
 }
 
@@ -297,6 +301,36 @@ function laravelRuleType(spec: string): ShapeType {
 }
 
 const STRAPI_ROUTE = /\{[^{}]*?\bmethod\s*:\s*(['"`])(GET|POST|PUT|PATCH|DELETE)\1[^{}]*?\bpath\s*:\s*(['"`])([^'"`]+)\3([\s\S]{0,200}?)\}/g;
+
+// cm:why A route declared as DATA is not a Strapi peculiarity: a manifest of `{ method, path }`
+// literals is how a codebase makes its surface reviewable in one file. Measured on a real Hono API,
+// every mount is `.get(declared(SPEC), h)` with no literal at the call site, so the verb-call readers
+// found 2 of 107 routes — the other 105 were sitting in a plain exported array all along.
+// cm:guard Requires the path to start with `/`, unlike the Strapi form: this runs over every .ts file
+// in a backend repo, and `{ method: 'POST', path: 'upload' }` in an SDK call config is not a route.
+const ROUTE_OBJECT = /\{[^{}]*?\bmethod\s*:\s*(['"`])(GET|POST|PUT|PATCH|DELETE)\1[^{}]*?\bpath\s*:\s*(['"`])(\/[^'"`]*)\3/g;
+
+// cm:why `.get(declared(HEALTH), h)` names its path through a const, which is the shape a repo lands
+// on as soon as the path has to be shared between the mount and its own auth declaration. Reading the
+// const in the same file recovers the mount SITE, which is better evidence than the manifest entry:
+// it is where the route is actually served, and its line carries the middleware.
+const SPEC_CONST = /\b(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*\{[^{}]*?\bmethod\s*:\s*(['"`])(GET|POST|PUT|PATCH|DELETE)\2[^{}]*?\bpath\s*:\s*(['"`])(\/[^'"`]*)\4/g;
+const SPEC_MOUNT = /\.\s*(get|post|put|patch|delete|options|all)\s*\(\s*(?:[A-Za-z_$][\w$]*\s*\(\s*)?([A-Z][A-Z0-9_]{2,})\b/g;
+
+// cm:why A DECLARED protection beats the name heuristic every time. This API states the gate on all
+// 107 routes — 7 deliberately public, 100 not — and AUTH_HINT read `middlewareFor(SPEC.protection)`
+// as nothing, so 95 fully guarded routes would have been reported as "no auth gate found". A false
+// alarm on that particular number is worse than silence: it is the one an operator acts on.
+// cm:guard Only `public`-shaped words clear the gate. An unrecognised kind counts as GUARDED, so a
+// vocabulary this does not know cannot manufacture an open endpoint.
+const PROTECTION_KIND = /\b(?:protection|auth|authorization|authorize|access)\s*:\s*\{[^{}]*?\b(?:kind|type|mode)\s*:\s*(['"`])(\w+)\1/;
+const PUBLIC_KIND = /^(public|none|anonymous|open|unauthenticated|guest)$/i;
+
+function declaredGate(block: string): boolean | undefined {
+  const m = PROTECTION_KIND.exec(block);
+  if (m === null) return undefined;
+  return !PUBLIC_KIND.test(m[2]);
+}
 const STRAPI_CORE_ROUTER = /createCoreRouter\s*\(\s*(['"`])api::([\w-]+)\.([\w-]+)\1/g;
 
 // cm:why Strapi declares routes as data, not calls — a `{method, path, handler}` object literal.
@@ -440,6 +474,31 @@ function scanNode(file: string, content: string): BeFileScan {
       );
     }
     return out;
+  }
+
+  // cm:edge protocol -> ROUTE_OBJECT · SPEC_CONST — both may name the same route, and that is fine:
+  // endpoint ids are derived from METHOD + normalized path, so the two collapse into one endpoint and
+  // the mount site wins the source line by being pushed second.
+  for (const m of content.matchAll(ROUTE_OBJECT)) {
+    const block = content.slice(m.index, m.index + 400);
+    out.routes.push(route(m[2], m[4], file, lineOf(content, m.index), {
+      auth: declaredGate(block) ?? (AUTH_HINT.test(block) || undefined),
+    }));
+  }
+
+  const specs = new Map<string, { method: string; path: string; gate?: boolean }>();
+  for (const m of content.matchAll(SPEC_CONST)) {
+    specs.set(m[1], { method: m[3], path: m[5], gate: declaredGate(content.slice(m.index, m.index + 600)) });
+  }
+  for (const m of content.matchAll(SPEC_MOUNT)) {
+    const spec = specs.get(m[2]);
+    if (spec === undefined) continue;
+    const line = content.slice(m.index, m.index + 300);
+    // cm:guard The verb at the mount wins over the verb in the const: `.post(declared(X))` where X
+    // says GET is a real mismatch, and reporting the const would hide the route that is served.
+    out.routes.push(route(m[1].toUpperCase(), spec.path, file, lineOf(content, m.index), {
+      auth: spec.gate ?? (AUTH_HINT.test(line) || undefined),
+    }));
   }
 
   const mounts = new Map<string, string>();
