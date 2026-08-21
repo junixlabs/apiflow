@@ -62,6 +62,10 @@ export interface FieldNode {
   declared?: boolean;
   observed?: boolean;
   declaredAs?: string;
+  // cm:edge contract -> src/core/shape.ts isDictionary() — set only on a `{key}` path, and it is the
+  // number of keys that were collapsed into it. Present means "a keyed collection this wide", not
+  // "a field".
+  keys?: number;
   source?: SourceRef;
 }
 

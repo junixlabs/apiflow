@@ -148,6 +148,19 @@ function main(): void {
     console.log(`**Samples**: ${samples.length} · applied ${samples.length - skipped.length} · skipped ${skipped.length}`);
     console.log(`**Fields now observed**: ${observed} (${applied} field observations merged)`);
     console.log(`**Probed endpoints**: ${next.endpoints.filter((e) => e.probed).length}/${next.endpoints.length}`);
+    // cm:why A collapse that is not printed reads as an endpoint with one field. Naming the widest
+    // ones is also the only way a WRONG collapse — a real 20-field record read as a dictionary — is
+    // ever noticed by whoever knows the API.
+    const dicts = finalized.fields.filter((f) => f.keys !== undefined).sort((a, b) => (b.keys ?? 0) - (a.keys ?? 0));
+    if (dicts.length > 0) {
+      const byId = new Map(finalized.endpoints.map((e) => [e.id, e]));
+      const total = dicts.reduce((n, f) => n + (f.keys ?? 0), 0);
+      console.log(`**Dictionaries collapsed**: ${dicts.length} — ${total} keys held out of the field list`);
+      for (const f of dicts.slice(0, 5)) {
+        const ep = byId.get(f.endpointId);
+        console.log(`- ${ep?.method} ${ep?.path} → \`${f.path}\` — ${f.keys} keys of ${f.type}`);
+      }
+    }
     console.log('');
     console.log(`### Declared in code but never sent — ${lying.length === 0 ? 'none' : lying.length}`);
     for (const a of lying.slice(0, 30)) {

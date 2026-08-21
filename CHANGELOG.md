@@ -4,6 +4,52 @@ All notable changes to API View are documented here.
 
 ---
 
+## [1.1.10] — 2026-08-21
+
+Probing a real Laravel API produced **572 observed fields** where the static reader had 0 — and 271 of
+them were translation strings. A dictionary is not a shape.
+
+### Fixed — a keyed collection collapses to `{key}`
+
+- `GET /api/v1/languages` returns the i18n table. Its 100 `data.en.validation.*` keys are translation
+  ids — **data, not fields** — and one endpoint contributed 263 "fields" to a map whose whole API had
+  354 declared. An endpoint that gained a translation string would have read as an endpoint that
+  gained a field.
+- `shapeOf` now collapses an object whose keys are values into a single `{key}` path, which is the
+  array rule applied to an object: `{key}` is to a dictionary what dropping the index is to a list.
+  Several values are sampled into the one path, for the same reason a list samples 20 items.
+- **The key count is kept** (`FieldNode.keys`), so the map says "a dictionary of 100 strings" rather
+  than pretending the endpoint returns one field, and `probe --ingest` **prints the widest collapses**.
+  A collapse nobody can see is a collapse nobody can correct.
+
+### The threshold is measured, and deliberately conservative
+
+Two conditions must both hold: **≥ 20 sibling keys** *and* **every value the same shape**.
+
+| | keys | value types |
+|---|---|---|
+| widest genuine record, 1,126 Zod-read endpoints | **15** | mixed |
+| widest genuine record in the probed bodies | 11 | mixed |
+| the dictionaries found | 100 · 65 · 47 · 34 · 25 | single |
+
+Under-collapsing leaves noise; over-collapsing **deletes real field names**. So when the two
+conditions disagree the field names survive — `data.en.passwords` (8 keys, all strings) stays
+expanded, and that is the intended side to fail on.
+
+### Measured on adminhub
+
+| observed fields | before | after |
+|---|---|---|
+| total | 572 | **136** |
+| `GET /statuses/groups` | 216 | **13** |
+| `GET /languages` | 263 | **30** |
+
+`/statuses/groups` is the point: 34 status-group names were burying the shape of the status object
+itself, and it now reads `data.{key}[].color_status.background_color` — 13 fields that describe the
+API instead of 216 that describe today's data. Scan + ingest twice is byte-identical.
+
+---
+
 ## [1.1.9] — 2026-08-21
 
 One app reported **11,340 calls across 719 screens**. It has 855 calls across 141 screens. The other

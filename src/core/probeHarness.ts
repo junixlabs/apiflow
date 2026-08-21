@@ -245,6 +245,7 @@ export function ingestSamples(map: ApiMapFile, samples: ProbeSample[]): { map: A
         optional: existing?.optional,
         declared: existing?.declared,
         observed: true,
+        keys: shape.keys ?? existing?.keys,
         source: existing?.source,
       });
       applied++;
