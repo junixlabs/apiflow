@@ -4,6 +4,37 @@ All notable changes to API View are documented here.
 
 ---
 
+## [1.1.13] — 2026-08-21
+
+The blind full walk is the wrong default, and now there is a targeted one. Measured on a real API,
+`--fill=1` over the whole GET surface was **63% usable** — the rest were `400`s for required query
+params a walk cannot guess and `404`s for ids that do not exist. An API rarely answers to a fictional
+id and no query string.
+
+### Added — `--screen=<route>`, impact → probe
+
+A screen names the handful of endpoints it actually reads, and only those are hit. It is the same edge
+`apiflow impact --screen` reports (`screenIdsForRoute` → `endpointsForScreen`), handed straight to the
+probe.
+
+```bash
+apiflow probe linked.apimap --live=http://127.0.0.1:8000 --screen=/account --header="Authorization: Bearer $TOKEN" --fill=1
+# **Scoped by `--screen=/account`**: 7 of 1092 endpoints that screen reads · **Sent**: 2
+```
+
+- Needs a **linked** (fe+be) map — the screen→endpoint edge is produced by `apiflow link`, so a BE-only
+  map has no screens. `--screen` there refuses with a pointer to the linked map, rather than silently
+  selecting nothing.
+- An unknown route refuses too (exit 2). Composes with `--fill`/`--methods`/`--only`/`--skip`.
+
+This is the shape probe was meant to be used in: not "cover the API", but "confirm the few endpoints the
+screen I am changing depends on". The static map stays the core; probe closes the two blind spots
+(typed-client response fields, a stack with no response type) for exactly the endpoints a screen reads.
+
+412 tests.
+
+---
+
 ## [1.1.12] — 2026-08-21
 
 `--only` is an include filter, and a live authenticated probe showed why that is not enough: the guard

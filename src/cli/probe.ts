@@ -2,7 +2,7 @@ import { existsSync, mkdirSync, readFileSync, realpathSync, writeFileSync } from
 import { dirname, join, resolve } from 'path';
 import { fileURLToPath } from 'url';
 import type { ApiMapFile } from '../core/apimap';
-import { finalizeApiMap, parseMap, undeliveredFields } from '../core/apimap';
+import { endpointsForScreen, finalizeApiMap, parseMap, screenIdsForRoute, undeliveredFields } from '../core/apimap';
 import type { Stack } from '../core/beScanner';
 import { detectStack } from '../core/beScanner';
 import type { ProbeSample } from '../core/probeHarness';
@@ -57,6 +57,30 @@ export function passesScope(method: string, path: string, only: string[], skip: 
   if (!matchesOnly(method, path, only)) return false;
   if (skip.length > 0 && matchesAny(method, path, skip)) return false;
   return true;
+}
+
+// cm:why This is impact→probe: instead of walking 1018 endpoints with a fictional `--fill=1`, a screen
+// names the handful it actually reads and the walk hits exactly those. Measured on a real API, a blind
+// full walk of the GET surface was 63% usable; the rest were 400s for query params a walk cannot guess
+// and 404s for ids that do not exist. A screen's own dependency list is the only honest scope.
+// cm:guard Needs a map with BOTH sides — screens map to endpoints only in a linked (fe+be) map. A
+// pure BE map has zero screens, so `--screen` there would silently select nothing; that is refused.
+export function endpointsForScreens(
+  map: ApiMapFile,
+  routes: string[]
+): { keys: Set<string>; unmatched: string[] } {
+  const keys = new Set<string>();
+  const unmatched: string[] = [];
+  for (const route of routes) {
+    const ids = screenIdsForRoute(map, route);
+    if (ids.length === 0) { unmatched.push(route); continue; }
+    for (const id of ids) {
+      for (const dep of endpointsForScreen(map, id)) {
+        keys.add(`${dep.endpoint.method} ${dep.endpoint.path}`);
+      }
+    }
+  }
+  return { keys, unmatched };
 }
 
 const SAFE_METHODS = new Set(['GET', 'HEAD']);
@@ -120,9 +144,26 @@ async function runLive(map: ApiMapFile, base: string, args: string[], mapPath: s
 
   const only = args.filter((a) => a.startsWith('--only=')).map((a) => a.slice('--only='.length));
   const skip = args.filter((a) => a.startsWith('--skip=')).map((a) => a.slice('--skip='.length));
-  const scoped = map.endpoints.filter((e) => passesScope(e.method, e.path, only, skip));
-  if ((only.length > 0 || skip.length > 0) && scoped.length === 0) {
-    console.error(`--only/--skip left no endpoint in the map. Nothing was sent.`);
+  const screens = args.filter((a) => a.startsWith('--screen=')).map((a) => a.slice('--screen='.length));
+  let screenKeys: Set<string> | undefined;
+  if (screens.length > 0) {
+    if (map.screens.length === 0) {
+      console.error('--screen needs a map that has screens. This map has none — it is a BE-only map.');
+      console.error('Probe the linked (fe+be) map so a screen can name the endpoints it reads.');
+      process.exit(2);
+    }
+    const { keys, unmatched } = endpointsForScreens(map, screens);
+    if (unmatched.length > 0) {
+      console.error(`No screen named ${unmatched.join(', ')} in this map. Nothing was sent.`);
+      process.exit(2);
+    }
+    screenKeys = keys;
+  }
+  const scoped = map.endpoints.filter(
+    (e) => passesScope(e.method, e.path, only, skip) && (screenKeys === undefined || screenKeys.has(`${e.method} ${e.path}`))
+  );
+  if ((only.length > 0 || skip.length > 0 || screens.length > 0) && scoped.length === 0) {
+    console.error(`--only/--skip/--screen left no endpoint in the map. Nothing was sent.`);
     process.exit(2);
   }
   const { ready, unfilled } = liveTargets(scoped, fills, asked);
@@ -150,9 +191,14 @@ async function runLive(map: ApiMapFile, base: string, args: string[], mapPath: s
   console.log('');
   console.log(`**Base**: ${base} · **methods**: ${[...asked].join(', ')}`);
   // cm:why A scope that is not printed reads as a whole-map run that found two endpoints.
-  if (only.length > 0 || skip.length > 0) {
-    const by = [only.length ? `--only=${only.join(',')}` : '', skip.length ? `--skip=${skip.join(',')}` : ''].filter(Boolean).join(' ');
-    console.log(`**Scoped by \`${by}\`**: ${scoped.length} of ${map.endpoints.length} endpoints`);
+  if (only.length > 0 || skip.length > 0 || screens.length > 0) {
+    const by = [
+      screens.length ? `--screen=${screens.join(',')}` : '',
+      only.length ? `--only=${only.join(',')}` : '',
+      skip.length ? `--skip=${skip.join(',')}` : '',
+    ].filter(Boolean).join(' ');
+    const tail = screens.length ? ` that ${screens.length === 1 ? 'screen reads' : 'those screens read'}` : '';
+    console.log(`**Scoped by \`${by}\`**: ${scoped.length} of ${map.endpoints.length} endpoints${tail}`);
   }
   console.log(`**Sent**: ${ready.length} · **answered**: ${samples.length} · **unreachable**: ${failed}`);
   console.log(`**Skipped for an unfilled \`{param}\`**: ${unfilled.length}${unfilled.length > 0 ? ` — pass --fill=<value>` : ''}`);

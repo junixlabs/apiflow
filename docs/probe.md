@@ -28,6 +28,7 @@ its `{param}`. `url` is what was actually sent. Both are needed: without `url`, 
 | `--methods=GET,POST` | default is `GET` alone |
 | `--only=<pattern>` | repeatable; scope the walk. A plain string matches as a substring of `METHOD PATH`, and `*` globs. Refuses with exit 2 when it matches nothing, rather than reporting a clean run over zero endpoints. |
 | `--skip=<pattern>` | repeatable; the exclusion `--only` cannot express. Same matching. An endpoint must pass the include **and** clear every skip — skip wins ties, because the safe default when the two disagree is *do not send*. |
+| `--screen=<route>` | repeatable; probe only the endpoints a screen actually reads. Needs a **linked** (fe+be) map, because the screen→endpoint edge lives there. Composes with `--fill`/`--methods`/`--only`/`--skip`. |
 | `--out=<file>` | default `apiflow-probe.json` beside the map |
 
 `--only` exists because a fill is positional: `--fill=laravel.log` would otherwise reach the one route
@@ -54,6 +55,26 @@ apiflow probe ~/.apiflow/projects/demo/be.apimap --live=http://127.0.0.1:8000 \
 
 A non-2xx or a non-JSON body is still recorded. `--ingest` is what decides a sample is unusable, and
 it says so per endpoint — dropping them at collection time would turn a 500 into silence.
+
+### Probe what a screen reads — `--screen`
+
+A blind full walk is the wrong default. Measured on a real API, `--fill=1` over the whole GET surface
+was **63% usable**: the rest were `400`s for required query params a walk cannot guess and `404`s for
+ids that do not exist. An API rarely answers correctly to a fictional id and no query string.
+
+`--screen=<route>` is the targeted path — the same question `apiflow impact --screen` answers, handed
+straight to the probe: the screen names the handful of endpoints it depends on, and only those are hit.
+
+```bash
+# 7 endpoints this screen reads, not 1018 — GET ones sent, with a real token
+apiflow probe ~/.apiflow/projects/adminhub/linked.apimap --live=http://127.0.0.1:8000 \
+  --screen=/account --header="Authorization: Bearer $TOKEN" --fill=1
+# **Scoped by `--screen=/account`**: 7 of 1092 endpoints that screen reads · **Sent**: 2
+```
+
+It needs a **linked** map: the screen→endpoint edge is produced by `apiflow link`, so a BE-only map has
+no screens and `--screen` refuses with a pointer to the linked map. An unknown route refuses too, rather
+than sending nothing and reporting a clean run.
 
 ## Inside the project's own test runner — `--emit`
 
