@@ -8,7 +8,11 @@ All notable changes to API View are documented here.
 
 ### Added — agent-native (the map as an MCP server)
 
-- `apiflow mcp-map` — a second MCP server, map-side only (the existing `--mcp` one is the request
+- **Both MCP servers are now spelled the same way**: `apiflow mcp map` (reads the map) and
+  `apiflow mcp run` (executes requests). They used to be a subcommand (`mcp-map`) and a *flag*
+  (`--mcp`) for the same kind of thing. `mcp-map` and `--mcp` keep working — the flag is in the
+  published README and in installed MCP configs — and bare `apiflow mcp` prints the two choices.
+- `apiflow mcp map` — a second MCP server, map-side only (the existing `--mcp` one is the request
   runner and pulls the run half in; this one never touches it, enforced by the dependency-cruiser
   boundary). Tools: `impact_endpoint` · `impact_field` · `screen_deps` · `find` · `map_health` ·
   `map_check` · `map_list`. Answers are compact, carry the `file:line` that proves each screen, and

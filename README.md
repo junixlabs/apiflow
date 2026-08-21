@@ -218,13 +218,13 @@ Claude Code skill that auto-generates `.apiview` flow files from Laravel routes,
 
 ### Map MCP server (for agents)
 
-`apiflow mcp-map` speaks MCP over stdio and answers from an existing `.apimap`: `impact_endpoint`,
+`apiflow mcp map` speaks MCP over stdio and answers from an existing `.apimap`: `impact_endpoint`,
 `impact_field`, `screen_deps`, `find`, `map_health`, `map_check`, `map_list`. Every answer carries the
 `file:line` that proves it and the count of call sites the scanner could not resolve, so an empty
 answer cannot be read as "nothing calls this". Register it per project:
 
 ```json
-{ "mcpServers": { "apiflow-map": { "command": "npx", "args": ["-y", "@junixlabs/apiflow", "mcp-map"],
+{ "mcpServers": { "apiflow-map": { "command": "npx", "args": ["-y", "@junixlabs/apiflow", "mcp", "map"],
   "env": { "APIFLOW_PROJECT": "my-project" } } } }
 ```
 
@@ -251,8 +251,9 @@ npx @junixlabs/apiflow --project=/path/to/my-api
 # Run on custom port
 npx @junixlabs/apiflow --port=4000
 
-# Start MCP server for Claude Code
-npx @junixlabs/apiflow --mcp
+# Two MCP servers, one word apart: `map` reads the dependency map, `run` executes requests
+npx @junixlabs/apiflow mcp map
+npx @junixlabs/apiflow mcp run
 
 # Map a frontend's API usage
 npx @junixlabs/apiflow scan-fe ./my-frontend --name=web [--hints=hints.json]
@@ -294,8 +295,12 @@ npm run dev:mcp      # MCP server only
 
 ### MCP Server (Claude Code)
 
+There are two, and they are different halves of this repo. `map` only reads a `.apimap` and answers
+impact questions; `run` builds and executes flows. Add whichever you want, or both:
+
 ```bash
-claude mcp add apiflow -- npx @junixlabs/apiflow --mcp
+claude mcp add apiflow-map -- npx @junixlabs/apiflow mcp map
+claude mcp add apiflow     -- npx @junixlabs/apiflow mcp run   # `--mcp` still works as an alias
 ```
 
 Then ask Claude:

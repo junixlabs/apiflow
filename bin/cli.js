@@ -45,8 +45,9 @@ const HELP = `apiflow — bản đồ màn hình ↔ endpoint ↔ field
   apiflow check <map> [--root=<dir>] [--json] [--write]
   apiflow view <map> --out=<file.html>
 
-  apiflow mcp-map                MCP server đọc bản đồ (cho agent)
-  apiflow --mcp                  MCP server chạy request (flow runner)
+  apiflow mcp map                MCP server ĐỌC BẢN ĐỒ — 7 tool, cho agent
+  apiflow mcp run                MCP server CHẠY REQUEST — 13 tool, flow runner
+                                 (alias cũ: mcp-map = mcp map · --mcp = mcp run)
 
 Workspace: ~/.apiflow — apiflow không ghi gì vào project được scan trừ khi --out trỏ vào đó.`;
 
@@ -79,11 +80,27 @@ const SUBCOMMANDS = {
   ui: 'cli/ui.ts',
   hub: 'cli/hub.ts',
 };
-const subcommand = SUBCOMMANDS[args[0]];
+// cm:why Two MCP servers, one word apart, because they are two different halves of the repo: `map`
+// only reads .apimap, `run` executes requests and pulls the run side in. They were `mcp-map` and a
+// `--mcp` FLAG — one subcommand and one flag for the same kind of thing, which is unreadable. Both
+// old spellings still work: `--mcp` is in the published README and in people's MCP configs.
+const MCP_SERVERS = { map: 'mcp/mapServer.ts', run: 'mcp/server.ts' };
+
+let subcommand = SUBCOMMANDS[args[0]];
+let forwarded = args.slice(1);
+if (args[0] === 'mcp') {
+  subcommand = MCP_SERVERS[args[1]];
+  forwarded = args.slice(2);
+  if (!subcommand) {
+    console.error('apiflow mcp map   — server đọc bản đồ (7 tool, cho agent)');
+    console.error('apiflow mcp run   — server chạy request (13 tool, flow runner)');
+    process.exit(1);
+  }
+}
 
 if (subcommand) {
   const script = join(root, 'src', subcommand);
-  const [cmd, argv] = tsxRunner(script, args.slice(1));
+  const [cmd, argv] = tsxRunner(script, forwarded);
   const child = spawn(cmd, argv, { stdio: 'inherit', cwd: root });
   child.on('exit', (code) => process.exit(code ?? 0));
   // cm:guard Forwards the signal: `apiflow ui` is long-running, and without this, killing this
@@ -91,7 +108,8 @@ if (subcommand) {
   process.on('SIGINT', () => { child.kill('SIGINT'); });
   process.on('SIGTERM', () => { child.kill('SIGTERM'); });
 }
-// --mcp mode: start MCP server
+// cm:edge contract -> README.md — `--mcp` is the spelling already published and already sitting in
+// installed MCP configs, so it stays as an alias for `mcp run` rather than being cleaned up.
 else if (args.includes('--mcp')) {
   const mcpServer = join(root, 'src', 'mcp', 'server.ts');
   const [cmd, argv] = tsxRunner(mcpServer, []);
