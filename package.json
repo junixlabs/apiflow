@@ -1,11 +1,17 @@
 {
   "name": "@junixlabs/apiflow",
   "version": "1.1.0",
-  "description": "Visual API flow testing tool. Build flows, chain requests, test assertions. Local-first, git-friendly, open source.",
+  "description": "A screen \u2194 endpoint \u2194 field dependency map: answers which screens break if you change an endpoint or a response field. Plus a visual request runner. Local-first, git-friendly, open source.",
   "type": "module",
   "license": "MIT",
   "keywords": [
     "api",
+    "dependency-graph",
+    "impact-analysis",
+    "codebase-map",
+    "static-analysis",
+    "mcp",
+    "mcp-server",
     "api-testing",
     "api-client",
     "visual",
@@ -46,7 +52,9 @@
     "vite.config.ts",
     "tsconfig*.json",
     "postcss.config.js",
-    "tailwind.config.*"
+    "tailwind.config.*",
+    "!src/**/*.test.ts",
+    "!src/**/__fixtures__/**"
   ],
   "scripts": {
     "dev": "concurrently \"vite\" \"tsx proxy/index.ts\"",

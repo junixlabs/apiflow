@@ -4,7 +4,7 @@ All notable changes to API View are documented here.
 
 ---
 
-## [Unreleased]
+## [1.1.0] — 2026-08-21
 
 ### Changed — the repo speaks English
 

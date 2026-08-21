@@ -2,20 +2,27 @@
 
 The whole path, with the output you should actually see. Measured on a clean clone.
 
-## 1. Install (~15s)
+## 1. Install
+
+```bash
+npm install -g @junixlabs/apiflow     # then: apiflow --help
+```
+
+Or from a clone (~15s), which is also the contributor path — every `apiflow …` below becomes
+`node bin/cli.js …`:
 
 ```bash
 git clone https://github.com/junixlabs/apiflow.git && cd apiflow && npm install
 node bin/cli.js --help
 ```
 
-No build step is needed for anything on the map side. `apiflow` (the canvas app, no subcommand)
+No build step is needed for anything on the map side. `apiflow` with no subcommand (the canvas app)
 builds `dist/` on first run; the map commands never touch it.
 
 ## 2. Register a project (~1s)
 
 ```bash
-node bin/cli.js project add "web" --fe=/path/to/frontend --be=/path/to/api
+apiflow project add "web" --fe=/path/to/frontend --be=/path/to/api
 ```
 
 ```
@@ -33,7 +40,7 @@ workspace, which is the easiest way to try this without disturbing anything.
 ## 3. Scan (3s–15s)
 
 ```bash
-node bin/cli.js project scan web
+apiflow project scan web
 ```
 
 ```
@@ -53,21 +60,21 @@ it diffs cleanly and two people scanning the same commit get the same bytes.
 ## 4. Look at it
 
 ```bash
-node bin/cli.js ui          # http://127.0.0.1:3030
+apiflow ui                  # http://127.0.0.1:3030
 ```
 
 The hub lists every project; opening one gives nine panes — overview, endpoints, coverage map,
 impact ring, impact for one endpoint, screens, unresolved, alerts, and a comparison against the
 previous scan. It binds `127.0.0.1` only and has no flag to widen that.
 
-Prefer a file you can send to someone? `node bin/cli.js view $MAP --out=map.html` writes one
+Prefer a file you can send to someone? `apiflow view $MAP --out=map.html` writes one
 self-contained page, and `hub --out=<dir>` writes the whole workspace as static HTML.
 
 ## 5. Ask
 
 ```bash
 MAP=~/.apiflow/projects/web/fe.apimap
-node bin/cli.js impact $MAP | head -20
+apiflow impact $MAP | head -20
 ```
 
 List first. Guessing an endpoint string is the most common way to get an empty answer:
@@ -83,10 +90,10 @@ List first. Guessing an endpoint string is the most common way to get an empty a
 Then ask for one of them:
 
 ```bash
-node bin/cli.js impact $MAP --endpoint="GET /orgs"
-node bin/cli.js impact $MAP --field=email
-node bin/cli.js impact $MAP --screen=/users/:id
-node bin/cli.js impact $MAP --endpoint="GET /orgs" --json   # exit 0 found · 2 nothing found
+apiflow impact $MAP --endpoint="GET /orgs"
+apiflow impact $MAP --field=email
+apiflow impact $MAP --screen=/users/:id
+apiflow impact $MAP --endpoint="GET /orgs" --json   # exit 0 found · 2 nothing found
 ```
 
 ```
@@ -131,8 +138,8 @@ screens — which is the thing neither repo can answer on its own.
 ## 7. Keep it from going stale
 
 ```bash
-node bin/cli.js check $MAP            # exit 0 clean · 1 drifted · 2 cannot check
-node bin/cli.js check $MAP --write    # refresh in place
+apiflow check $MAP            # exit 0 clean · 1 drifted · 2 cannot check
+apiflow check $MAP --write    # refresh in place
 ```
 
 `check` re-scans and compares. It names the endpoints that appeared or vanished, and it separates

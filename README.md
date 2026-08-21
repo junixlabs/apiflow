@@ -17,17 +17,21 @@ consumption. Local-first, git-friendly, open source.
 ## Quick start
 
 ```bash
-git clone https://github.com/junixlabs/apiflow.git && cd apiflow && npm install   # ~15s
-node bin/cli.js project add "web" --fe=/path/to/frontend [--be=/path/to/api]      # ~1s
-node bin/cli.js project scan web                                                  # 3s–15s
-node bin/cli.js ui                                                                # http://127.0.0.1:3030
+npm install -g @junixlabs/apiflow                                          # or: npx @junixlabs/apiflow …
+apiflow project add "web" --fe=/path/to/frontend [--be=/path/to/api]       # ~1s
+apiflow project scan web                                                   # 3s–15s
+apiflow ui                                                                 # http://127.0.0.1:3030
 ```
 
 Nothing is written into the project being scanned — maps live in `~/.apiflow/`
 (`APIFLOW_HOME` moves that). One side is enough; `--be` is optional.
 
-> **`npm install -g` is not the way in yet.** The published `@junixlabs/apiflow` predates the map
-> half, so `npx @junixlabs/apiflow scan-fe` does not exist there. Clone until the next release.
+From a clone, `node bin/cli.js …` replaces `apiflow …` and needs no build:
+
+```bash
+git clone https://github.com/junixlabs/apiflow.git && cd apiflow && npm install   # ~15s
+node bin/cli.js --help
+```
 
 ## Ask
 
@@ -35,10 +39,10 @@ List first, then ask — don't guess an endpoint string.
 
 ```bash
 MAP=~/.apiflow/projects/web/fe.apimap
-node bin/cli.js impact $MAP                                  # every endpoint, with caller counts
-node bin/cli.js impact $MAP --endpoint="GET /users/:id"       # which screens break
-node bin/cli.js impact $MAP --field=email                     # which screens read this field
-node bin/cli.js impact $MAP --screen=/users/:id              # what one screen depends on
+apiflow impact $MAP                                  # every endpoint, with caller counts
+apiflow impact $MAP --endpoint="GET /users/:id"       # which screens break
+apiflow impact $MAP --field=email                     # which screens read this field
+apiflow impact $MAP --screen=/users/:id               # what one screen depends on
 ```
 
 ```
@@ -65,9 +69,12 @@ Every answer comes with two qualifiers, and both are part of the answer:
 
 ```json
 { "mcpServers": { "apiflow-map": {
-  "command": "node", "args": ["/path/to/apiflow/bin/cli.js", "mcp", "map"],
+  "command": "apiflow", "args": ["mcp", "map"],
   "env": { "APIFLOW_PROJECT": "web" } } } }
 ```
+
+From a clone, or when the agent's environment has a trimmed `PATH`, spell it out instead:
+`"command": "node", "args": ["/path/to/apiflow/bin/cli.js", "mcp", "map"]`.
 
 Seven read-only tools — `impact_endpoint` · `impact_field` · `screen_deps` · `find` · `map_health` ·
 `map_check` · `map_list`. Measured on a clean install: 0.4s to connect, 5ms per call. Pair it with
@@ -77,9 +84,9 @@ route, a handler, an api client or a response field.
 ## Keep the map honest
 
 ```bash
-node bin/cli.js check $MAP        # exit 0 clean · 1 drifted · 2 cannot check
-node bin/cli.js check $MAP --write
-node bin/cli.js project scan web
+apiflow check $MAP        # exit 0 clean · 1 drifted · 2 cannot check
+apiflow check $MAP --write
+apiflow project scan web
 ```
 
 A scan of an unchanged repo is **byte-identical**, and the file records the repo it came from
