@@ -2,9 +2,11 @@ import { describe, expect, it } from 'vitest';
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
-import { createApiMap } from '../core/apimap';
-import { checkAgainst, renderCheck, rescan } from './check';
+import { createApiMap, endpointId, fieldId, finalizeApiMap } from '../core/apimap';
+import { checkAgainst, readerChanged, renderCheck, rescan } from './check';
 import { sideOf } from '../core/apimap';
+import { GENERATOR as BE_GENERATOR } from './scanBe';
+import { headlineFor } from '../workspace/diff';
 
 function repo(): string {
   const root = mkdtempSync(join(tmpdir(), 'apiflow-check-'));
@@ -72,5 +74,39 @@ describe('apiflow check', () => {
     expect(sideOf(createApiMap('a', 'r', 'apiflow scan-fe/1'))).toBe('fe');
     expect(sideOf(createApiMap('a', 'r', 'apiflow scan-be/1'))).toBe('be');
     expect(sideOf(createApiMap('a', 'r', 'apiflow link/1'))).toBeNull();
+  });
+});
+
+// cm:why A reader upgrade and a code change look identical in a diff and mean opposite things. Saying
+// which one it is is the difference between a gate people trust and a gate people mute.
+describe('a map written by an older reader says so', () => {
+  it('names the version pair when the generator moved, and nothing when it did not', () => {
+    const old = createApiMap('a', 'github.com/acme/api', 'apiflow scan-be/1');
+    expect(readerChanged(old, 'be')).toMatch(/scan-be\/1 → apiflow scan-be\/\d+/);
+    const current = createApiMap('a', 'github.com/acme/api', BE_GENERATOR);
+    expect(readerChanged(current, 'be')).toBeNull();
+  });
+});
+
+// cm:why A BE map has no calls, so the call-based headline said "No meaningful change" on every one of
+// them — printed directly under "the map has drifted from the code".
+describe('the headline for a map with no calls', () => {
+  const beMap = (endpoints: number, shaped: number) => {
+    const map = createApiMap('be', 'github.com/acme/api', BE_GENERATOR);
+    for (let i = 0; i < endpoints; i++) {
+      const id = endpointId('GET', `/x${i}`);
+      map.endpoints.push({ id, method: 'GET', path: `/x${i}` });
+      if (i < shaped) {
+        map.fields.push({ id: fieldId(id, 'a', 'response'), endpointId: id, path: 'a', kind: 'response', declared: true });
+      }
+    }
+    return finalizeApiMap(map);
+  };
+
+  it('reads coverage off the endpoints and certainty off the declared shapes', () => {
+    expect(headlineFor(beMap(2, 0), beMap(4, 0))).toBe('More endpoints read.');
+    expect(headlineFor(beMap(4, 0), beMap(4, 3))).toBe('Same endpoints, more of them have a declared shape.');
+    expect(headlineFor(beMap(4, 3), beMap(4, 0))).toBe('Same endpoints, fewer of them have a declared shape.');
+    expect(headlineFor(beMap(4, 0), beMap(2, 0))).toBe('Fewer endpoints read.');
   });
 });

@@ -28,10 +28,25 @@ export interface RouteHit {
   source: SourceRef;
 }
 
+export interface HandlerDef {
+  name: string;
+  requestSchema?: string;
+  responseSchema?: string;
+}
+
 export interface BeFileScan {
   schemas: SchemaDef[];
   routes: RouteHit[];
   unresolved: UnresolvedCall[];
+  // cm:why Two name-keyed indexes instead of following imports: `schemas` is already global by NAME,
+  // so a handler two modules away from its mount only has to yield the NAME of the schema it
+  // validates with. Measured on a real Hono API, that is the whole distance between 0 fields and the
+  // request shape of every route that validates one.
+  handlers?: HandlerDef[];
+  // cm:why `export type Foo = z.infer<typeof fooSchema>` is how a TS+zod codebase names a shape for
+  // its consumers — the route mentions the TYPE and the fields live on the schema, so without the
+  // alias the response half is unreachable by name.
+  aliases?: Array<{ type: string; schema: string }>;
 }
 
 export function detectStack(manifests: Record<string, string>): Stack {
@@ -434,19 +449,160 @@ const NEST_METHOD = /@(Get|Post|Put|Patch|Delete|Options)\s*\(\s*(?:(['"`])([^'"
 // Map/Redis read register as an HTTP route, and the receiver is needed to find its mount prefix.
 const EXPRESS_ROUTE = /\b(\w+)\s*\.\s*(get|post|put|patch|delete|options|all)\s*\(\s*(['"`])(\/[^'"`]*)\3\s*,([^)]*)/g;
 const EXPRESS_MOUNT = /\.\s*use\s*\(\s*(['"`])(\/[^'"`]*)\1\s*,\s*(\w+)/g;
-const ZOD_OBJECT = /(?:const|let|var)\s+(\w+)\s*=\s*z\s*\.\s*object\s*\(\s*\{([\s\S]*?)\n\s*\}\s*\)/g;
+const ZOD_INFER = /export\s+type\s+(\w+)\s*=\s*z\s*\.\s*infer\s*<\s*typeof\s+(\w+)\s*>/g;
+
+// cm:guard Brace-balanced and quote-aware, not a regex terminator. `z.object({ a: z.string() })`
+// written on ONE line has no `\n})` to stop at, so the old pattern ran on to the next multi-line
+// close and swallowed the schema after it: in one real contracts file the first schema absorbed the
+// second, and the second vanished from the index entirely.
+function balancedFrom(src: string, open: number): { body: string; end: number } {
+  let depth = 0;
+  let quote: string | null = null;
+  for (let i = open; i < src.length; i++) {
+    const c = src[i];
+    if (quote !== null) {
+      if (c === '\\') { i++; continue; }
+      if (c === quote) quote = null;
+      continue;
+    }
+    if (c === "'" || c === '"' || c === '`') { quote = c; continue; }
+    if (c === '{' || c === '(' || c === '[') depth++;
+    else if (c === '}' || c === ')' || c === ']') {
+      depth--;
+      if (depth === 0) return { body: src.slice(open + 1, i), end: i };
+    }
+  }
+  return { body: src.slice(open + 1), end: src.length };
+}
+
+// cm:why Only DEPTH-ZERO keys are fields of this schema. A nested `z.object({...})` describes a
+// child shape, and lifting its keys into the parent invents fields the endpoint never has at top level.
+function zodFields(body: string): SchemaField[] {
+  const out: SchemaField[] = [];
+  let depth = 0;
+  let quote: string | null = null;
+  for (let i = 0; i < body.length; i++) {
+    const c = body[i];
+    if (quote !== null) {
+      if (c === '\\') { i++; continue; }
+      if (c === quote) quote = null;
+      continue;
+    }
+    if (c === "'" || c === '"' || c === '`') { quote = c; continue; }
+    if (c === '{' || c === '(' || c === '[') { depth++; continue; }
+    if (c === '}' || c === ')' || c === ']') { depth--; continue; }
+    if (depth !== 0) continue;
+    const key = /^([A-Za-z_$][\w$]*)\s*:/.exec(body.slice(i));
+    if (key === null || (i > 0 && /[\w$.]/.test(body[i - 1]))) continue;
+
+    // cm:guard The field's text ends at ITS OWN top-level comma. A fixed-width window ran past it and
+    // read the NEXT field's `.optional()`, so a required field was reported optional — which is the
+    // wrong direction: it tells a caller a field may be absent when the API always sends it.
+    let j = i + key[0].length;
+    let inner = 0;
+    let q: string | null = null;
+    for (; j < body.length; j++) {
+      const d = body[j];
+      if (q !== null) {
+        if (d === '\\') { j++; continue; }
+        if (d === q) q = null;
+        continue;
+      }
+      if (d === "'" || d === '"' || d === '`') { q = d; continue; }
+      if (d === '{' || d === '(' || d === '[') inner++;
+      else if (d === '}' || d === ')' || d === ']') inner--;
+      else if (d === ',' && inner === 0) break;
+    }
+    const text = body.slice(i + key[0].length, j);
+    const type = /^\s*z\s*\.\s*(\w+)/.exec(text);
+    out.push({
+      path: key[1],
+      type: zodType(type?.[1] ?? 'unknown'),
+      optional: /\.\s*(optional|nullish|default)\s*\(/.test(text),
+    });
+    i = j;
+  }
+  return out;
+}
+
+const ZOD_HEAD = /(?:const|let|var)\s+(\w+)\s*=\s*z\s*\.\s*(object|strictObject|looseObject|discriminatedUnion|union)\s*\(/g;
+
+// cm:why A discriminated union IS one response shape with branches. Taking the union of the members'
+// keys, and marking a key optional unless every member has it, is the honest reading — reporting
+// nothing would hide the whole endpoint, and reporting one branch would claim fields that may not come.
+function zodSchemas(file: string, content: string): SchemaDef[] {
+  const out: SchemaDef[] = [];
+  for (const m of content.matchAll(ZOD_HEAD)) {
+    const openParen = m.index + m[0].length - 1;
+    const { body } = balancedFrom(content, openParen);
+    const source = { file, line: lineOf(content, m.index) };
+    if (m[2] === 'object' || m[2] === 'strictObject' || m[2] === 'looseObject') {
+      const brace = body.indexOf('{');
+      if (brace === -1) continue;
+      const fields = zodFields(balancedFrom(body, brace).body);
+      if (fields.length > 0) out.push({ name: m[1], fields, source });
+      continue;
+    }
+    const members: SchemaField[][] = [];
+    for (let i = 0; i < body.length; i++) {
+      const at = /^z\s*\.\s*(?:object|strictObject|looseObject)\s*\(\s*\{/.exec(body.slice(i));
+      if (at === null) continue;
+      const brace = body.indexOf('{', i);
+      const inner = balancedFrom(body, brace);
+      members.push(zodFields(inner.body));
+      i = inner.end;
+    }
+    if (members.length === 0) continue;
+    const merged = new Map<string, SchemaField>();
+    for (const member of members) {
+      for (const f of member) {
+        const prior = merged.get(f.path);
+        merged.set(f.path, prior === undefined ? { ...f } : { ...prior, optional: prior.optional || f.optional });
+      }
+    }
+    for (const [path, f] of merged) {
+      if (!members.every((member) => member.some((x) => x.path === path))) f.optional = true;
+    }
+    if (merged.size > 0) out.push({ name: m[1], fields: [...merged.values()], source });
+  }
+  return out;
+}
+// cm:guard Anchored on `export const NAME =` and bounded to the next top-level `export`, so one
+// handler's validator cannot be read as the next handler's.
+const HANDLER_DEF = /export\s+const\s+(\w+)\s*=\s*([\s\S]*?)(?=\nexport\s|$)/g;
+const VALIDATOR_ARG = /\b(?:zValidator|validator|validate)\s*\(\s*(['"`])\w+\1\s*,\s*(\w+)/;
+const SCHEMA_PARSE = /\b(\w+)\s*\.\s*(?:parse|safeParse|parseAsync)\s*\(/;
+// cm:why Three ways a handler names its response shape, all same-file: an explicit annotation on a
+// helper it calls, `satisfies T`, and `c.json<T>`. Following an import to find a fourth would buy
+// little — a codebase that annotates at all annotates in one of these.
+const TYPED_RETURN = /function\s+(\w+)\s*\([\s\S]{0,600}?\)\s*:\s*([A-Z]\w*)\s*\{/g;
+const SATISFIES_TYPE = /\bsatisfies\s+([A-Z]\w*)|\.\s*json\s*<\s*([A-Z]\w*)\s*>/;
+
+function handlerDefs(content: string): HandlerDef[] {
+  const returns = new Map<string, string>();
+  for (const m of content.matchAll(TYPED_RETURN)) returns.set(m[1], m[2]);
+  const out: HandlerDef[] = [];
+  for (const m of content.matchAll(HANDLER_DEF)) {
+    const block = m[2];
+    const request = VALIDATOR_ARG.exec(block)?.[2] ?? SCHEMA_PARSE.exec(block)?.[1];
+    const direct = SATISFIES_TYPE.exec(block);
+    let response = direct?.[1] ?? direct?.[2];
+    if (response === undefined) {
+      for (const [fn, type] of returns) {
+        if (new RegExp(`\\b${fn}\\s*\\(`).test(block)) { response = type; break; }
+      }
+    }
+    if (request !== undefined || response !== undefined) out.push({ name: m[1], requestSchema: request, responseSchema: response });
+  }
+  return out;
+}
 const CLASS_VALIDATOR = /class\s+(\w+)\s*\{([\s\S]*?)\n\}/g;
 
 function scanNode(file: string, content: string): BeFileScan {
-  const out: BeFileScan = { schemas: [], routes: [], unresolved: [] };
+  const out: BeFileScan = { schemas: [], routes: [], unresolved: [], handlers: handlerDefs(content), aliases: [] };
+  for (const m of content.matchAll(ZOD_INFER)) out.aliases?.push({ type: m[1], schema: m[2] });
 
-  for (const m of content.matchAll(ZOD_OBJECT)) {
-    const fields: SchemaField[] = [];
-    for (const f of m[2].matchAll(/(\w+)\s*:\s*z\s*\.\s*(\w+)\s*\(([\s\S]{0,80}?)\)([^,\n]*)/g)) {
-      fields.push({ path: f[1], type: zodType(f[2]), optional: /optional|nullish|default/.test(f[4]) });
-    }
-    if (fields.length > 0) out.schemas.push({ name: m[1], fields, source: { file, line: lineOf(content, m.index) } });
-  }
+  out.schemas.push(...zodSchemas(file, content));
 
   for (const m of content.matchAll(CLASS_VALIDATOR)) {
     const fields: SchemaField[] = [];
@@ -494,10 +650,15 @@ function scanNode(file: string, content: string): BeFileScan {
     const spec = specs.get(m[2]);
     if (spec === undefined) continue;
     const line = content.slice(m.index, m.index + 300);
+    // cm:why The handler SYMBOL is the only link from the mount to the module that validates the
+    // request — `...patchPolicyRoute` names a file two directories away, and the schema index is
+    // keyed by name, so the symbol is enough and no import has to be resolved.
+    const handler = /\)\s*,\s*(?:\.\.\.)?([a-z_$][\w$]*)/.exec(line)?.[1];
     // cm:guard The verb at the mount wins over the verb in the const: `.post(declared(X))` where X
     // says GET is a real mismatch, and reporting the const would hide the route that is served.
     out.routes.push(route(m[1].toUpperCase(), spec.path, file, lineOf(content, m.index), {
       auth: spec.gate ?? (AUTH_HINT.test(line) || undefined),
+      handler,
     }));
   }
 

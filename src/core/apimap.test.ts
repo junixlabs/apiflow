@@ -284,3 +284,39 @@ describe('a layout route hands its calls down to its children', () => {
     expect(deps[0].inheritedFrom).toBe('/app');
   });
 });
+
+// cm:why Two readers see the same endpoint and know different things: a route manifest knows the path
+// and the declared gate, the mount site knows the handler — and the handler is what carries the
+// schemas. Keeping whichever ran first left 72 of 106 endpoints with no handler and no fields.
+describe('one endpoint seen by two readers keeps both halves', () => {
+  const build = (order: 'manifest-first' | 'mount-first') => {
+    const map = createApiMap('merge', 'github.com/acme/api', 'test/1');
+    const id = endpointId('PATCH', '/policy');
+    const manifest = { id, method: 'PATCH' as const, path: '/policy', source: { file: 'src/surface.ts', line: 9 }, auth: true };
+    const mount = { id, method: 'PATCH' as const, path: '/policy', source: { file: 'src/index.ts', line: 512 }, handler: 'patchPolicyRoute' };
+    map.endpoints.push(...(order === 'manifest-first' ? [manifest, mount] : [mount, manifest]));
+    return finalizeApiMap(map).endpoints[0];
+  };
+
+  it('fills the handler from whichever reader had it, either way round', () => {
+    expect(build('manifest-first').handler).toBe('patchPolicyRoute');
+    expect(build('mount-first').handler).toBe('patchPolicyRoute');
+  });
+
+  // cm:why The mount is where the route is served, so its line is the one to open — and a reader that
+  // recovered the handler is by construction looking at the mount.
+  it('gives the source line to the mount site', () => {
+    expect(build('manifest-first').source?.file).toBe('src/index.ts');
+    expect(build('mount-first').source?.file).toBe('src/index.ts');
+  });
+
+  // cm:guard Disagreement resolves to GATED. This number feeds the "no auth gate found" alarm, and
+  // inventing an open endpoint is the one error on it that gets acted on.
+  it('resolves a disagreement about the gate towards guarded', () => {
+    const map = createApiMap('gate', 'github.com/acme/api', 'test/1');
+    const id = endpointId('GET', '/x');
+    map.endpoints.push({ id, method: 'GET', path: '/x', source: { file: 'a.ts', line: 1 }, auth: false });
+    map.endpoints.push({ id, method: 'GET', path: '/x', source: { file: 'b.ts', line: 1 }, auth: true });
+    expect(finalizeApiMap(map).endpoints[0].auth).toBe(true);
+  });
+});

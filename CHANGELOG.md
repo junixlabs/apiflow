@@ -4,6 +4,74 @@ All notable changes to API View are documented here.
 
 ---
 
+## [1.1.7] — 2026-08-21
+
+The artefact and the readers, finished. **BE fields: 0 → 166** on a real API, and three ways the file
+was being written with less than the readers actually knew.
+
+### Fixed — the schema reader was eating its neighbour
+
+- **A one-line `z.object({ … })` swallowed the schema after it.** The reader ended a schema on
+  `\n})`, so a schema written on one line had nothing to stop at and the match ran on to the next
+  multi-line close — absorbing the next schema, which then vanished from the index entirely. Twenty-two
+  schema names that a route correctly asked for resolved to nothing for this reason. Extraction is now
+  brace-balanced and quote-aware. **127 → 159 schemas.**
+- **Optionality leaked across the comma.** The modifiers were read from a fixed 160-character window,
+  which ran past the field's own comma into the next field: `name: z.string(), age: z.number()
+  .optional()` reported `name` as optional. That is the wrong direction to be wrong in — it tells a
+  caller a field may be absent when the API always sends it. A field now ends at its own top-level
+  comma.
+- **Only the top-level keys of a schema are its fields.** A nested `z.object({ … })` describes a child
+  shape, and lifting its keys into the parent invented fields the endpoint does not have at top level.
+- **A discriminated union reads as one shape with branches**: a key present in every member is
+  required, a key in one member is optional. Reporting a single branch would promise fields that may
+  never arrive; reporting nothing would hide the endpoint.
+
+### Fixed — a handler two modules from its mount can now name its schema
+
+The schema index was always keyed by NAME, so nothing had to follow an import — the missing piece was
+the name itself.
+
+- The mount records the **handler symbol** (`.patch(declared(PATCH_POLICY), ...patchPolicyRoute)`).
+- A handler index yields, per exported handler, the schema its validator was given
+  (`zValidator('json', policyPatchSchema)`, or `X.parse(`) and the response type it annotates
+  (`satisfies T`, `c.json<T>`, or a same-file helper it calls whose return type is declared).
+- A `z.infer` alias table resolves the TYPE a route names (`PolicyResponse`) to the schema the fields
+  live on (`policyResponseSchema`).
+
+Result: request shapes on **42 of the 43 routes that validate one**, response shapes on **23 of the 23
+that name one** — both at the ceiling of what the code declares.
+
+### Fixed — the file now keeps the union of what the readers found
+
+- **One endpoint seen by two readers kept only the first half.** A route manifest knows the path and
+  the declared gate; the mount site knows the handler — and the handler is what carries the schemas.
+  Keeping whichever reader ran first left **72 of 106 endpoints with no handler and no fields at all**.
+  Duplicates now merge: the handler comes from whichever reader had it, the source line goes to the
+  mount site (where the route is actually served), and a disagreement about `auth` resolves to
+  **guarded** — inventing an open endpoint is the one error on that number that gets acted on.
+
+### Fixed — check could not tell a reader upgrade from a code change
+
+- **The generator string is a reader version now** (`apiflow scan-fe/2`, `apiflow scan-be/2`), bumped
+  in the same commit as any change to what a reader produces for unchanged input. `apiflow check`
+  prints it: *"this map was written by an older reader, so part of any difference below is apiflow
+  reading the same code better, not the code changing."* Every map written before this release will say
+  so once — that is the message working, not drift.
+- **A BE map always reported "No meaningful change" — printed directly under "the map has drifted from
+  the code".** The headline reasoned only about calls, and a BE map has none. Its coverage is endpoints
+  and its certainty is endpoints carrying a declared shape, so it now says which of those moved.
+- **`check` names where it drifted when no endpoint moved**, instead of leaving a verdict that reads as
+  a bug in check.
+
+### Measured
+
+getcontent BE: 106 endpoints · 159 schemas · **166 fields** · 100 behind auth · 6 public.
+adminhub BE: unchanged at 1018 · 354 · 881 — no regression. Re-scanning either twice is still
+byte-identical.
+
+---
+
 ## [1.1.6] — 2026-08-21
 
 The BE half was the weak one. On a real Hono API it understood **2 of 106 routes**; the reconciliation

@@ -8,10 +8,18 @@ import type { MapDiff } from '../workspace/diff';
 import { diffMaps } from '../workspace/diff';
 import { localRootFor } from '../workspace/registry';
 import { scanOrigin } from '../workspace/scanOrigin';
-import { scanBackend } from './scanBe';
-import { scanDirectory } from './scanFe';
+import { GENERATOR as BE_GENERATOR, scanBackend } from './scanBe';
+import { GENERATOR as FE_GENERATOR, scanDirectory } from './scanFe';
 import { tolerateClosedPipe } from './stdio';
 
+
+// cm:why Drift and a reader upgrade look identical in a diff and mean opposite things: one is
+// "someone changed the code", the other is "apiflow got better at reading it". Saying which one it is
+// is the difference between a gate people trust and a gate people mute.
+export function readerChanged(stored: ApiMapFile, side: Side): string | null {
+  const current = side === 'fe' ? FE_GENERATOR : BE_GENERATOR;
+  return stored.metadata.generator === current ? null : `${stored.metadata.generator} → ${current}`;
+}
 
 export function rescan(side: Side, root: string, name: string): ApiMapFile {
   return side === 'fe' ? scanDirectory(root, name) : scanBackend(root, name).map;
@@ -40,16 +48,30 @@ export function checkAgainst(stored: ApiMapFile, fresh: ApiMapFile): CheckResult
   return { drifted: !identical, identical, diff, structural };
 }
 
-export function renderCheck(result: CheckResult, mapPath: string): string {
+export function renderCheck(result: CheckResult, mapPath: string, reader?: string | null): string {
   const { diff } = result;
   const lines: string[] = ['## apiflow check', ''];
   lines.push(`**Map**: ${mapPath}`);
+  // cm:why Printed BEFORE the verdict, because it changes how the verdict should be read: a diff that
+  // follows a reader upgrade is not evidence that anyone touched the code.
+  if (reader !== undefined && reader !== null) {
+    lines.push(`**Reader**: ${reader} — this map was written by an older reader, so part of any`);
+    lines.push('difference below is apiflow reading the same code better, not the code changing.');
+  }
   if (result.identical) {
     lines.push('');
     lines.push('The map still matches the code. Nothing to do.');
     return lines.join('\n');
   }
+  // cm:why Names WHERE it drifted when no endpoint moved. "Drifted" with an empty endpoint diff under
+  // it reads as a bug in check; the difference is real and lives in the fields, the unresolved list or
+  // the metadata, and saying so is what makes the exit code actionable.
+  const surfaceMoved = diff.endpoints.added.length + diff.endpoints.removed.length + diff.endpoints.changed.length > 0;
   lines.push(`**Verdict**: the map has drifted from the code — ${diff.headline}`);
+  if (!surfaceMoved) {
+    lines.push('No endpoint was added, removed or changed: the difference is in the fields, the');
+    lines.push('unresolved list or the metadata.');
+  }
   lines.push('');
   const show = (label: string, items: Array<{ method: string; path: string }>): void => {
     if (items.length === 0) return;
@@ -119,9 +141,9 @@ function main(): void {
     return;
   }
   if (args.includes('--json')) {
-    process.stdout.write(`${JSON.stringify({ map: mapPath, root: stored.metadata.root, ...result }, null, 2)}\n`);
+    process.stdout.write(`${JSON.stringify({ map: mapPath, root: stored.metadata.root, reader: readerChanged(stored, side), ...result }, null, 2)}\n`);
   } else {
-    console.log(renderCheck(result, mapPath));
+    console.log(renderCheck(result, mapPath, readerChanged(stored, side)));
   }
   process.exit(result.drifted ? 1 : 0);
 }

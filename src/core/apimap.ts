@@ -211,9 +211,39 @@ export function createApiMap(name: string, root: string, generator: string): Api
   };
 }
 
+// cm:why Two readers legitimately see the same endpoint and know different things about it: a route
+// manifest knows the path and the declared gate, the mount site knows the handler — and the handler is
+// what carries the request/response schema. Keeping whichever ran first threw the other half away, so
+// 72 of 106 endpoints came out with a handler of `-` and no fields at all.
+// cm:guard `auth` resolves true > false > undefined. If two readers disagree, the artefact claims the
+// endpoint IS gated: this number is the "no auth gate found" alarm, and inventing an open endpoint is
+// the one error on it that gets acted on.
+function mergeEndpoint(into: EndpointNode, from: EndpointNode): EndpointNode {
+  const gated = into.auth === true || from.auth === true ? true : into.auth ?? from.auth;
+  return {
+    ...into,
+    handler: into.handler ?? from.handler,
+    auth: gated,
+    baseUrlVar: into.baseUrlVar ?? from.baseUrlVar,
+    probed: into.probed || from.probed,
+    // cm:why The mount site wins the source line: it is where the route is served, and a reader that
+    // recovered the handler is by construction looking at the mount rather than at the declaration.
+    source: into.handler !== undefined ? into.source : from.handler !== undefined ? from.source : into.source,
+  };
+}
+
 function byId<T extends { id: string }>(items: T[]): T[] {
   const seen = new Map<string, T>();
   for (const item of items) if (!seen.has(item.id)) seen.set(item.id, item);
+  return [...seen.values()].sort((a, b) => a.id.localeCompare(b.id));
+}
+
+function mergedById<T extends { id: string }>(items: T[], merge: (a: T, b: T) => T): T[] {
+  const seen = new Map<string, T>();
+  for (const item of items) {
+    const prior = seen.get(item.id);
+    seen.set(item.id, prior === undefined ? item : merge(prior, item));
+  }
   return [...seen.values()].sort((a, b) => a.id.localeCompare(b.id));
 }
 
@@ -233,7 +263,7 @@ export function finalizeApiMap(map: ApiMapFile): ApiMapFile {
   return {
     ...map,
     screens: byId(map.screens),
-    endpoints: byId(map.endpoints),
+    endpoints: mergedById(map.endpoints, mergeEndpoint),
     fields: byId(map.fields),
     calls: dedupeEdges(map.calls),
     reads: dedupeEdges(map.reads),

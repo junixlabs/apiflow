@@ -642,3 +642,79 @@ describe('routes declared as object literals', () => {
     expect(isBackendFile('src/surface.ts')).toBe(true);
   });
 });
+
+// cm:why The linking was never the hard part — `schemas` is already global by NAME. What was missing
+// was a handler two modules from its mount yielding the name, and a schema reader that did not eat
+// its neighbour. Measured on a real Hono API: 0 fields to 166.
+describe('attaching a schema to a route that lives in another module', () => {
+  it('does not let a one-line z.object swallow the schema after it', () => {
+    const src = [
+      "export const requestSchema = z",
+      "  .object({ role: z.enum(['a', 'b']) })",
+      "  .strict()",
+      "",
+      "export const responseSchema = z.object({",
+      "  id: z.string(),",
+      "  role: z.string(),",
+      "})",
+    ].join('\n');
+    const scan = scanBackendFile('src/contracts/x.ts', src, 'node');
+    expect(scan.schemas.map((s) => s.name)).toEqual(['requestSchema', 'responseSchema']);
+    expect(scan.schemas[0].fields.map((f) => f.path)).toEqual(['role']);
+    expect(scan.schemas[1].fields.map((f) => f.path)).toEqual(['id', 'role']);
+  });
+
+  // cm:guard Optionality must not leak across the comma. Reporting a required field as optional tells
+  // a caller it may be absent when the API always sends it — the wrong direction to be wrong in.
+  it('ends a field at its own comma, not a fixed window', () => {
+    const src = "const S = z.object({ name: z.string(), age: z.number().optional() })";
+    const fields = scanBackendFile('src/s.ts', src, 'node').schemas[0].fields;
+    expect(fields).toEqual([
+      { path: 'name', type: 'string', optional: false },
+      { path: 'age', type: 'number', optional: true },
+    ]);
+  });
+
+  it('reads only the top-level keys of a schema', () => {
+    const src = "const S = z.object({ id: z.string(), nested: z.object({ hidden: z.string() }) })";
+    expect(scanBackendFile('src/s.ts', src, 'node').schemas[0].fields.map((f) => f.path)).toEqual(['id', 'nested']);
+  });
+
+  // cm:why A discriminated union is one response shape with branches: a key present in every member
+  // is required, a key in only one is optional. Reporting one branch would promise fields that may
+  // never arrive; reporting nothing would hide the endpoint.
+  it('merges the members of a discriminated union and marks the partial keys optional', () => {
+    const src = [
+      "const S = z.discriminatedUnion('outcome', [",
+      "  z.object({ outcome: z.literal('created'), assetId: z.string() }),",
+      "  z.object({ outcome: z.literal('duplicates'), matches: z.array(m) }),",
+      "])",
+    ].join('\n');
+    const fields = scanBackendFile('src/s.ts', src, 'node').schemas[0].fields;
+    expect(fields.find((f) => f.path === 'outcome')?.optional).toBe(false);
+    expect(fields.find((f) => f.path === 'assetId')?.optional).toBe(true);
+    expect(fields.find((f) => f.path === 'matches')?.optional).toBe(true);
+  });
+
+  it('names the validator schema and the annotated response of a handler', () => {
+    const src = [
+      "export const patchPolicyRoute = factory.createHandlers(zValidator('json', policyPatchSchema), async (c) => {",
+      "  return c.json(buildPolicyResponse(row))",
+      "})",
+      "function buildPolicyResponse(row: Row): PolicyResponse {",
+      "  return row",
+      "}",
+    ].join('\n');
+    const handlers = scanBackendFile('src/routes/policy.ts', src, 'node').handlers ?? [];
+    expect(handlers).toEqual([
+      { name: 'patchPolicyRoute', requestSchema: 'policyPatchSchema', responseSchema: 'PolicyResponse' },
+    ]);
+  });
+
+  it('resolves a z.infer type alias back to the schema the fields live on', () => {
+    const src = "export type PolicyResponse = z.infer<typeof policyResponseSchema>";
+    expect(scanBackendFile('src/contracts/policy.ts', src, 'node').aliases).toEqual([
+      { type: 'PolicyResponse', schema: 'policyResponseSchema' },
+    ]);
+  });
+});

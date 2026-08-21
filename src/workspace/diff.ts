@@ -33,6 +33,22 @@ export function headlineFor(before: ApiMapFile, after: ApiMapFile): string {
   const a = split(after);
   const bt = before.calls.length;
   const at = after.calls.length;
+
+  // cm:why A BE map has no calls, so every one of them came out as "No meaningful change" — printed
+  // directly under "the map has drifted from the code", which is a contradiction the reader has to
+  // resolve alone. The BE analogue of coverage is endpoints, and of certainty, endpoints that carry a
+  // declared shape.
+  if (bt === 0 && at === 0) {
+    const shaped = (m: ApiMapFile) => new Set(m.fields.map((f) => f.endpointId)).size;
+    const cov = after.endpoints.length - before.endpoints.length;
+    const trust = share(shaped(after), after.endpoints.length) - share(shaped(before), before.endpoints.length);
+    if (cov > 0 && trust > 1) return 'More endpoints and more of them have a declared shape.';
+    if (cov > 0) return 'More endpoints read.';
+    if (cov < 0) return 'Fewer endpoints read.';
+    if (trust > 1) return 'Same endpoints, more of them have a declared shape.';
+    if (trust < -1) return 'Same endpoints, fewer of them have a declared shape.';
+    return 'No meaningful change.';
+  }
   const coverage = at - bt;
   const trust = share(a.exact + a.inferred, at) - share(b.exact + b.inferred, bt);
 

@@ -11,7 +11,10 @@ import { buildMountGraph, joinPrefix, prefixesFor } from '../core/mountGraph';
 import { buildResolver } from './scanFe';
 import { tolerateClosedPipe } from './stdio';
 
-const GENERATOR = 'apiflow scan-be/1';
+// cm:edge contract -> src/cli/check.ts readerChanged() — this string is the READER's version, and
+// check reads it to tell "the code moved" apart from "the reader improved". Bump it in the same commit
+// as any change to what the BE reader produces for unchanged input.
+export const GENERATOR = 'apiflow scan-be/2';
 const MANIFESTS = ['artisan', 'composer.json', 'package.json', 'go.mod', 'pyproject.toml', 'requirements.txt'];
 const SKIP_DIRS = new Set([
   'node_modules', 'vendor', 'dist', 'build', 'coverage', '.git', '__pycache__', '.venv', 'venv',
@@ -94,6 +97,8 @@ export function scanBackend(root: string, name: string): BeScanResult {
   const classes: ClassIndex = indexClasses(files);
 
   const schemas = new Map<string, SchemaDef>();
+  const handlers = new Map<string, { requestSchema?: string; responseSchema?: string }>();
+  const aliases = new Map<string, string>();
   const map = createApiMap(name, scanOrigin(root), GENERATOR);
   const schemaGaps = new Set<string>();
   const routes = [];
@@ -102,6 +107,8 @@ export function scanBackend(root: string, name: string): BeScanResult {
     if (!content) continue;
     const scan = scanBackendFile(file, content, stackAt(file));
     for (const s of scan.schemas) if (!schemas.has(s.name)) schemas.set(s.name, s);
+    for (const h of scan.handlers ?? []) if (!handlers.has(h.name)) handlers.set(h.name, h);
+    for (const a of scan.aliases ?? []) if (!aliases.has(a.type)) aliases.set(a.type, a.schema);
     routes.push(...scan.routes);
     map.unresolved.push(...scan.unresolved);
   }
@@ -115,10 +122,21 @@ export function scanBackend(root: string, name: string): BeScanResult {
     return '';
   };
 
+  // cm:why Resolves a NAME through the alias table before the schema table: a route names the TYPE
+  // (`PolicyResponse`) while the fields live on the schema it was inferred from (`policyResponseSchema`).
+  const lookup = (name: string | undefined): SchemaDef | undefined => {
+    if (name === undefined) return undefined;
+    return schemas.get(name) ?? schemas.get(aliases.get(name) ?? '');
+  };
+
   for (const raw of routes) {
     const hit = resolveHandlerSchemas(raw, classes);
-    const request = hit.requestSchema ? schemas.get(hit.requestSchema) : undefined;
-    const response = hit.responseSchema ? schemas.get(hit.responseSchema) : undefined;
+    // cm:edge lockstep -> src/core/beScanner.ts handlerDefs() — the mount records the handler symbol
+    // and this is where that symbol is turned into the two schema names. A mount that stops recording
+    // the symbol makes every node route schema-less again, silently.
+    const viaHandler = hit.handler === undefined ? undefined : handlers.get(hit.handler);
+    const request = lookup(hit.requestSchema ?? viaHandler?.requestSchema);
+    const response = lookup(hit.responseSchema ?? viaHandler?.responseSchema);
     if (request) routesWithRequest++;
     if (response) routesWithResponse++;
 
