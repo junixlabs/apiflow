@@ -4,6 +4,50 @@ All notable changes to API View are documented here.
 
 ---
 
+## [1.1.4] — 2026-08-21
+
+Both fixes come from Pass B of the map audit — walking whole user flows instead of sampling the rows
+the map already prints. A missing edge is invisible to a sample of the edges that exist, which is why
+a 28/28 Pass A sat next to a 2/5 Pass B.
+
+### Fixed — a layout route's calls now reach the screens rendered inside it
+
+- **An endpoint called by a layout reported one screen when it gated the whole app.** `GET /auth/me`
+  runs in the `beforeLoad` of `/_authenticated` and decides whether any authenticated screen renders
+  at all; `impact` named **1** screen. It now names **24**, each marked
+  `inherited from layout /_authenticated` so the reader knows the call site is in the layout, not in
+  the screen. Same for a layout that fetches on behalf of its children: `GET /projects/{id}/policy`
+  went from 1 screen to 7 — the `/setup` layout plus the six sections that read the result out of
+  context.
+- Under-reporting is the failure mode that makes an impact answer unsafe to paste into a PR, so this
+  is the more important half of the release.
+- Derived from the route tree and the file name at query time, so a map already on disk answers
+  correctly without a re-scan. An **index** route is never a parent: it shares its directory's route
+  string with the layout but wraps nothing, and treating it as one would make `/orders` the ancestor
+  of its own sibling `/orders/{id}`.
+
+### Fixed — an import clause is not a use of the thing it binds
+
+- **`POST /auth/refresh` was claimed on 26 of 27 screens, including one that never calls through the
+  wrapper.** `/sign-in` takes exactly one thing from `lib/api-fetch`: the `ApiError` class. Its
+  `login` deliberately bypasses the 401-retry path, and the code says so. The chain got there because
+  a name listed inside a **multi-line** import clause counted as a usage — the guard against that was
+  a 24-character lookbehind, and `import {\n  NetworkError,\n  apiFetch,` puts 26 characters between
+  the keyword and the name. The usage then landed on a line with no enclosing declaration, which
+  widened the chain to "any export of this file" and reached every importer.
+- Import, re-export and export clauses are now masked in place, on the same contract as the comment
+  mask: equal length, newlines kept, so every line number still resolves.
+- Measured on the same frontend: `/sign-in` went from 2 endpoints to **1**, calls 128 → 124, and
+  `guess` fell from 64% to **46%** as chains that no longer widen keep their precision.
+
+### Still open
+
+`/paygate-account/{list,card,bank-account}` continue to report an identical set of 39 endpoints, 15
+of which are provably the siblings'. That one is a component registry keyed by a prop, so it needs
+prop-value tracking rather than a fix — and every one of those rows is labelled `guess`.
+
+---
+
 ## [1.1.3] — 2026-08-21
 
 ### Fixed — the screen count counts screens

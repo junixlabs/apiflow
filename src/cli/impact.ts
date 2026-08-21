@@ -63,14 +63,18 @@ export function renderImpact(answer: ImpactAnswer, label: string): string {
   lines.push('');
   const order = { exact: 0, inferred: 1, guess: 2 };
   for (const s of [...answer.screens].sort((a, b) => order[a.confidence] - order[b.confidence])) {
-    const via = s.screen.viaHops ? ` · via ${s.screen.viaHops} hop(s) → ${s.screen.source.file}:${s.screen.source.line}` : '';
+    const hops = s.hops ?? s.screen.viaHops;
+    const via = hops ? ` · via ${hops} hop(s) → ${s.screen.source.file}:${s.screen.source.line}` : '';
     // cm:why A screen with no route never reached a route table — printing it like the others reads
     // as "this URL breaks", when all that is known is the module the call sits in.
     const label = s.screen.route ?? `${s.screen.label} (never reached a route)`;
     // cm:why Prints the extra call sites as a count, not as extra screen rows: the headline counts
     // screens, and a screen listed twice reads as twice the blast radius.
     const sites = s.callSites > 1 ? ` · ${s.callSites} call sites` : '';
-    lines.push(`- **${label}** [${s.confidence}] — ${s.source.file}:${s.source.line}${sites}${via}`);
+    // cm:why Says WHERE an inherited call lives. The screen really does break, but the call site is
+    // in the layout above it — printing it like an own call sends the reader to the wrong file.
+    const from = s.inheritedFrom === undefined ? '' : ` · inherited from layout ${s.inheritedFrom}`;
+    lines.push(`- **${label}** [${s.confidence}] — ${s.source.file}:${s.source.line}${sites}${from}${via}`);
     // cm:why Prints the chain, not the hop COUNT: "3 hop" cannot be checked by hand, while every
     // step with its file:line can — and that is the difference between a claim and evidence.
     if (s.chain !== undefined && s.chain.length > 1) {
@@ -102,7 +106,8 @@ export function renderScreenDeps(map: ApiMapFile, route: string): string {
   const order = { exact: 0, inferred: 1, guess: 2 };
   for (const d of [...seen.values()].sort((a, b) => order[a.confidence] - order[b.confidence])) {
     const hop = d.viaHops ? ` · ${d.viaHops} hop` : '';
-    lines.push(`- \`${d.endpoint.method} ${d.endpoint.path}\` [${d.confidence}] — ${d.source.file}:${d.source.line}${hop}`);
+    const inherited = d.inheritedFrom === undefined ? '' : ` · from layout ${d.inheritedFrom}`;
+    lines.push(`- \`${d.endpoint.method} ${d.endpoint.path}\` [${d.confidence}] — ${d.source.file}:${d.source.line}${hop}${inherited}`);
   }
   return lines.join('\n');
 }
@@ -144,8 +149,9 @@ export function impactJson(map: ApiMapFile, kind: 'endpoint' | 'field', value: s
         label: s.screen.label,
         confidence: s.confidence,
         at: at(s.source),
-        hops: s.screen.viaHops ?? 0,
+        hops: s.hops ?? s.screen.viaHops ?? 0,
         callSites: s.callSites,
+        inheritedFrom: s.inheritedFrom ?? null,
         chain: (s.chain ?? []).map((c) => ({ role: c.role, symbol: c.symbol, at: at(c), precise: c.precise })),
       })),
   }));

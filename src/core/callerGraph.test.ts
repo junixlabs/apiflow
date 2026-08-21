@@ -300,3 +300,41 @@ export default function Page() { return <SetupPipeline />; }`,
     expect(routes).toEqual(['/brand-voice']);
   });
 });
+
+// cm:why The clause binds the name, it does not use it. A 24-character lookbehind could not see past
+// a multi-line `import {`, so the binding counted as a use and widened the chain to ANY.
+describe('an import clause is not a usage', () => {
+  it('ignores a name bound inside a multi-line import clause', () => {
+    const parsed = parseModule([
+      "import {",
+      "  NetworkError,",
+      "  apiFetch,",
+      "  toApiError,",
+      "} from './api-fetch'",
+      "",
+      "export function login() { return fetch('/auth/login') }",
+      "",
+      "export function me() { return apiFetch('/auth/me') }",
+    ].join('\n'));
+    expect(parsed.imports.map((i) => i.imported).sort()).toEqual(['NetworkError', 'apiFetch', 'toApiError']);
+    expect(parsed.usages.filter((u) => u.symbol === 'apiFetch').map((u) => u.line)).toEqual([9]);
+  });
+
+  it('ignores a name listed in an export clause', () => {
+    const parsed = parseModule([
+      "import { helper } from './helper'",
+      "function wrap() { return helper() }",
+      "export { wrap, helper }",
+    ].join('\n'));
+    expect(parsed.usages.filter((u) => u.symbol === 'helper').map((u) => u.line)).toEqual([2]);
+  });
+
+  it('ignores a re-export clause naming a symbol it does not call', () => {
+    const parsed = parseModule([
+      "import { apiFetch } from './api-fetch'",
+      "export { apiFetch } from './api-fetch'",
+      "export function me() { return apiFetch('/auth/me') }",
+    ].join('\n'));
+    expect(parsed.usages.filter((u) => u.symbol === 'apiFetch').map((u) => u.line)).toEqual([3]);
+  });
+});

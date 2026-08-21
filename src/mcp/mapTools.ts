@@ -68,7 +68,7 @@ function renderImpact(target: Target, label: string, answers: ImpactAnswer[], ve
     const sorted = [...a.screens].sort((x, y) => ORDER[x.confidence] - ORDER[y.confidence]);
     for (const s of sorted.slice(0, SCREEN_CAP)) {
       const route = s.screen.route ?? `${s.screen.label} (no route attached)`;
-      lines.push(`- ${route} [${s.confidence}] ${at(s.source)}${s.callSites > 1 ? ` · ${s.callSites} call sites` : ''}`);
+      lines.push(`- ${route} [${s.confidence}] ${at(s.source)}${s.callSites > 1 ? ` · ${s.callSites} call sites` : ''}${s.inheritedFrom === undefined ? '' : ` · inherited from layout ${s.inheritedFrom}`}`);
       if (verbose && s.chain !== undefined && s.chain.length > 1) {
         for (const step of s.chain) lines.push(`    ${step.role} ${step.symbol}${step.precise ? '' : ' ~'} ${at(step)}`);
       }

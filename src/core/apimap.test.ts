@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ApiMapFile } from './apimap';
-import { createApiMap, endpointId, fieldId, finalizeApiMap, normalizePath, parseMap, screenId, screensAffectedByEndpoint, screensAffectedByField, serializeMap, unreadResponseFields } from './apimap';
+import { createApiMap, endpointId, endpointsForScreen, fieldId, finalizeApiMap, normalizePath, parseMap, screenId, screensAffectedByEndpoint, screensAffectedByField, serializeMap, unreadResponseFields } from './apimap';
 
 describe('normalizePath', () => {
   it('strips origin, query and hash', () => {
@@ -245,5 +245,42 @@ describe('a screen that calls an endpoint twice is one screen', () => {
       .find((s) => s.screen.route === '/setup/pipeline');
     expect(pipeline?.confidence).toBe('inferred');
     expect(pipeline?.source.line).toBe(40);
+  });
+});
+
+// cm:why A layout's call belongs to every screen rendered inside it: GET /auth/me runs in the
+// beforeLoad of /_authenticated and gates 24 screens, and the answer used to name one.
+describe('a layout route hands its calls down to its children', () => {
+  const build = () => {
+    const map = createApiMap('layout', 'github.com/acme/app', 'test/1');
+    map.endpoints.push({ id: 'ep_me', method: 'GET', path: '/auth/me' });
+    map.endpoints.push({ id: 'ep_own', method: 'GET', path: '/queue' });
+    map.screens.push({ id: 'sc_shell', label: '/app', route: '/app', source: { file: 'src/routes/app/route.tsx', line: 3 } });
+    map.screens.push({ id: 'sc_kid', label: '/app/queue', route: '/app/queue', source: { file: 'src/routes/app/queue.tsx', line: 5 } });
+    map.screens.push({ id: 'sc_index', label: '/orders', route: '/orders', source: { file: 'src/routes/orders/index.tsx', line: 4 } });
+    map.screens.push({ id: 'sc_detail', label: '/orders/{param}', route: '/orders/{param}', source: { file: 'src/routes/orders/[id].tsx', line: 4 } });
+    map.calls.push({ endpointId: 'ep_me', screenId: 'sc_shell', confidence: 'inferred', via: 'direct', source: { file: 'src/lib/auth.ts', line: 9 } });
+    map.calls.push({ endpointId: 'ep_own', screenId: 'sc_index', confidence: 'exact', via: 'direct', source: { file: 'src/lib/orders.ts', line: 2 } });
+    return finalizeApiMap(map);
+  };
+
+  it('names the child and says which layout the call came from', () => {
+    const answer = screensAffectedByEndpoint(build(), 'ep_me');
+    expect(answer.screens.map((s) => s.screen.route).sort()).toEqual(['/app', '/app/queue']);
+    expect(answer.screens.find((s) => s.screen.route === '/app/queue')?.inheritedFrom).toBe('/app');
+    expect(answer.screens.find((s) => s.screen.route === '/app')?.inheritedFrom).toBeUndefined();
+  });
+
+  // cm:guard An index route shares its directory's route string with the layout but wraps nothing —
+  // treating it as a parent would make /orders the ancestor of its own sibling /orders/{param}.
+  it('does not treat an index route as the parent of its siblings', () => {
+    const answer = screensAffectedByEndpoint(build(), 'ep_own');
+    expect(answer.screens.map((s) => s.screen.route)).toEqual(['/orders']);
+  });
+
+  it('lets the child list the inherited endpoint in its own dependencies', () => {
+    const deps = endpointsForScreen(build(), 'sc_kid');
+    expect(deps.map((d) => `${d.endpoint.method} ${d.endpoint.path}`)).toEqual(['GET /auth/me']);
+    expect(deps[0].inheritedFrom).toBe('/app');
   });
 });

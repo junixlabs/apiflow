@@ -39,12 +39,14 @@ The `--json` answer is the contract you audit:
 
 ```
 matches[].endpoint          { method, path }
-matches[].screens[]         { route, label, confidence, at, hops, callSites, chain[] }
+matches[].screens[]         { route, label, confidence, at, hops, callSites, inheritedFrom, chain[] }
 matches[].screens[].chain[] { role, symbol, at, precise }
 ```
 
 One entry per screen, not per call: `callSites` says how many places in that screen reach the
-endpoint, so the screen count is never inflated by a screen that calls it twice.
+endpoint, so the screen count is never inflated by a screen that calls it twice. `inheritedFrom` names
+the layout route when the call site is in a parent layout rather than in the screen itself — the
+screen still breaks, but the file to open is the layout's.
 
 Each `screens[]` entry with `confidence: "guess"` is one claim: *this screen breaks if this endpoint
 changes, and here is the call site*.
@@ -106,7 +108,10 @@ For each story:
      is the expensive kind: an impact answer for that endpoint would have under-reported.
    - **extra** — the map attaches something the flow does not touch. Over-reporting; cheaper, but it
      is what makes people stop trusting the answer.
-4. A story whose endpoints are all in `unresolved` is not a failure of Pass B — it is a scan gap.
+4. Check the **layout** the screen renders inside, not only the screen's own files. A parent route
+   that fetches on behalf of its children is the cheapest place for a `missing` to hide, and it is the
+   expensive kind: measured once, `GET /auth/me` gated 24 screens and the map named one.
+5. A story whose endpoints are all in `unresolved` is not a failure of Pass B — it is a scan gap.
    Send it to `fe-map-extractor` and say so.
 
 ## Report

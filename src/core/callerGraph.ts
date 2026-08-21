@@ -85,6 +85,18 @@ export function maskComments(src: string): string {
 
 // cm:why Type-only imports are dropped here: a screen that imports only a type from an api module
 // does not call it, and counting those turns every shared type into a fake dependency edge.
+// cm:guard Same in-place contract as maskComments: replaces each match with spaces of equal length
+// and keeps every newline, so `lineOf` still resolves to the line the text was on.
+function maskSpans(src: string, patterns: RegExp[]): string {
+  const out = src.split('');
+  for (const pattern of patterns) {
+    for (const m of src.matchAll(pattern)) {
+      for (let i = m.index; i < m.index + m[0].length; i++) if (out[i] !== '\n') out[i] = ' ';
+    }
+  }
+  return out.join('');
+}
+
 export function parseModule(content: string): ParsedModule {
   const imports: ImportBinding[] = [];
   const exports = new Set<string>();
@@ -150,15 +162,22 @@ export function parseModule(content: string): ParsedModule {
     ?? /export\s+default\s+([A-Za-z_$][\w$]*)\s*;?[ \t]*(?:\/\/[^\n]*)?$/m.exec(code))?.[1];
   if (defaultExport !== undefined) exports.add(defaultExport);
 
+  // cm:guard Masks the import/export CLAUSES in place — same length, newlines kept — for the same
+  // reason maskComments does: every line below is an index into this string.
+  // cm:why The clause names every symbol it binds, so a `\bname\b` scan finds the binding itself and
+  // calls it a use. A fixed-width lookbehind cannot see past a multi-line clause: `import {\n  A,\n
+  // apiFetch,` puts 26 characters between `import` and the name, and 24 was the window. The usage
+  // then landed on a line with no enclosing declaration, which widened the chain to ANY and sent
+  // POST /auth/refresh to 26 of 27 screens — including one that imports only a class from the file.
+  const body = maskSpans(code, [IMPORT, REEXPORT, EXPORT_LIST]);
+
   const usages: Usage[] = [];
   // cm:guard An anonymous `import('./x')` binds the local name `*`, which is not an identifier —
   // interpolating it builds the regex `\b*\b` and throws "Nothing to repeat" mid-scan.
   const locals = new Set(imports.map((i) => i.local).filter((l) => IDENTIFIER.test(l)));
   for (const local of locals) {
     const re = new RegExp(`\\b${local}\\b(?:\\s*\\.\\s*([A-Za-z_$][\\w$]*))?`, 'g');
-    for (const m of code.matchAll(re)) {
-      const before = code.slice(Math.max(0, m.index - 24), m.index);
-      if (/(import|from)\s*[{,\s]*$/.test(before)) continue;
+    for (const m of body.matchAll(re)) {
       usages.push({ symbol: local, member: m[1], line: lineOf(m.index) });
     }
   }
@@ -168,10 +187,10 @@ export function parseModule(content: string): ParsedModule {
   const localUsages: Usage[] = [];
   for (const local of declarations) {
     const re = new RegExp(`\\b${local}\\b(?:\\s*\\.\\s*([A-Za-z_$][\\w$]*))?`, 'g');
-    for (const m of code.matchAll(re)) {
-      const before = code.slice(Math.max(0, m.index - 40), m.index);
-      if (/(import|from|export)\s*[{,\s]*$/.test(before)) continue;
-      if (/(?:const|let|var|function|class)\s+$/.test(before)) continue;
+    for (const m of body.matchAll(re)) {
+      // cm:guard The declaration site is not a use of itself — without this every exported symbol
+      // would carry a self-edge at its own `function x` line.
+      if (/(?:const|let|var|function|class)\s+$/.test(body.slice(Math.max(0, m.index - 40), m.index))) continue;
       localUsages.push({ symbol: local, member: m[1], line: lineOf(m.index) });
     }
   }

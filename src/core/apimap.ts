@@ -245,7 +245,7 @@ export function finalizeApiMap(map: ApiMapFile): ApiMapFile {
 
 export interface ImpactAnswer {
   endpoint: EndpointNode | null;
-  screens: Array<{ screen: ScreenNode; confidence: Confidence; source: SourceRef; chain?: ChainNode[]; callSites: number }>;
+  screens: Array<{ screen: ScreenNode; confidence: Confidence; source: SourceRef; chain?: ChainNode[]; callSites: number; inheritedFrom?: string; hops?: number }>;
 }
 
 // cm:why One number decides whether the reconciliation is worth showing at all. Measured on a real
@@ -274,6 +274,29 @@ export function bePartial(map: ApiMapFile): boolean {
 // second call site visible instead of dropping it.
 // cm:why Keeps the STRONGEST confidence of the group. The screen breaks by its best evidence: one
 // exact call site is proof, and letting a guess sibling downgrade it would understate what is known.
+// cm:why Read off the file name, not a stored flag, so a map written before this still answers
+// correctly without a re-scan. `route`/`layout` WRAP their children; `index`/`page` are leaves that
+// merely share the directory's route string, and treating one as a parent would make an index route
+// the ancestor of its own siblings.
+const LAYOUT_FILE = /(?:^|\/)(?:route|layout|_layout|\+layout)\.(?:tsx?|jsx?|vue|svelte|astro)$/;
+
+const isDescendantRoute = (child: string, parent: string): boolean =>
+  child !== parent && child.startsWith(parent === '/' ? '/' : `${parent}/`);
+
+// cm:guard A layout's call belongs to every screen rendered inside it. Without this, `GET /auth/me`
+// — called in the `beforeLoad` of `/_authenticated` and gating 25 of 27 screens — reported ONE
+// screen, and an impact answer that under-reports is the one kind that is unsafe to act on.
+function layoutDescendants(map: ApiMapFile): Map<string, ScreenNode[]> {
+  const routed = map.screens.filter((s) => s.route !== undefined);
+  const out = new Map<string, ScreenNode[]>();
+  for (const parent of routed) {
+    if (!LAYOUT_FILE.test(parent.source.file)) continue;
+    const kids = routed.filter((c) => c.id !== parent.id && isDescendantRoute(c.route as string, parent.route as string));
+    if (kids.length > 0) out.set(parent.id, kids);
+  }
+  return out;
+}
+
 export function screensAffectedByEndpoint(map: ApiMapFile, id: string): ImpactAnswer {
   const endpoint = map.endpoints.find((e) => e.id === id) ?? null;
   const rank: Record<Confidence, number> = { exact: 0, inferred: 1, guess: 2 };
@@ -292,6 +315,18 @@ export function screensAffectedByEndpoint(map: ApiMapFile, id: string): ImpactAn
       seen.confidence = c.confidence;
       seen.source = c.source;
       seen.chain = c.chain;
+    }
+  }
+  // cm:guard Inherited rows never overwrite a direct one: a screen that calls the endpoint itself
+  // keeps its own call site as the evidence, and its own callSites count.
+  for (const [parentId, kids] of layoutDescendants(map)) {
+    const parent = byScreen.get(parentId);
+    if (parent === undefined) continue;
+    for (const kid of kids) {
+      if (byScreen.has(kid.id)) continue;
+      // cm:guard Carries the LAYOUT's hop count, not the child's: the chain on this row is the
+      // layout's chain, and the child's own `viaHops` describes a different path entirely.
+      byScreen.set(kid.id, { ...parent, screen: kid, inheritedFrom: parent.screen.route, hops: parent.screen.viaHops });
     }
   }
   return { endpoint, screens: [...byScreen.values()] };
@@ -469,6 +504,7 @@ export function orphanEndpoints(map: ApiMapFile): EndpointNode[] {
 }
 
 export interface ScreenDependency {
+  inheritedFrom?: string;
   endpoint: EndpointNode;
   confidence: Confidence;
   source: SourceRef;
@@ -486,6 +522,23 @@ export function endpointsForScreen(map: ApiMapFile, screenId: string): ScreenDep
     const endpoint = byId.get(call.endpointId);
     if (endpoint === undefined) continue;
     out.push({ endpoint, confidence: call.confidence, source: call.source, viaHops: screen?.viaHops });
+  }
+  // cm:edge lockstep -> screensAffectedByEndpoint — the two answers must agree: an endpoint a layout
+  // calls has to appear in its children's dependency list too, or `impact` and `screen_deps` disagree
+  // about the same pair.
+  if (screen?.route !== undefined) {
+    const own = new Set(out.map((d) => d.endpoint.id));
+    for (const [parentId, kids] of layoutDescendants(map)) {
+      if (!kids.some((k) => k.id === screenId)) continue;
+      const parent = map.screens.find((s) => s.id === parentId);
+      for (const call of map.calls) {
+        if (call.screenId !== parentId) continue;
+        const endpoint = byId.get(call.endpointId);
+        if (endpoint === undefined || own.has(endpoint.id)) continue;
+        own.add(endpoint.id);
+        out.push({ endpoint, confidence: call.confidence, source: call.source, viaHops: parent?.viaHops, inheritedFrom: parent?.route });
+      }
+    }
   }
   return out.sort((a, b) =>
     a.endpoint.path.localeCompare(b.endpoint.path) || a.endpoint.method.localeCompare(b.endpoint.method)
