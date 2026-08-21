@@ -4,7 +4,7 @@ All notable changes to API View are documented here.
 
 ---
 
-## [Unreleased]
+## [1.1.1] — 2026-08-21
 
 ### Fixed — a comment naming a symbol is no longer a call
 
