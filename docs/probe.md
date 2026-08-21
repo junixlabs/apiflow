@@ -12,16 +12,31 @@ apiflow probe ~/.apiflow/projects/demo/be.apimap --live=http://127.0.0.1:3000
 apiflow probe ~/.apiflow/projects/demo/be.apimap --ingest=./apiflow-probe.json
 ```
 
-Walks the endpoints in the map, records `{method, path, status, body}` for each, and writes one JSON
-file. Then `--ingest` merges the shapes it saw into the map as `observed` fields, alongside the
+Walks the endpoints in the map, records `{method, path, url, status, body}` for each, and writes one
+JSON file. Then `--ingest` merges the shapes it saw into the map as `observed` fields, alongside the
 `declared` ones.
+
+`path` stays the **template** — it is the key that joins the sample back onto the endpoint, so it keeps
+its `{param}`. `url` is what was actually sent. Both are needed: without `url`, a sample of
+`GET /api/v1/orders/{param}` cannot be reproduced, because nobody can tell which id answered, and a
+200 you cannot reproduce is a claim rather than evidence.
 
 | flag | |
 |---|---|
 | `--fill=<value>` | a value for a `{param}`, positional — two placeholders take two `--fill`s. An endpoint with an unfilled placeholder is skipped and named. |
 | `--header='K: V'` | repeatable; an auth header goes here |
 | `--methods=GET,POST` | default is `GET` alone |
+| `--only=<pattern>` | repeatable; scope the walk. A plain string matches as a substring of `METHOD PATH`, and `*` globs. Refuses with exit 2 when it matches nothing, rather than reporting a clean run over zero endpoints. |
 | `--out=<file>` | default `apiflow-probe.json` beside the map |
+
+`--only` exists because a fill is positional: `--fill=laravel.log` would otherwise reach the one route
+that wants a filename by way of the 189 that want an id. It narrows the walk; it does **not** relax the
+two refusals below — `--only=orders` over a resource with six verbs still sends only the GETs.
+
+```bash
+apiflow probe ~/.apiflow/projects/demo/be.apimap --live=http://127.0.0.1:8000 \
+  --only='/storage/logs/*' --fill=app-2026-08-21.log
+```
 
 **Two refusals, both deliberate.** The map lists every endpoint it found, and that list contains
 `DELETE`:

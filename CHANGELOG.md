@@ -4,6 +4,52 @@ All notable changes to API View are documented here.
 
 ---
 
+## [1.1.11] — 2026-08-21
+
+Two gaps found by using `probe` rather than by reading it, plus a silent break in `--help` introduced
+while fixing them.
+
+### Added — `url` in every sample
+
+`ProbeSample` now carries `url`: the path **actually sent**. `path` stays the template, because it is
+the key that joins the sample back onto the endpoint — it has to keep its `{param}`.
+
+Both are needed. A sample of `GET /api/v1/orders/{param}` could not be reproduced from the file: nobody
+could tell which id answered, and a 200 you cannot reproduce is a claim, not evidence. `--ingest` now
+also prints the sent url on a skipped sample when it differs from the template — "returned 404" is
+unactionable until you know it was id 1 that was missing.
+
+The field is optional, so samples files written by 1.1.10 still ingest to the same numbers.
+
+### Added — `--only=<pattern>`, repeatable
+
+Scopes the walk. A plain string matches as a substring of `METHOD PATH`; `*` globs.
+
+```bash
+apiflow probe be.apimap --live=http://127.0.0.1:8000 --only='/storage/logs/*' --fill=app.log
+# **Scoped by `--only=/storage/logs/*`**: 1 of 1018 endpoints · **Sent**: 1
+```
+
+It exists because a fill is positional: `--fill=laravel.log` reached the one route wanting a filename
+by way of the 189 wanting an id, so probing a single endpoint meant leaving the tool for `curl` — and a
+sample taken by hand is not in the samples file.
+
+- It **narrows** the walk and relaxes nothing: `--only=color-statuses` matched 6 of 1018 endpoints and
+  sent **2**, because the GET/HEAD rule still held.
+- The scope is **printed**. A filter nobody can see reads as a whole-map run that found two endpoints.
+- Matching nothing **exits 2** rather than reporting a clean run over zero endpoints.
+
+### Fixed — a backtick made `apiflow --help` print `NaN`
+
+`HELP` in `bin/cli.js` is a template literal. A `` `*` `` inside a new flag description ended the string
+mid-sentence; node still parsed the file, nothing failed, and the entire help output became `NaN`. The
+test added asserts the **rendered** output, not the source, because that is the only thing that catches
+the next one — verified by putting the backtick back and watching it fail.
+
+403 tests.
+
+---
+
 ## [1.1.10] — 2026-08-21
 
 Probing a real Laravel API produced **572 observed fields** where the static reader had 0 — and 271 of

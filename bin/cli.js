@@ -25,6 +25,9 @@ function tsxRunner(script, rest) {
 }
 
 const args = process.argv.slice(2);
+// cm:guard No backtick and no ${...} anywhere in this string — it is a template literal, and one
+// backtick in a flag description ended it mid-sentence and made `apiflow --help` print `NaN`. The
+// break is silent: node parses the file fine, the rest of the help becomes code.
 const HELP = `apiflow — a screen ↔ endpoint ↔ field map
 
   apiflow                        open the app (proxy + built UI)
@@ -42,6 +45,7 @@ const HELP = `apiflow — a screen ↔ endpoint ↔ field map
   apiflow scan-be <dir> [--name=] [--out=] [--json]
   apiflow probe <map> --emit[=<dir>] | --ingest=<results.json>
   apiflow probe <map> --live=<baseUrl> [--fill=<v>…] [--header='K: V'] [--methods=GET]
+                                 [--only=<pattern>…]  scope the walk; substring, or * to glob
                                  walks the map against a RUNNING api and records what came back.
                                  GET/HEAD only unless --methods and --unsafe say otherwise, and a
                                  non-localhost host needs --yes-remote.

@@ -27,6 +27,20 @@ function stackOf(root: string, override?: string): Stack {
 }
 
 
+// cm:why `--only` exists because a fill is positional: `--fill=laravel.log` reaches the one route that
+// wants a filename by way of the other 189 that do not. Without a scope the only way to probe one
+// endpoint was to leave the tool and use curl, and a sample taken by hand is not in the samples file.
+export function matchesOnly(method: string, path: string, patterns: string[]): boolean {
+  if (patterns.length === 0) return true;
+  const subject = `${method} ${path}`.toLowerCase();
+  return patterns.some((raw) => {
+    const pattern = raw.toLowerCase();
+    if (!pattern.includes('*')) return subject.includes(pattern);
+    const rx = new RegExp(`^${pattern.split('*').map((s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('.*')}$`);
+    return rx.test(subject) || rx.test(path.toLowerCase());
+  });
+}
+
 const SAFE_METHODS = new Set(['GET', 'HEAD']);
 const LOCAL_HOST = /^(localhost|127\.0\.0\.1|\[::1\]|0\.0\.0\.0)$/;
 
@@ -86,7 +100,13 @@ async function runLive(map: ApiMapFile, base: string, args: string[], mapPath: s
     if (at > 0) headers[raw.slice(0, at).trim()] = raw.slice(at + 1).trim();
   }
 
-  const { ready, unfilled } = liveTargets(map.endpoints, fills, asked);
+  const only = args.filter((a) => a.startsWith('--only=')).map((a) => a.slice('--only='.length));
+  const scoped = map.endpoints.filter((e) => matchesOnly(e.method, e.path, only));
+  if (only.length > 0 && scoped.length === 0) {
+    console.error(`--only=${only.join(',')} matched no endpoint in the map. Nothing was sent.`);
+    process.exit(2);
+  }
+  const { ready, unfilled } = liveTargets(scoped, fills, asked);
   const samples: ProbeSample[] = [];
   let failed = 0;
   for (const t of ready) {
@@ -98,7 +118,7 @@ async function runLive(map: ApiMapFile, base: string, args: string[], mapPath: s
       // turn a 500 into silence.
       let body: unknown = text;
       try { body = JSON.parse(text); } catch { /* left as text */ }
-      samples.push({ method: t.method, path: t.path, status: res.status, body });
+      samples.push({ method: t.method, path: t.path, status: res.status, body, url: t.url });
     } catch (err) {
       failed++;
       console.error(`- ${t.method} ${t.url} — ${err instanceof Error ? err.message : String(err)}`);
@@ -110,6 +130,10 @@ async function runLive(map: ApiMapFile, base: string, args: string[], mapPath: s
   console.log('## Probe — live');
   console.log('');
   console.log(`**Base**: ${base} · **methods**: ${[...asked].join(', ')}`);
+  // cm:why A scope that is not printed reads as a whole-map run that found two endpoints.
+  if (only.length > 0) {
+    console.log(`**Scoped by \`--only=${only.join(',')}\`**: ${scoped.length} of ${map.endpoints.length} endpoints`);
+  }
   console.log(`**Sent**: ${ready.length} · **answered**: ${samples.length} · **unreachable**: ${failed}`);
   console.log(`**Skipped for an unfilled \`{param}\`**: ${unfilled.length}${unfilled.length > 0 ? ` — pass --fill=<value>` : ''}`);
   console.log(`**Samples**: ${out}`);
@@ -171,7 +195,10 @@ function main(): void {
       console.log(`### Skipped samples — ${skipped.length}`);
       for (const s of skipped.slice(0, 20)) {
         const why = s.status < 200 || s.status >= 300 ? `status ${s.status} is not a success` : s.body == null ? 'empty body' : 'endpoint not in the map';
-        console.log(`- ${s.method} ${s.path} — ${why}`);
+        // cm:why Prints the url actually sent when it differs from the template — "GET /orders/{param}
+        // returned 404" is unactionable until you know it was id 1 that was missing.
+        const sent = s.url && s.url !== s.path ? ` (sent ${s.url})` : '';
+        console.log(`- ${s.method} ${s.path}${sent} — ${why}`);
       }
     }
     return;
