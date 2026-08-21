@@ -81,6 +81,11 @@ Seven read-only tools — `impact_endpoint` · `impact_field` · `screen_deps` �
 [`skills/apiflow-impact/`](skills/apiflow-impact/), which tells the agent to ask *before* editing a
 route, a handler, an api client or a response field.
 
+Two more skills close the loop: [`fe-map-extractor`](skills/fe-map-extractor/) resolves what the
+scanner could not read, and [`apiflow-map-audit`](skills/apiflow-map-audit/) samples the map's own
+`guess`-level claims and checks them against the code — so "how much can I trust this" gets a
+measured answer instead of a label.
+
 ## Keep the map honest
 
 ```bash
