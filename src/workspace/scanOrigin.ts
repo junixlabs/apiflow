@@ -47,6 +47,21 @@ function remoteUrl(configDir: string): string | null {
   return /^\s*url\s*=\s*(.+)$/m.exec(named[1])?.[1].trim() ?? null;
 }
 
+// cm:why An ssh alias from ~/.ssh/config — `git@github.com-junixlabs:org/repo` — is a name that
+// exists on ONE machine. Left in, the same repo gets one id from a developer's aliased clone and
+// another from CI's https checkout, which breaks the one thing the id is for. Measured: KineTrak
+// resolved to `github.com-junixlabs/junixlabs/kinetrak` while the https remote gave
+// `github.com/junixlabs/kinetrak`.
+// cm:guard Only ever trims inside the LAST host segment, so a real host with dashes earlier
+// (`git.my-company.com`) is left alone. An alias with no dot at all (`gh-work:org/repo`) cannot be
+// told from a hostname and still resolves per-machine — write remotes with the real host.
+function dealias(host: string): string {
+  const dot = host.lastIndexOf('.');
+  if (dot < 0) return host;
+  const dash = host.indexOf('-', dot);
+  return dash < 0 ? host : host.slice(0, dash);
+}
+
 // cm:why Two clones of one repo differ in scheme, in the ssh user, in a `.git` suffix and in case;
 // none of that is a different repo. Collapsing all of it is what makes the id comparable between a
 // developer's ssh clone and a CI job's https checkout.
@@ -59,7 +74,8 @@ export function normalizeRemote(url: string): string {
   s = s.replace(/\/+/g, '/').replace(/^\/|\/$/g, '');
   const parts = s.split('/').filter((p) => p !== '' && p !== '~');
   if (parts.length === 0) return '';
-  const host = parts[0];
+  const host = dealias(parts[0]);
+  parts[0] = host;
   if (!host.includes('.') || parts.length === 1) return basename(parts[parts.length - 1]).toLowerCase();
   return parts.join('/').toLowerCase();
 }

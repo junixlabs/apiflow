@@ -71,3 +71,19 @@ describe('scanOrigin', () => {
     expect(normalizeRemote('/srv/git/canawan-api.git')).toBe('canawan-api');
   });
 });
+
+describe('ssh aliases from ~/.ssh/config', () => {
+  // cm:why Found by installing the tool the way a new person would: the alias made the same repo
+  // produce two different ids depending on who cloned it, which is exactly what the id must prevent.
+  it('strips the alias suffix so an aliased clone matches an https one', () => {
+    expect(normalizeRemote('git@github.com-junixlabs:junixlabs/kinetrak.git')).toBe('github.com/junixlabs/kinetrak');
+    expect(normalizeRemote('git@github.com-junixlabs:junixlabs/kinetrak.git'))
+      .toBe(normalizeRemote('https://github.com/junixlabs/kinetrak'));
+    expect(normalizeRemote('git@gitlab.com-work:acme/app.git')).toBe('gitlab.com/acme/app');
+  });
+
+  it('leaves a real host that has dashes of its own alone', () => {
+    expect(normalizeRemote('git@git.my-company.com:acme/app.git')).toBe('git.my-company.com/acme/app');
+    expect(normalizeRemote('https://code.internal-corp.net/acme/app.git')).toBe('code.internal-corp.net/acme/app');
+  });
+});

@@ -72,7 +72,12 @@ export function renderCheck(result: CheckResult, mapPath: string): string {
   lines.push(`**Unresolved**: ${diff.unresolved.before} → ${diff.unresolved.after}`);
   if (!result.structural) {
     lines.push('');
-    lines.push('Không có thay đổi cấu trúc nào — khác byte nhưng cùng số liệu (thường là đổi phiên bản scanner).');
+    // cm:why Names the usual cause first. Measured on a live repo: same 27 màn / 182 lời gọi, but the
+    // handlers had moved and every file:line under them moved with it. Blaming the scanner version
+    // sends the reader looking in the wrong repo for a change that is right there in their diff.
+    lines.push('Cùng số liệu nhưng khác byte — thường là code dịch chỗ nên file:line của bằng chứng đổi theo,');
+    lines.push('đôi khi là đổi phiên bản scanner. Số đếm không đổi không có nghĩa là bản đồ còn đúng: cái');
+    lines.push('người ta bấm vào là file:line, và nó đã trỏ sai dòng.');
   }
   lines.push('');
   lines.push('Cập nhật bằng: apiflow check <map> --root=<dir> --write');

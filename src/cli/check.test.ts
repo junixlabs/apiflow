@@ -61,7 +61,7 @@ describe('apiflow check', () => {
       const result = checkAgainst(stored, fresh);
       expect(result.drifted).toBe(true);
       expect(result.structural).toBe(false);
-      expect(renderCheck(result, 'm.apimap')).toContain('Không có thay đổi cấu trúc');
+      expect(renderCheck(result, 'm.apimap')).toContain('code dịch chỗ');
     } finally {
       rmSync(root, { recursive: true, force: true });
     }

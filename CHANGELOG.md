@@ -8,6 +8,17 @@ All notable changes to API View are documented here.
 
 ### Fixed — the first ten minutes for someone who just installed it
 
+- **An ssh alias no longer leaks into the repo id.** `git@github.com-junixlabs:org/repo` — an alias
+  that exists only in one machine's `~/.ssh/config` — produced `github.com-junixlabs/org/repo`, so
+  the same repo got one id from an aliased clone and another from CI's https checkout, defeating the
+  one thing the id exists for. The alias suffix is now trimmed inside the last host segment only, so
+  a real host with dashes (`git.my-company.com`) is untouched. Found by installing the tool from a
+  clean clone the way a new user would.
+- **`check` no longer blames the scanner for a code move.** When bytes differ but every count is
+  equal, the usual cause is that handlers moved and the `file:line` evidence moved with them — which
+  is real drift, because `file:line` is the part a reader clicks. Measured on a live repo: same
+  27 screens / 182 calls, 24 chain nodes at new lines.
+
 - **`apiflow … | head` no longer crashes.** A closed pipe reached node as an unhandled `error` event:
   a 20-line stack trace and exit 1 on the most ordinary command a newcomer types. Every CLI now
   tolerates EPIPE. The test drives the real binary through a real closed pipe — a unit test on the
