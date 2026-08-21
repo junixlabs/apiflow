@@ -49,6 +49,9 @@ const HELP = `apiflow — a screen ↔ endpoint ↔ field map
   apiflow mcp run                MCP server that RUNS REQUESTS — 13 tools, flow runner
                                  (old aliases: mcp-map = mcp map · --mcp = mcp run)
 
+  apiflow --version              print the installed version
+  apiflow --help                 this text
+
 Workspace: ~/.apiflow — apiflow writes nothing into the project it scans unless --out points there.`;
 
 // cm:guard --help must be answered BEFORE dispatch: `apiflow scan-fe --help` used to fall through
@@ -56,6 +59,17 @@ Workspace: ~/.apiflow — apiflow writes nothing into the project it scans unles
 // wrote a map into it. A help flag must never be able to start a scan.
 if (args.includes('--help') || args.includes('-h') || args[0] === 'help') {
   console.log(HELP);
+  process.exit(0);
+}
+
+// cm:guard `--version` is answered here for the same reason `--help` is: with no positional argument
+// it fell through to the dev server, so asking a published binary its version started a listener.
+// cm:edge contract -> package.json — the number is read from the manifest, never written twice: the
+// banner below said v1.0.0 while npm served 1.1.1, and a version string nobody bumps is worse than none.
+const VERSION = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')).version;
+
+if (args.includes('--version') || args.includes('-v') || args[0] === 'version') {
+  console.log(VERSION);
   process.exit(0);
 }
 
@@ -169,7 +183,7 @@ else if (args.includes('--mcp')) {
   });
 
   server.listen(port, () => {
-    console.log(`\n  apiflow v1.0.0\n`);
+    console.log(`\n  apiflow v${VERSION}\n`);
     console.log(`  App:   http://localhost:${port}`);
     console.log(`  Proxy: http://localhost:3001\n`);
 

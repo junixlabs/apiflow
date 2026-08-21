@@ -1,6 +1,6 @@
 {
   "name": "@junixlabs/apiflow",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "description": "A screen ↔ endpoint ↔ field dependency map: answers which screens break if you change an endpoint or a response field. Plus a visual request runner. Local-first, git-friendly, open source.",
   "type": "module",
   "license": "MIT",

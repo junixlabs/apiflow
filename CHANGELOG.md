@@ -4,6 +4,20 @@ All notable changes to API View are documented here.
 
 ---
 
+## [1.1.2] — 2026-08-21
+
+### Fixed — asking the binary its version started a server
+
+- **`apiflow --version` had no handler.** With no positional argument it fell through to the default
+  branch, which opens the proxy and the UI — so the first thing a new user types after installing
+  bound a port instead of answering. `--version`, `-v` and `version` now print the number and exit,
+  answered next to `--help` and before any dispatch.
+- **The banner said `v1.0.0` while npm served 1.1.1.** The version was a literal in `bin/cli.js` that
+  no release step touched. It is read from `package.json` now, so there is one number, not two.
+  Caught by installing the published 1.1.1 tarball into a clean prefix and running the binary.
+
+---
+
 ## [1.1.1] — 2026-08-21
 
 ### Fixed — a comment naming a symbol is no longer a call
