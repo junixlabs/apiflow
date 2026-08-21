@@ -1,5 +1,5 @@
-// cm:guard Hai vế của repo này chạm nhau 0 lần (đo 2026-08-20). Rule dưới đây làm cho con số 0 đó
-// được cưỡng chế, không phải một sự tình cờ — đó là lý do apiflow ở MỘT repo mà không rối.
+// cm:guard The two halves of this repo touch each other 0 times (measured 2026-08-20). The rules
+// below make that 0 enforced rather than accidental — which is why apiflow can live in ONE repo.
 const MAP_SIDE = '^src/(cli|workspace|server|view)|^src/mcp/map|^src/core/(apimap|feScanner|beScanner|callerGraph|mountGraph|wrappers|routeTable|probeHarness)';
 const RUN_SIDE = '^src/(components|engine|store|hooks)|^src/App\\.tsx|^src/main\\.tsx|^proxy/';
 
@@ -8,8 +8,8 @@ module.exports = {
     {
       name: 'map-khong-duoc-goi-run',
       comment:
-        'Vế bản đồ (scan/CLI/workspace/server/view) không được import vế chạy request. Vế bản đồ ' +
-        'phải chạy được headless, không có DOM và không có React.',
+        'The map side (scan/CLI/workspace/server/view) must not import the request-runner side. The ' +
+        'map side has to run headless, with no DOM and no React.',
       severity: 'error',
       from: { path: MAP_SIDE },
       to: { path: RUN_SIDE },
@@ -17,8 +17,8 @@ module.exports = {
     {
       name: 'run-khong-duoc-goi-map',
       comment:
-        'Vế chạy request không được import vế bản đồ. Muốn dùng bản đồ thì đọc .apimap qua CLI, ' +
-        'không nối trực tiếp — nếu không thì SPA lôi cả scanner vào bundle browser.',
+        'The request-runner side must not import the map side. To use a map, read the .apimap through ' +
+        'the CLI instead of wiring it in directly — otherwise the SPA drags the scanner into the browser bundle.',
       severity: 'error',
       from: { path: RUN_SIDE },
       to: { path: MAP_SIDE },

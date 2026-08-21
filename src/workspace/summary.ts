@@ -22,7 +22,7 @@ export interface ProjectSummary {
 export type EndpointState = 'both' | 'uncalled' | 'feOnly' | 'unpaired';
 
 // cm:guard Never says feOnly on a map with no backend side, nor uncalled on one with no frontend
-// side: on a FE-only scan EVERY endpoint lacks a `source`, and calling that "API không khai" turns
+// side: on a FE-only scan EVERY endpoint lacks a `source`, and calling that "not declared" turns
 // a missing half of the scan into a fabricated finding about the API.
 // cm:edge contract -> src/view/panes.ts — the browser pane re-implements this as `reconOf`
 // because it cannot import node code; the two must keep agreeing on what a colour means.

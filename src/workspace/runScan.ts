@@ -25,12 +25,12 @@ export function scanInBackground(
 ): { cancel: () => void } {
   const entry = findProject(id);
   if (entry === undefined) {
-    onEvent({ kind: 'error', text: `không có project nào tên ${id}` });
+    onEvent({ kind: 'error', text: `no project named ${id}` });
     return { cancel: () => undefined };
   }
   const root = kind === 'fe' ? entry.fe : entry.be;
   if (root === undefined) {
-    onEvent({ kind: 'error', text: `${id} chưa khai thư mục ${kind.toUpperCase()}` });
+    onEvent({ kind: 'error', text: `${id} has no ${kind.toUpperCase()} directory` });
     return { cancel: () => undefined };
   }
 
@@ -51,7 +51,7 @@ export function scanInBackground(
 
   child.on('close', (code) => {
     if (code !== 0 || !existsSync(staging)) {
-      onEvent({ kind: 'error', text: `scan thất bại (mã ${String(code)})` });
+      onEvent({ kind: 'error', text: `scan failed (code ${String(code)})` });
       rmSync(staging, { force: true });
       return;
     }
@@ -59,9 +59,9 @@ export function scanInBackground(
       const map = parseMap(readFileSync(staging, 'utf8'));
       const written = writeMap(id, kind, map);
       rmSync(staging, { force: true });
-      onEvent({ kind: 'log', text: `đã ghi ${written.file}` });
+      onEvent({ kind: 'log', text: `wrote ${written.file}` });
       relinkIfPossible(id, onEvent);
-      onEvent({ kind: 'done', text: `${kind} xong — ${map.endpoints.length} endpoint · ${map.screens.length} màn` });
+      onEvent({ kind: 'done', text: `${kind} done — ${map.endpoints.length} endpoints · ${map.screens.length} screens` });
     } catch (err) {
       rmSync(staging, { force: true });
       onEvent({ kind: 'error', text: err instanceof Error ? err.message : String(err) });
@@ -80,5 +80,5 @@ export function relinkIfPossible(id: string, onEvent: (event: ScanEvent) => void
   const entry = findProject(id);
   const joined = linkMaps(fe, be, `${fe.metadata.name}+${be.metadata.name}`);
   writeMap(id, 'linked', joined);
-  onEvent({ kind: 'log', text: `đã link lại: ${joined.endpoints.length} endpoint · ${entry?.id ?? id}/linked.apimap` });
+  onEvent({ kind: 'log', text: `re-linked: ${joined.endpoints.length} endpoints · ${entry?.id ?? id}/linked.apimap` });
 }

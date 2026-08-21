@@ -24,7 +24,7 @@ describe('apiflow check', () => {
       const stored = rescan('fe', root, 'app');
       const result = checkAgainst(stored, rescan('fe', root, 'app'));
       expect(result.drifted).toBe(false);
-      expect(renderCheck(result, 'm.apimap')).toContain('khớp code');
+      expect(renderCheck(result, 'm.apimap')).toContain('still matches the code');
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
@@ -61,7 +61,7 @@ describe('apiflow check', () => {
       const result = checkAgainst(stored, fresh);
       expect(result.drifted).toBe(true);
       expect(result.structural).toBe(false);
-      expect(renderCheck(result, 'm.apimap')).toContain('code dịch chỗ');
+      expect(renderCheck(result, 'm.apimap')).toContain('code that moved');
     } finally {
       rmSync(root, { recursive: true, force: true });
     }

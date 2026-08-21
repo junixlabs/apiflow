@@ -1,6 +1,6 @@
 # apiflow
 
-> **Mục tiêu & cái không được làm:** [`NORTH-STAR.md`](./NORTH-STAR.md) — đọc trước khi thêm tính năng.
+> **Product goal, and what must not be built:** [`NORTH-STAR.md`](./NORTH-STAR.md) — read it before proposing a feature.
 
 **A dependency map for systems that talk over HTTP** — screen ↔ endpoint ↔ field. It answers one
 question, before you edit: **if I change this endpoint or this field, which screens break?**
@@ -12,32 +12,56 @@ consumption. Local-first, git-friendly, open source.
 [![npm version](https://img.shields.io/npm/v/@junixlabs/apiflow.svg)](https://www.npmjs.com/package/@junixlabs/apiflow)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-## Quick Start — four commands to an answer
+![How apiflow builds and reads a dependency map](docs/img/workflow.svg)
+
+## Quick start
 
 ```bash
-git clone https://github.com/junixlabs/apiflow.git && cd apiflow && npm install   # ~10s
-node bin/cli.js project add "web" --fe=/path/to/frontend [--be=/path/to/api]
-node bin/cli.js project scan web
-node bin/cli.js ui                      # http://127.0.0.1:3030
+git clone https://github.com/junixlabs/apiflow.git && cd apiflow && npm install   # ~15s
+node bin/cli.js project add "web" --fe=/path/to/frontend [--be=/path/to/api]      # ~1s
+node bin/cli.js project scan web                                                  # 3s–15s
+node bin/cli.js ui                                                                # http://127.0.0.1:3030
 ```
 
-Nothing is written into the project being scanned — maps live in `~/.apiflow/`. Then ask, from a
-terminal or from an agent:
+Nothing is written into the project being scanned — maps live in `~/.apiflow/`
+(`APIFLOW_HOME` moves that). One side is enough; `--be` is optional.
 
-```bash
-node bin/cli.js impact ~/.apiflow/projects/web/fe.apimap                          # what is in the map
-node bin/cli.js impact ~/.apiflow/projects/web/fe.apimap --endpoint="GET /users/:id"
-node bin/cli.js impact ~/.apiflow/projects/web/fe.apimap --field=email
-```
-
-Read the answer with its two qualifiers: every edge carries `exact` / `inferred` / `guess`, and
-every answer carries the number of call sites the scanner could **not** resolve. `0 screens` means
-"nothing in this map calls it" — never "nothing calls it".
-
-> **npm install is not the way in yet.** The published `@junixlabs/apiflow` on npm predates the map
+> **`npm install -g` is not the way in yet.** The published `@junixlabs/apiflow` predates the map
 > half, so `npx @junixlabs/apiflow scan-fe` does not exist there. Clone until the next release.
 
-### For an agent (Claude Code, or any MCP client)
+## Ask
+
+List first, then ask — don't guess an endpoint string.
+
+```bash
+MAP=~/.apiflow/projects/web/fe.apimap
+node bin/cli.js impact $MAP                                  # every endpoint, with caller counts
+node bin/cli.js impact $MAP --endpoint="GET /users/:id"       # which screens break
+node bin/cli.js impact $MAP --field=email                     # which screens read this field
+node bin/cli.js impact $MAP --screen=/users/:id              # what one screen depends on
+```
+
+```
+## Impact — GET /api/users/{param}
+
+3 screen(s) break if this changes:
+
+- **/users/{param}** [exact] — src/pages/users/[id].tsx:14
+  client    fetchUser   src/api/users.ts:8
+  ↳ hook      useUser     src/hooks/useUser.ts:12
+  ↳ screen    UserPage    src/pages/users/[id].tsx:14
+```
+
+Every answer comes with two qualifiers, and both are part of the answer:
+
+| | |
+|---|---|
+| `exact` | the path is a literal at the call site |
+| `inferred` | one half was derived — a template string, an implicit verb |
+| `guess` | the path was assembled, or the screen was reached through a wide module hop |
+| **unresolved** | call sites the scanner could **not** read. `0 screens` means *nothing in this map calls it* — never *nothing calls it* |
+
+## For an agent
 
 ```json
 { "mcpServers": { "apiflow-map": {
@@ -46,434 +70,76 @@ every answer carries the number of call sites the scanner could **not** resolve.
 ```
 
 Seven read-only tools — `impact_endpoint` · `impact_field` · `screen_deps` · `find` · `map_health` ·
-`map_check` · `map_list`. Pair it with `skills/apiflow-impact/`, which tells the agent to ask
-*before* editing a route, a handler, an api client or a response field.
+`map_check` · `map_list`. Measured on a clean install: 0.4s to connect, 5ms per call. Pair it with
+[`skills/apiflow-impact/`](skills/apiflow-impact/), which tells the agent to ask *before* editing a
+route, a handler, an api client or a response field.
 
-### Keep the map honest
-
-```bash
-node bin/cli.js check ~/.apiflow/projects/web/fe.apimap      # exit 0 clean · 1 drifted · 2 cannot check
-node bin/cli.js project scan web                             # refresh
-```
-
-A scan of an unchanged repo is byte-identical and records the repo it came from, not the machine it
-ran on — so the file can be committed, reviewed in a pull request, and gated in CI.
-
-### The other half — running requests
-
-The visual flow runner (canvas, chaining, assertions) is the older half of this repo and is
-deliberately second in line; see [`NORTH-STAR.md`](./NORTH-STAR.md) §3.
+## Keep the map honest
 
 ```bash
-npx @junixlabs/apiflow                       # canvas + proxy
-npx @junixlabs/apiflow --project=/path/to/project
-npm run dev                                  # from a clone
+node bin/cli.js check $MAP        # exit 0 clean · 1 drifted · 2 cannot check
+node bin/cli.js check $MAP --write
+node bin/cli.js project scan web
 ```
 
-## Dependency map — which screens break if I change this?
+A scan of an unchanged repo is **byte-identical**, and the file records the repo it came from
+(`github.com/acme/app//apps/web`) rather than the machine it ran on — so it can be committed,
+reviewed in a pull request, and gated in CI.
 
-The half no request-store can answer. Scan a frontend, then ask.
+## What it reads
+
+| Side | Coverage |
+|---|---|
+| Frontend | framework-agnostic — it reads call sites, not conventions, then walks the import graph back to the screen (`client → hook → component → route`), keeping `file:line` for every hop |
+| Backend | Laravel · Strapi · NestJS/Express · Go (gin/chi/echo/fiber) · FastAPI/Flask, plus a generic pass on every file |
+| Response shapes | from code (Resource / DTO / `response_model` / struct tags), then **confirmed by running** — the probe harness runs inside the project's own test suite (PHPUnit · vitest+supertest · Go `httptest` · pytest), so it never touches a real database |
+
+## Commands
+
+| Command | What it does |
+|---|---|
+| `project add \| ls \| scan \| rm` | the workspace registry in `~/.apiflow` |
+| `scan-fe <dir>` | frontend → screens, endpoints, fields |
+| `scan-be <dir>` | backend → routes, payloads, response shapes |
+| `probe <map>` | emit a harness, ingest real responses |
+| `link <fe> <be>` | join the two halves |
+| `impact <map>` | which screens break — `--endpoint` / `--field` / `--screen`, `--json` |
+| `check <map>` | is the map still true — CI gate, `--write` to refresh |
+| `ui` · `hub` · `view` | browser UI (live, static workspace, single map) |
+| `mcp map` · `mcp run` | MCP servers: read the map (7 tools) · run requests (13 tools) |
+
+`apiflow --help` prints this list. Every command takes `--json` where a machine might read it.
+
+## The other half — running requests
+
+The visual flow runner (canvas, response chaining, assertions, cURL/OpenAPI/Postman import) is the
+older half of this repo and is deliberately second in line — see [`NORTH-STAR.md`](./NORTH-STAR.md)
+§3 and [`docs/request-runner.md`](docs/request-runner.md).
 
 ```bash
-# Scan a frontend — deterministic, framework-agnostic, no config
-npx @junixlabs/apiflow scan-fe ./my-frontend --name=web
-
-# Ask the question
-npx @junixlabs/apiflow impact ./my-frontend/.apiview/map/web.apimap --endpoint="GET /api/users/{id}"
-npx @junixlabs/apiflow impact ./my-frontend/.apiview/map/web.apimap --field=email
+npx @junixlabs/apiflow            # canvas + proxy
+npm run dev                       # from a clone
 ```
 
-```
-## Impact — GET /api/users/{param}
-
-2 screen(s) break if this changes:
-
-- **/users/{param}** [exact] — src/pages/users/[id].tsx:14
-- **AccountMenu** [guess]  — src/components/AccountMenu.tsx:31
-```
-
-The scanner finds HTTP call sites, normalizes urls onto endpoints, and attributes each to a
-**screen**. When the call lives in an api module rather than a page — the usual case — it walks the
-import graph back through hooks and components until it reaches a file-based route, and reports how
-many hops that took. Members are kept apart, so `agentsApi.remove` does not drag in every screen
-that only calls `agentsApi.list`. It also traces which response fields get read. Every edge carries a confidence — `exact`, `inferred` or `guess` — and a
-`file:line`. What it cannot resolve goes into an **Unresolved** list instead of being dropped.
-
-To close that list, `skills/fe-map-extractor/` reads only those call sites, works out what a
-variable url really is, and feeds the answers back as `--hints=hints.json`. Ids stay derived by
-code, so a re-scan of an unchanged repo produces a byte-identical `.apimap`.
-
-### The backend half
-
-```bash
-# Routes + payload + response shapes, from code
-npx @junixlabs/apiflow scan-be ./my-api --name=api
-
-# Confirm the response shapes against reality — using the project's OWN test runner,
-# so it hits the test database and never touches real rows
-npx @junixlabs/apiflow probe ./my-api/.apiview/map/api.apimap --emit
-#   fill the /* apiflow:fill */ markers (app instance, auth, fixture ids), run the test, then:
-npx @junixlabs/apiflow probe ./my-api/.apiview/map/api.apimap --ingest=./my-api/apiflow-probe.json
-```
-
-Stacks read directly: **Laravel** (`Route::resource` expanded, group prefixes, FormRequest
-`rules()`, API Resource `toArray()`), **NestJS / Express** (`@Controller`+`@Get`, Zod,
-class-validator), **Go** (gin/chi/echo/fiber/`HandleFunc`, struct `json:` tags), **Python**
-(FastAPI/Flask, Pydantic, `response_model=`). A generic pass runs on every file regardless.
-
-Response shapes are **not** taken from an OpenAPI spec — a spec drifts from the code. They come
-from the code, then get confirmed by the probe. Each field records `declared` and `observed`
-independently, so *declared but never sent* is a finding rather than a silent assumption.
-
-### Joining the halves
-
-```bash
-npx @junixlabs/apiflow link ./web/.apiview/map/web.apimap ./my-api/.apiview/map/api.apimap --out=full.apimap
-npx @junixlabs/apiflow impact full.apimap --field=email
-```
-
-Endpoints join on `METHOD + normalized path`, with suffix matching for a gateway prefix only the
-frontend sees. The joined map answers what neither half could alone:
-
-- **fields the API sends that no screen reads** — dead payload candidates
-- **fields the code declares but the probe never saw** — the code lying about its contract
-- **endpoints no screen calls** — dead routes, or a frontend that was not scanned
-
-Each is a candidate, not a verdict: another client may consume what this frontend does not.
-
-`skills/be-map-extractor/` covers the judgement the CLI cannot make — wiring the probe into the
-project's fixtures, and classifying each mismatch. `skills/api-flow-analyzer/` remains the
-agent-only route mapper for stacks the CLI does not cover yet.
-
-## Managing more than one project
-
-```bash
-npx @junixlabs/apiflow project add "Adminhub" --fe=./adminhub-ui --be=./adminhub-api
-npx @junixlabs/apiflow ui
-```
-
-`+ Thêm project` in the UI does the same thing as `project add`, then runs the first scan and streams
-its output. `Sửa gốc` moves a project's FE or BE directory, and `Bỏ khỏi workspace` drops the entry
-while leaving the scanned maps on disk. These are the only routes that accept a path from a request,
-so they answer on the loopback interface only and reject anything a cross-site page sends.
-
-A map records the directory it was scanned from. Move a project's root without re-scanning and the
-project's own pane says so, naming the directory the numbers actually came from — the map is not
-deleted, because it is still a true measurement of a different repo.
-
-`project add` records the roots under `~/.apiflow/` — nothing is written inside the repos being
-read. `apiflow ui` serves the project list on `127.0.0.1` and opens one project into eight panes:
-endpoints, a coverage map of every endpoint as one cell, the impact ring (screens on the left,
-endpoints on the right, one curve per call), impact for a single endpoint, screens, unresolved,
-alerts, and a comparison of the last two scans. The scan button re-runs a scanner and streams its
-output; the map is only replaced when the scan finishes cleanly.
-
-`apiflow view <file.apimap>` writes that same app to a single self-contained HTML file — same panes,
-no server, and no control that would need one.
-
-The page follows the operating system's light/dark setting; the control at the bottom of the rail
-cycles system → light → dark and the choice sticks. The header reads the branch and short sha out of
-`.git` of each scanned root, so a map always says which revision it was taken from.
-
-Alerts and Unresolved are separate counts on purpose. An alert is something the tool understood and
-finds dangerous — a method mismatch, an endpoint with no auth, a route no screen calls. An
-unresolved is something it could not understand, and it is listed with the line it gave up on.
-
-The project list is a rail down the left and one project's detail on the right — literally the same
-shell as a project page: same rail width, same header, same tiles, same panels, brand top-left as the
-way back to the workspace, `+ Thêm project` and the light/dark control at the foot of the rail. `Toàn workspace` at the top of the rail totals every project and lists what is worth
-looking at across all of them, each line linking straight into the pane of the project that carries
-it — a big number that points nowhere is the thing that section replaced. Selecting a project writes
-the hash, so `/#adminhub` is a link you can send and a reload comes back to where you were.
-
-The rail searches name, id and both roots, filters by side (`cả hai phía` / `chỉ FE` / `chỉ BE`), by
-`chưa scan`, or down to the maps whose root has moved, and orders by name, scan age, endpoints,
-unresolved, or `đáng để mắt trước`. The count says how many are hidden rather than only how many are
-left. Only the ordering is remembered between visits; a filter is not, because a hidden project is
-the kind of thing that should not survive a reload.
-
-For a repo with no server to run, `apiflow hub <dir>` writes the same page as a single self-contained
-HTML file — same rail, same panes, same search, filter and ordering, all running in the page itself.
-
-## Features
-
-### Visual Canvas
-Drag-and-drop API nodes on an infinite canvas. See how your endpoints connect at a glance.
-
-### Chain Responses
-Use `{{nodes["Get User"].response.body.id}}` to pass data between requests automatically.
-
-### Test Assertions
-Add assertions per node — status codes, body content, JSONPath matching, header checks. Green/red badges show pass/fail directly on the canvas.
-
-### Import Anything
-- **cURL** — paste from browser DevTools
-- **OpenAPI 3.x** — drop a Swagger spec (JSON/YAML)
-- **Postman** — import collections with headers, body, folders
-
-### Conditional Branching
-If/else nodes: route flow based on response status or body content. Build upsert patterns (GET → if exists PUT, else POST).
-
-### Per-Node Auth
-Bearer Token, Basic Auth, or API Key — each node can use a different auth scheme in the same flow.
-
-### Endpoint Library
-Configure an endpoint once, save to library, drag into any flow. No more re-configuring the same GET /products in every flow.
-
-### Project Storage
-`.apiview` files are JSON. Store them in `.apiview/` alongside your code. Commit to git. Share via pull requests.
-
-### Multiple Environments
-Define Local, Staging, Production environments with different base URLs and credentials. Switch with one click.
-
-### Step-by-Step Execution
-Run flow level by level. Inspect results between each step.
-
-### Response Diff
-Compare consecutive runs to spot what changed.
-
-### Request History
-Browse last 10 runs per node with full response details.
-
-### Export
-- PNG / SVG (canvas screenshot)
-- Postman Collection (JSON)
-- cURL commands (all nodes or per-node copy)
-
-### Dashboard
-Batch run all saved flows. See pass/fail overview at a glance.
-
-### Dark / Light Theme
-Toggle in toolbar. Preference persisted.
-
-### MCP Server
-Connect to Claude Code via 12 MCP tools. Let AI build and run flows for you.
-
-### Laravel Analyzer
-Claude Code skill that auto-generates `.apiview` flow files from Laravel routes, controllers, and validation rules.
-
-### Map MCP server (for agents)
-
-`apiflow mcp map` speaks MCP over stdio and answers from an existing `.apimap`: `impact_endpoint`,
-`impact_field`, `screen_deps`, `find`, `map_health`, `map_check`, `map_list`. Every answer carries the
-`file:line` that proves it and the count of call sites the scanner could not resolve, so an empty
-answer cannot be read as "nothing calls this". Register it per project:
-
-```json
-{ "mcpServers": { "apiflow-map": { "command": "npx", "args": ["-y", "@junixlabs/apiflow", "mcp", "map"],
-  "env": { "APIFLOW_PROJECT": "my-project" } } } }
-```
-
-`skills/apiflow-impact/` is the companion skill — it tells an agent *when* to ask (before editing a
-route, a handler, an api client or a response field) and how to read confidence and unresolved.
-
-### FE Map Extractor
-Claude Code skill that closes the gaps `scan-fe` cannot resolve on its own — see the dependency map section above.
-
-### BE Map Extractor
-Claude Code skill that wires the probe harness into a project's own fixtures and auth, then classifies every declared-but-never-sent field as a bug, a conditional, or a scanner miss.
-
-## Usage
-
-### CLI
-
-```bash
-# Run (serves pre-built app + proxy)
-npx @junixlabs/apiflow
-
-# Run with a project directory
-npx @junixlabs/apiflow --project=/path/to/my-api
-
-# Run on custom port
-npx @junixlabs/apiflow --port=4000
-
-# Two MCP servers, one word apart: `map` reads the dependency map, `run` executes requests
-npx @junixlabs/apiflow mcp map
-npx @junixlabs/apiflow mcp run
-
-# Map a frontend's API usage
-npx @junixlabs/apiflow scan-fe ./my-frontend --name=web [--hints=hints.json]
-
-# Map a backend, and confirm its response shapes with test data
-npx @junixlabs/apiflow scan-be ./my-api --name=api
-npx @junixlabs/apiflow probe ./my-api/.apiview/map/api.apimap --emit
-npx @junixlabs/apiflow probe ./my-api/.apiview/map/api.apimap --ingest=./my-api/apiflow-probe.json
-
-# Join them, then ask
-npx @junixlabs/apiflow link web.apimap api.apimap --out=full.apimap
-npx @junixlabs/apiflow impact full.apimap --endpoint="GET /api/users"
-
-# Machine-readable answer, for an agent or a hook
-npx @junixlabs/apiflow impact web.apimap --endpoint="GET /api/users" --json   # exit 0 found, 2 not found
-
-# Is the committed map still true? (CI gate)
-npx @junixlabs/apiflow check .apiflow/fe.apimap --root=apps/web-next          # exit 0 clean, 1 drifted
-npx @junixlabs/apiflow check .apiflow/fe.apimap --root=apps/web-next --write  # refresh it
-```
-
-### Sharing a map with a team
-
-A `.apimap` records the **repo** it was scanned from (`github.com/acme/app//apps/web`), never a path
-on the machine that scanned it. Two people scanning the same commit get the same bytes, so the file
-can be committed, reviewed in a pull request, and gated in CI with `apiflow check`. Anything that
-needs the real directory back — `probe --emit`, `check` without `--root` — resolves it locally
-through `apiflow project add`.
-
-### Development
-
-```bash
-npm run dev          # Vite dev server + proxy (hot reload)
-npm run build        # Production build
-npm start            # Serve built app (builds dist/ on first run)
-npm test             # Run the test suite
-npm run dev:mcp      # MCP server only
-```
-
-### MCP Server (Claude Code)
-
-There are two, and they are different halves of this repo. `map` only reads a `.apimap` and answers
-impact questions; `run` builds and executes flows. Add whichever you want, or both:
-
-```bash
-claude mcp add apiflow-map -- npx @junixlabs/apiflow mcp map
-claude mcp add apiflow     -- npx @junixlabs/apiflow mcp run   # `--mcp` still works as an alias
-```
-
-Then ask Claude:
-- "Create a flow for my deploy endpoints"
-- "Run the checkout flow"
-- "Export all nodes as cURL"
-
-### Laravel Analyzer
-
-```bash
-# Copy skill to your Laravel project
-cp -r node_modules/@junixlabs/apiflow/skills/api-flow-analyzer .claude/skills/
-```
-
-Then ask Claude: "Analyze this Laravel project and generate API flows."
-
-## Project Storage
-
-When you open a project, apiflow creates:
-
-```
-your-project/
-└── .apiview/
-    ├── config.json              # Project settings
-    ├── environments/            # Shared across all flows
-    │   ├── local.json
-    │   └── staging.json
-    ├── flows/                   # Your API flows (git-commit these)
-    │   ├── user-management.apiview
-    │   └── deploy/
-    │       └── product-v2.apiview
-    ├── map/                      # Dependency maps from `scan-fe` (git-commit these)
-    │   └── web.apimap
-    ├── library/                 # Reusable endpoint templates
-    │   └── endpoints.json
-    ├── results/                 # Last run results (gitignored)
-    └── .gitignore
-```
-
-## .apiview File Format
-
-```json
-{
-  "version": 2,
-  "metadata": {
-    "name": "My Flow",
-    "createdAt": "2026-03-20T00:00:00Z",
-    "updatedAt": "2026-03-20T00:00:00Z"
-  },
-  "nodes": [
-    {
-      "id": "node_1",
-      "type": "apiNode",
-      "position": { "x": 200, "y": 100 },
-      "data": {
-        "label": "Get Users",
-        "config": {
-          "method": "GET",
-          "url": "{{base_url}}/api/users",
-          "headers": [{ "key": "Authorization", "value": "Bearer {{token}}", "enabled": true }],
-          "params": [],
-          "body": ""
-        }
-      }
-    }
-  ],
-  "edges": [{ "id": "edge_1_2", "source": "node_1", "target": "node_2" }],
-  "assertions": {
-    "node_1": [{ "id": "a1", "type": "status_equals", "target": "", "expected": "200", "enabled": true }]
-  }
-}
-```
-
-## .apimap File Format
-
-Generated by `scan-fe`. No positions and no timestamp — the map is laid out at render time, and
-the file stays byte-identical across scans of an unchanged repo so it diffs cleanly in git.
-
-```json
-{
-  "version": 1,
-  "metadata": { "name": "web", "root": "/repo/web", "generator": "apiflow scan-fe/1" },
-  "screens":   [{ "id": "sc_users-param", "label": "/users/{param}", "route": "/users/{param}",
-                  "source": { "file": "src/pages/users/[id].tsx", "line": 1 } }],
-  "endpoints": [{ "id": "ep_get-api-users-param", "method": "GET", "path": "/api/users/{param}" }],
-  "fields":    [{ "id": "fl_ep_get-api-users-param_data-email",
-                  "endpointId": "ep_get-api-users-param", "path": "data.email" }],
-  "calls":     [{ "screenId": "sc_users-param", "endpointId": "ep_get-api-users-param",
-                  "via": "axios", "confidence": "inferred",
-                  "source": { "file": "src/pages/users/[id].tsx", "line": 5 } }],
-  "reads":     [{ "screenId": "sc_users-param", "fieldId": "fl_ep_get-api-users-param_data-email",
-                  "confidence": "guess",
-                  "source": { "file": "src/pages/users/[id].tsx", "line": 6 } }],
-  "unresolved": [{ "source": { "file": "src/api/gen.ts", "line": 210 },
-                   "reason": "url is a variable or expression: endpoint",
-                   "snippet": "return fetch(endpoint, init);" }]
-}
-```
-
-## Tech Stack
-
-| Layer | Technology |
-|-------|-----------|
-| UI | React 19, @xyflow/react 12 |
-| State | Zustand 5 |
-| Styling | Tailwind CSS 4 |
-| Icons | Lucide React |
-| Fonts | Inter + JetBrains Mono |
-| Build | Vite 8, TypeScript 5.9 |
-| Proxy | Express 5 |
-| MCP | @modelcontextprotocol/sdk |
-
-## Keyboard Shortcuts
-
-| Shortcut | Action |
-|----------|--------|
-| `Ctrl+S` | Save |
-| `Ctrl+Z` | Undo |
-| `Ctrl+Shift+Z` | Redo |
-| `Ctrl+O` | Open / Library |
-| `Ctrl+Enter` | Run All |
-| `Ctrl+I` | Import cURL |
-| `Escape` | Deselect / Close |
-| `Delete` | Delete selected node |
+## Docs
+
+- [Getting started](docs/getting-started.md) — the same path with real output, and what to do when a map looks thin
+- [File formats](docs/formats.md) — `.apimap`, `.apiview`, and the `.apiflow` layout
+- [Request runner](docs/request-runner.md) — the canvas half, in full
+- [`NORTH-STAR.md`](./NORTH-STAR.md) — what this is for, and what will not be built
+- [`CHANGELOG.md`](./CHANGELOG.md)
 
 ## Contributing
 
 ```bash
-git clone https://github.com/junixlabs/apiflow.git
-cd apiflow
-npm install
-npm run dev
+git clone https://github.com/junixlabs/apiflow.git && cd apiflow && npm install
+npm test          # 332 tests
+npm run lint
+npm run boundary  # the two halves must not import each other
+npm run build
 ```
 
-Open http://localhost:5173. PRs welcome.
-
-Please review our [Code of Conduct](CODE_OF_CONDUCT.md) before participating.
+PRs welcome. Please read the [Code of Conduct](CODE_OF_CONDUCT.md) first.
 
 ## License
 

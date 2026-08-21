@@ -71,11 +71,11 @@ describe('the map MCP tools', () => {
 
   it('answers the impact question with the file:line that proves it', () => {
     const out = impactEndpointText(resolveTarget(), 'GET /users/:id');
-    expect(out).toContain('1 màn vỡ nếu đổi');
+    expect(out).toContain('1 screen(s) break if this changes');
     expect(out).toContain('/users/:id [inferred] src/api/users.ts:12');
   });
 
-  // cm:guard Every answer carries the unresolved count. An agent that reads "0 màn" without it will
+  // cm:guard Every answer carries the unresolved count. An agent that reads "0 screens" without it will
   // report "nothing calls this endpoint" as a measured fact.
   it('carries the unresolved count in every answer, including the misses', () => {
     const target = resolveTarget();
@@ -86,7 +86,7 @@ describe('the map MCP tools', () => {
       screenDepsText(target, '/users/:id'),
       findText(target, 'users'),
     ]) {
-      expect(out).toContain('1 lời gọi chưa giải được đường dẫn');
+      expect(out).toContain('1 calls whose path could not be resolved');
       expect(out).toContain('github.com/acme/app');
     }
   });
@@ -113,7 +113,7 @@ describe('the map MCP tools', () => {
 
   it('reports health with the confidence split and the unresolved count', () => {
     const out = mapHealthText(resolveTarget());
-    expect(out).toContain('endpoint 1 · màn 1 · lời gọi 1 · field 1');
+    expect(out).toContain('endpoints 1 · screens 1 · calls 1 · fields 1');
     expect(out).toContain('inferred 1');
     expect(out).toContain('unresolved 1');
     expect(out).toContain('fe: scan');
@@ -122,7 +122,7 @@ describe('the map MCP tools', () => {
   it('checks the stored map against a fresh scan of the real directory', () => {
     writeMap('demo', 'fe', finalizeApiMap(createApiMap('demo', 'github.com/acme/app', 'apiflow scan-fe/1')));
     const out = mapCheckText(resolveTarget());
-    expect(out).toContain('đã lệch code');
+    expect(out).toContain('has drifted from the code');
     expect(out).toContain('+ GET /api/users');
   });
 

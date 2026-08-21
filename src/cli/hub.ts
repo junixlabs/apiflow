@@ -14,7 +14,10 @@ function main(): void {
   tolerateClosedPipe();
   const args = process.argv.slice(2);
   const positional = args.filter((a) => !a.startsWith('--'));
-  const out = resolve(positional[0] ?? 'apiflow-maps');
+  // cm:guard `--out=<dir>` is the form README and docs/getting-started.md name, so it has to be read
+  // here: ignoring it fell back to ./apiflow-maps and wrote a page tree into whatever repo was cwd.
+  const flag = args.find((a) => a.startsWith('--out='))?.slice('--out='.length);
+  const out = resolve(flag ?? positional[0] ?? 'apiflow-maps');
   const projects = hubProjects();
   // cm:guard One `now` for every page in the batch: reading it per page makes two files written a
   // minute apart disagree about how old the same scan is.
@@ -53,12 +56,12 @@ function main(): void {
 
   console.log('## apiflow hub');
   console.log('');
-  console.log(`**Mở bằng browser**: file://${index}`);
-  console.log(`**Project**: ${projects.length} · **trang bản đồ đã sinh**: ${written.length}`);
+  console.log(`**Open in a browser**: file://${index}`);
+  console.log(`**Projects**: ${projects.length} · **map pages written**: ${written.length}`);
   const skipped = projects.length - written.length;
-  if (skipped > 0) console.log(`**Bỏ qua**: ${skipped} project chưa có map nào`);
+  if (skipped > 0) console.log(`**Skipped**: ${skipped} project(s) with no map yet`);
   console.log('');
-  console.log('Bản tĩnh: mở bằng file://, không cần server. Chạy lại lệnh này sau mỗi lần scan.');
+  console.log('Static output: open with file://, no server needed. Re-run after every scan.');
 }
 
 const invokedDirectly =

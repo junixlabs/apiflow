@@ -294,11 +294,11 @@ export function renderReport(map: ApiMapFile, outPath: string): string {
     `**Attributed to a route**: ${lastHopStats.reattributed} call sites walked back to a screen · ` +
       `${lastHopStats.stillModuleLevel} stopped at module level` +
       (lastHopStats.saturated > 0
-        ? ` (trong đó ${lastHopStats.saturated} bị bỏ vì fan-out quá rộng — xem Unresolved)`
+        ? ` (${lastHopStats.saturated} dropped for too wide a fan-out — see Unresolved)`
         : '')
   );
   if (lastScanStats.declaredRoutes > 0) {
-    lines.push(`**Route khai trong code**: ${lastScanStats.declaredRoutes} file gắn với một route`);
+    lines.push(`**Routes declared in code**: ${lastScanStats.declaredRoutes} file(s) tied to a route`);
   }
   if (lastScanStats.wrappers > 0) lines.push(`**Client wrappers followed**: ${lastScanStats.wrappers}`);
   if (lastScanStats.serverFilesSkipped > 0) {

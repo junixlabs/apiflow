@@ -459,7 +459,7 @@ export interface ScreenDependency {
   viaHops?: number;
 }
 
-// cm:why The reverse direction is the same evidence read the other way — "màn này ăn API nào" is the
+// cm:why The reverse direction is the same evidence read the other way — "what does this screen eat" is the
 // question a newcomer to a large FE asks, and it needs no new data, only this query.
 export function endpointsForScreen(map: ApiMapFile, screenId: string): ScreenDependency[] {
   const byId = new Map(map.endpoints.map((e) => [e.id, e]));

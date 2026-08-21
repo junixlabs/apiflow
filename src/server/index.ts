@@ -55,18 +55,18 @@ export function buildApp(): Express {
   app.get('/p/:id', (req, res) => {
     const project = hubProjects().find((p) => p.id === req.params.id);
     if (!project) {
-      res.status(404).type('text/plain; charset=utf-8').send(`Không có project nào tên ${req.params.id}`);
+      res.status(404).type('text/plain; charset=utf-8').send(`No project named ${req.params.id}`);
       return;
     }
     const requested = req.query.kind;
     const kind = KINDS.includes(requested as MapKind) ? (requested as MapKind) : bestKind(project);
     if (kind === null) {
-      res.status(404).type('text/plain; charset=utf-8').send(`${project.id} chưa có map nào — chạy apiflow scan-fe trước.`);
+      res.status(404).type('text/plain; charset=utf-8').send(`${project.id} has no map yet — run apiflow project scan ${project.id} first.`);
       return;
     }
     const map = readMap(project.id, kind);
     if (map === null) {
-      res.status(404).type('text/plain; charset=utf-8').send(`${project.id} không có map ${kind}`);
+      res.status(404).type('text/plain; charset=utf-8').send(`${project.id} has no ${kind} map`);
       return;
     }
     res.type('html').send(renderApp({
@@ -88,7 +88,7 @@ export function buildApp(): Express {
 
   // cm:why Rejects a name apiflow cannot use BEFORE touching the disk, and says what to type
   // instead: `slug()` silently returns '' for a name with no latin letters, and the registry's own
-  // message ("id không hợp lệ") does not tell the person which field to fix.
+  // message ("invalid id") does not tell the person which field to fix.
   // cm:edge contract -> src/view/panes.ts submitAdd() — it renders `message` verbatim to the user.
   app.post('/api/projects', localWritesOnly, (req, res) => {
     const body = (req.body ?? {}) as Record<string, unknown>;
@@ -98,20 +98,20 @@ export function buildApp(): Express {
     };
     const name = text('name');
     if (name === undefined) {
-      res.status(400).json({ error: 'NO_NAME', message: 'thiếu tên project' });
+      res.status(400).json({ error: 'NO_NAME', message: 'missing project name' });
       return;
     }
     const fe = text('fe');
     const be = text('be');
     if (fe === undefined && be === undefined) {
-      res.status(400).json({ error: 'NO_ROOT', message: 'cần ít nhất một thư mục FE hoặc BE' });
+      res.status(400).json({ error: 'NO_ROOT', message: 'needs at least an FE or a BE directory' });
       return;
     }
     const id = text('id') ?? slug(name);
     if (!ID.test(id)) {
       res.status(400).json({
         error: 'BAD_ID',
-        message: `không rút được id từ tên "${name}" — điền ô id bằng chữ thường, số và dấu gạch`,
+        message: `could not derive an id from "${name}" — fill the id field with lowercase, digits and dashes`,
       });
       return;
     }
@@ -136,14 +136,14 @@ export function buildApp(): Express {
       return value.trim() === '' ? null : value.trim();
     };
     if (findProject(req.params.id) === undefined) {
-      res.status(404).json({ error: 'NO_PROJECT', message: `không có project nào tên ${req.params.id}` });
+      res.status(404).json({ error: 'NO_PROJECT', message: `no project named ${req.params.id}` });
       return;
     }
     const name = field('name');
     // cm:guard Refuses an explicitly blank name instead of quietly treating it as "unchanged": the
     // reader cleared that field on purpose, and silently keeping the old value hides the refusal.
     if (name === null) {
-      res.status(400).json({ error: 'NO_NAME', message: 'tên không được để trống' });
+      res.status(400).json({ error: 'NO_NAME', message: 'name must not be blank' });
       return;
     }
     try {
@@ -164,7 +164,7 @@ export function buildApp(): Express {
   // nothing in the UI would have warned that it was about to.
   app.delete('/api/projects/:id', localWritesOnly, (req: Request<{ id: string }>, res) => {
     if (!removeProject(req.params.id)) {
-      res.status(404).json({ error: 'NO_PROJECT', message: `không có project nào tên ${req.params.id}` });
+      res.status(404).json({ error: 'NO_PROJECT', message: `no project named ${req.params.id}` });
       return;
     }
     // cm:guard Only names the map directory when it actually exists: a project removed before its
@@ -201,13 +201,13 @@ export function buildApp(): Express {
   app.get('/api/map/:id/:kind', (req, res) => {
     const kind = req.params.kind as MapKind;
     if (!KINDS.includes(kind)) {
-      res.status(400).json({ error: 'BAD_KIND', message: `kind phải là một trong ${KINDS.join(', ')}` });
+      res.status(400).json({ error: 'BAD_KIND', message: `kind must be one of ${KINDS.join(', ')}` });
       return;
     }
     try {
       const map = readMap(req.params.id, kind);
       if (map === null) {
-        res.status(404).json({ error: 'NO_MAP', message: `${req.params.id} không có map ${kind}` });
+        res.status(404).json({ error: 'NO_MAP', message: `${req.params.id} has no ${kind} map` });
         return;
       }
       res.json(map);

@@ -54,20 +54,20 @@
 
 ## Core Engine Separation
 
-Core Engine là pure TypeScript, **không có React dependency**. Cả MCP Server và Web UI đều import từ `src/core/`.
+The core engine is pure TypeScript with **no React dependency**. Both the MCP server and the web UI import from `src/core/`.
 
-### Tại sao tách Core Engine?
-- MCP Server chạy trong Node.js — không có DOM, không cần React
-- Web UI chạy trong browser — cần React, nhưng logic execution giống nhau
-- Tách ra → test được Core Engine độc lập, không cần browser
+### Why split the core engine out?
+- The MCP server runs in Node.js — no DOM, no need for React
+- The web UI runs in the browser — it needs React, but the execution logic is the same
+- Split out → the core engine can be tested on its own, with no browser
 
 ### Core Engine Modules
 
 | Module | Responsibility |
 |--------|---------------|
 | `ExecutionEngine` | Topological sort, sequential/parallel run, error handling |
-| `FlowManager` | CRUD operations trên flow: create, read, update, delete |
-| `VariableResolver` | Resolve `{{variable}}` trong URL, headers, body |
+| `FlowManager` | CRUD operations on a flow: create, read, update, delete |
+| `VariableResolver` | Resolves `{{variable}}` in the URL, headers and body |
 | `HttpClient` | Execute HTTP requests, capture timing + response |
 | `FileIO` | Read/write `.apiview` files, environment files |
 
@@ -77,16 +77,16 @@ Core Engine là pure TypeScript, **không có React dependency**. Cả MCP Serve
 
 ### Transport: stdio
 - Claude Code native support — `claude mcp add api-view -- node src/mcp/server.js`
-- Không cần HTTP server, không cần port management
+- No HTTP server, no port management
 - Protocol: JSON-RPC 2.0 over stdin/stdout
 
 ### SDK
 - `@modelcontextprotocol/sdk` — official MCP SDK
-- `server.setRequestHandler()` cho tools + resources
+- `server.setRequestHandler()` for tools + resources
 
 ### Tool Registration Pattern
 ```typescript
-// Mỗi tool = 1 handler function
+// One handler function per tool
 server.setRequestHandler(CallToolRequestSchema, async (request) => {
   switch (request.params.name) {
     case "create_flow": return handleCreateFlow(request.params.arguments);
@@ -112,7 +112,7 @@ server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
 ## Skill Implementation
 
 ### Format
-Claude Code skill = markdown file với instructions + tool usage patterns.
+A Claude Code skill is a markdown file with instructions plus tool-usage patterns.
 
 ### Codebase Analysis Approach
 
@@ -215,7 +215,7 @@ api-view/
 
 ## .apiview File Format (Reference)
 
-Existing JSON format đã dùng trong Web UI, ví dụ:
+The JSON format the web UI already uses, for example:
 ```json
 {
   "name": "user-registration",
@@ -242,14 +242,14 @@ Existing JSON format đã dùng trong Web UI, ví dụ:
 }
 ```
 
-MCP Server và Web UI đều đọc/ghi format này → single source of truth.
+The MCP server and the web UI both read and write this format → a single source of truth.
 
 ---
 
 ## Current State (as of Phase 2 completion)
 
-Web UI đã có đầy đủ:
-- Canvas với API nodes, annotations, group frames
+The web UI already has all of:
+- A canvas with API nodes, annotations and group frames
 - Execution engine (normal + step-by-step)
 - Variable resolution (env vars + node response chaining)
 - Inspector panel (resizable, JSON viewer with Tree/Raw/Search/Expand)
@@ -257,11 +257,11 @@ Web UI đã có đầy đủ:
 - Import cURL, Export PNG/SVG
 - Undo/Redo, Keyboard shortcuts, Auto-save
 
-Core Engine modules hiện nằm trong `src/engine/` và `src/store/`:
+The core engine modules currently live in `src/engine/` and `src/store/`:
 - `src/engine/executor.ts` — execution logic
 - `src/engine/variableResolver.ts` — variable resolution
 - `src/engine/httpClient.ts` — HTTP proxy client
 - `src/engine/topologicalSort.ts` — graph sorting
 - `src/utils/fileIO.ts` — file save/load
 
-Phase 4a refactor sẽ move các modules này sang `src/core/` để shared với MCP Server.
+The Phase 4a refactor moves these modules to `src/core/` so the MCP server can share them.

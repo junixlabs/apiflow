@@ -36,15 +36,15 @@ export function headlineFor(before: ApiMapFile, after: ApiMapFile): string {
   const coverage = at - bt;
   const trust = share(a.exact + a.inferred, at) - share(b.exact + b.inferred, bt);
 
-  if (coverage > 0 && trust < -1) return 'Phủ rộng hơn, nhưng chắc chắn kém đi.';
-  if (coverage > 0 && trust > 1) return 'Phủ rộng hơn và chắc chắn hơn.';
-  // cm:guard A flat trust with more coverage is NOT "chắc chắn hơn" — the old fallthrough said that
+  if (coverage > 0 && trust < -1) return 'Wider coverage, weaker certainty.';
+  if (coverage > 0 && trust > 1) return 'Wider coverage and more certainty.';
+  // cm:guard Flat trust with more coverage is NOT "more certainty" — the old fallthrough said that
   // on a scan where every confidence share moved 0.0pp, and the panel under it showed the zeros.
-  if (coverage > 0) return 'Phủ rộng hơn, độ chắc gần như không đổi.';
-  if (coverage < 0 && trust > 1) return 'Phủ hẹp hơn, phần còn lại chắc hơn.';
-  if (coverage < 0) return 'Phủ hẹp hơn.';
-  if (Math.abs(trust) <= 1) return 'Không thay đổi đáng kể.';
-  return trust < 0 ? 'Chắc chắn kém đi.' : 'Chắc chắn hơn.';
+  if (coverage > 0) return 'Wider coverage, certainty about the same.';
+  if (coverage < 0 && trust > 1) return 'Narrower coverage, what is left is firmer.';
+  if (coverage < 0) return 'Narrower coverage.';
+  if (Math.abs(trust) <= 1) return 'No meaningful change.';
+  return trust < 0 ? 'Weaker certainty.' : 'More certainty.';
 }
 
 export function diffMaps(before: ApiMapFile, after: ApiMapFile): MapDiff {
@@ -72,11 +72,11 @@ export function diffMaps(before: ApiMapFile, after: ApiMapFile): MapDiff {
     const old = bIndex.get(k) as typeof e;
     const notes: string[] = [];
     if (old.auth !== e.auth) {
-      const label = (v: boolean | undefined) => (v === true ? 'có auth' : v === false ? 'không auth' : 'không rõ');
-      notes.push(`cổng auth: ${label(old.auth)} → ${label(e.auth)}`);
+      const label = (v: boolean | undefined) => (v === true ? 'auth' : v === false ? 'no auth' : 'unknown');
+      notes.push(`auth gate: ${label(old.auth)} → ${label(e.auth)}`);
     }
     if ((old.source === undefined) !== (e.source === undefined)) {
-      notes.push(e.source === undefined ? 'API không còn khai' : 'API bắt đầu khai');
+      notes.push(e.source === undefined ? 'the API stopped declaring it' : 'the API started declaring it');
     }
     if (notes.length > 0) changed.push({ method: e.method, path: e.path, detail: notes.join(' · '), screens: screensOf(after, e.id) });
   }

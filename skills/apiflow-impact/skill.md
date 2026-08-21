@@ -11,7 +11,7 @@ description: >
 
 # apiflow impact
 
-Answer **"đổi cái này thì màn nào vỡ?"** from a map that already exists, in one tool call,
+Answer **"if I change this, which screens break?"** from a map that already exists, in one tool call,
 before touching the code.
 
 ## When to reach for this
@@ -49,10 +49,10 @@ resolve**. Those two facts are part of the answer, not a footnote:
 - `inferred` — one half was derived (a template, an implicit verb).
 - `guess` — the path was assembled, or the screen was reached through a wide module hop. Real
   signal, not proof.
-- **`0 màn vỡ` is not "nothing uses it".** It means nothing *in this map* calls it. If the
+- **`0 screens break` is not "nothing uses it".** It means nothing *in this map* calls it. If the
   unresolved count is not zero, say so in the same sentence.
-- If `map_health` says the BE half is too thin to compare, do not act on "FE gọi, API không
-  khai" — that column is the scanner's blind spot, not a defect in the API.
+- If `map_health` says the BE half is too thin to compare, do not act on "FE calls it, API does not
+  declare it" — that column is the scanner's blind spot, not a defect in the API.
 
 ## What to do with it
 

@@ -220,12 +220,12 @@ export const PANES_HTML = `
   <div class="kpistrip" id="ep-kpis"></div>
   <div class="grid3">
     <aside class="facets" id="ep-facets">
-      <div class="fhead"><span>Bộ lọc</span><button class="reset" id="f-reset" type="button">Bỏ lọc</button></div>
+      <div class="fhead"><span>Filters</span><button class="reset" id="f-reset" type="button">Clear</button></div>
       <div id="f-groups"></div>
     </aside>
     <div>
       <div class="toolrow">
-        <label class="search">🔎<input id="q" placeholder="tìm theo method, path hoặc controller" autocomplete="off"></label>
+        <label class="search">🔎<input id="q" placeholder="search method, path or controller" autocomplete="off"></label>
         <span class="stat" id="ep-count"></span>
         <span class="spacer"></span>
         <span class="stat" id="ep-range"></span>
@@ -238,18 +238,18 @@ export const PANES_HTML = `
           </colgroup>
           <thead><tr>
             <th>method</th><th>path · controller</th>
-            <th>auth</th><th>trạng thái</th><th class="num">#</th><th>tin cậy</th>
+            <th>auth</th><th>state</th><th class="num">#</th><th>confidence</th>
           </tr></thead>
           <tbody id="ep-rows"></tbody>
         </table>
         <div class="pager" id="ep-pager"></div>
       </div>
       <div class="legendbar">
-        <span><b>độ tin cậy</b></span>
-        <span><span class="swatch c-bg-exact"></span>exact — đọc trực tiếp từ code</span>
-        <span><span class="swatch c-bg-inferred"></span>inferred — suy qua wrapper hoặc hằng số</span>
-        <span><span class="swatch c-bg-guess"></span>guess — đi qua re-export, có thể sai màn</span>
-        <span>Unresolved <b>không</b> nằm trong ba mức trên — apiflow không đọc được đường dẫn.</span>
+        <span><b>confidence</b></span>
+        <span><span class="swatch c-bg-exact"></span>exact — read straight off the code</span>
+        <span><span class="swatch c-bg-inferred"></span>inferred — derived through a wrapper or a constant</span>
+        <span><span class="swatch c-bg-guess"></span>guess — went through a re-export, the screen may be wrong</span>
+        <span>Unresolved is <b>not</b> part of the three levels above — apiflow could not read the path.</span>
       </div>
     </div>
     <div class="insp2">
@@ -261,31 +261,31 @@ export const PANES_HTML = `
 
 <section class="pane" id="pane-cover" hidden>
   <div class="toolrow">
-    <label class="search">🔎<input id="cv-q" placeholder="tìm theo method hoặc path" autocomplete="off"></label>
+    <label class="search">🔎<input id="cv-q" placeholder="search method or path" autocomplete="off"></label>
     <select class="facet" id="cv-recon"></select>
     <span class="stat" id="cv-count"></span>
   </div>
   <div class="legend">
-    <span><span class="swatch" style="background:var(--exact)"></span>màn gọi &amp; API khai</span>
-    <span><span class="swatch" style="background:var(--surface-3);border-color:var(--line)"></span>API khai, không màn nào gọi</span>
-    <span><span class="swatch" style="background:var(--dead)"></span>FE gọi, API không khai</span>
-    <span><span class="swatch" style="background:repeating-linear-gradient(135deg,var(--surface-3) 0 3px,var(--surface) 3px 6px)"></span>chưa đối chiếu được</span>
-    <span><b>viền trong</b> = không thấy cổng auth</span>
-    <span>bấm một ô để xem vòng ảnh hưởng của nó</span>
+    <span><span class="swatch" style="background:var(--exact)"></span>screens call it &amp; the API declares it</span>
+    <span><span class="swatch" style="background:var(--surface-3);border-color:var(--line)"></span>declared, no screen calls it</span>
+    <span><span class="swatch" style="background:var(--dead)"></span>FE calls it, API does not declare it</span>
+    <span><span class="swatch" style="background:repeating-linear-gradient(135deg,var(--surface-3) 0 3px,var(--surface) 3px 6px)"></span>not reconciled yet</span>
+    <span><b>inner ring</b> = no auth gate found</span>
+    <span>click a cell to see its impact ring</span>
   </div>
   <div class="blocks" id="blocks"></div>
 </section>
 
 <section class="pane" id="pane-graph" hidden>
   <div class="pick">
-    <span class="hint">đang xem</span><b id="scope-label">—</b>
+    <span class="hint">showing</span><b id="scope-label">—</b>
     <span class="spacer"></span>
-    <span class="hint">trỏ vào một hàng để soi riêng nhánh đó</span>
+    <span class="hint">hover a row to isolate that branch</span>
   </div>
   <div class="legend">
-    <span><span class="swatch" style="background:var(--inferred)"></span>màn</span>
-    <span><span class="swatch" style="background:var(--exact)"></span>endpoint API có khai</span>
-    <span><span class="swatch" style="background:var(--dead)"></span>endpoint API không khai</span>
+    <span><span class="swatch" style="background:var(--inferred)"></span>screen</span>
+    <span><span class="swatch" style="background:var(--exact)"></span>endpoint the API declares</span>
+    <span><span class="swatch" style="background:var(--dead)"></span>endpoint the API does not declare</span>
     <span style="color:var(--exact)">── exact</span>
     <span style="color:var(--inferred)">── inferred</span>
     <span style="color:var(--guess)">╌╌ guess</span>
@@ -296,7 +296,7 @@ export const PANES_HTML = `
 
 <section class="pane" id="pane-impact" hidden>
   <div class="toolrow">
-    <label class="search">🔎<input id="imp-q" placeholder="chọn endpoint: gõ method hoặc path" autocomplete="off"></label>
+    <label class="search">🔎<input id="imp-q" placeholder="pick an endpoint: type a method or a path" autocomplete="off"></label>
     <select class="facet" id="imp-pick"></select>
   </div>
   <div id="imp-body"></div>
@@ -304,13 +304,13 @@ export const PANES_HTML = `
 
 <section class="pane" id="pane-screens" hidden>
   <div class="toolrow">
-    <label class="search">🔎<input id="sc-q" placeholder="tìm màn theo route" autocomplete="off"></label>
+    <label class="search">🔎<input id="sc-q" placeholder="search screens by route" autocomplete="off"></label>
     <span class="stat" id="sc-count"></span>
   </div>
   <div class="grid2">
     <div class="tblwrap">
       <table class="rows">
-        <thead><tr><th>màn</th><th class="nowrap">#endpoint</th><th>độ tin cậy</th></tr></thead>
+        <thead><tr><th>screen</th><th class="nowrap">#endpoints</th><th>confidence</th></tr></thead>
         <tbody id="sc-rows"></tbody>
       </table>
       <div class="pager" id="sc-pager"></div>
@@ -320,17 +320,17 @@ export const PANES_HTML = `
 </section>
 
 <section class="pane" id="pane-unresolved" hidden>
-  <p class="hintbox">Đây là những lời gọi apiflow <b>thấy nhưng không giải được đường dẫn</b>.
-  Chúng không nằm trong bất kỳ con số endpoint nào — chúng là mẫu số của độ tin cậy.</p>
-  <div class="toolrow"><label class="search">🔎<input id="un-q" placeholder="tìm theo file hoặc lý do" autocomplete="off"></label>
+  <p class="hintbox">These are calls apiflow <b>saw but could not resolve to a path</b>.
+  They are part of no endpoint count — they are the denominator of confidence.</p>
+  <div class="toolrow"><label class="search">🔎<input id="un-q" placeholder="search by file or reason" autocomplete="off"></label>
   <span class="stat" id="un-count"></span></div>
   <div id="un-body"></div>
 </section>
 
 <section class="pane" id="pane-alerts" hidden>
-  <p class="hintbox"><b>Alert</b> là thứ apiflow hiểu được và thấy nguy hiểm — khác với Unresolved,
-  là thứ nó không hiểu nổi. Mức nghiêm trọng xếp theo độ tin cậy của lời gọi: một mismatch ở mức
-  <i>guess</i> có thể là hệ quả của phép suy đường dẫn của chính tool.</p>
+  <p class="hintbox">An <b>alert</b> is something apiflow understood and finds dangerous — unlike
+  Unresolved, which is something it could not understand at all. Severity follows the confidence of the
+  calls: a mismatch at <i>guess</i> level may be an artefact of the tool's own path inference.</p>
   <div class="toolrow">
     <select class="facet" id="al-kind"></select>
     <select class="facet" id="al-sev"></select>
@@ -354,16 +354,16 @@ const DIFF = JSON.parse(document.getElementById('diff').textContent);
 const SERIES = JSON.parse(el0('series'));
 const EPHIST = JSON.parse(el0('ephist'));
 
-// cm:why "bản scan thứ 3/5" plus a date, not just a date: history holds only the scans that CHANGED
-// something, so "2 ngày trước" alone hides that there were three scans in between that saw the same.
+// cm:why "scan 3/5" plus a date, not just a date: history holds only the scans that CHANGED
+// something, so "2d ago" alone hides that there were three scans in between that saw the same.
 function seenText(endpointId) {
   if (!EPHIST) return null;
   const total = EPHIST.scans.length;
   const index = EPHIST.first[endpointId];
-  if (index === undefined) return 'có ở cả ' + total + ' bản scan đã lưu';
+  if (index === undefined) return 'present in all ' + total + ' stored scans';
   const at = EPHIST.scans[index] && EPHIST.scans[index].at;
-  return 'xuất hiện ở bản scan thứ ' + (index + 1) + '/' + total
-    + (at ? ' (' + new Date(at).toLocaleString('vi-VN') + ')' : '');
+  return 'first seen in scan ' + (index + 1) + '/' + total
+    + (at ? ' (' + new Date(at).toLocaleString('en-US') + ')' : '');
 }
 
 // cm:guard Kept for the panes that still cap instead of paginate — unresolved groups by reason, and
@@ -411,19 +411,19 @@ function reconOf(e) {
   return HAS_FE ? 'uncalled' : 'unpaired';
 }
 const RECON_LABEL = {
-  both: 'khớp hai phía',
-  uncalled: 'không màn nào gọi',
-  feonly: 'API không khai',
-  unpaired: 'chưa đối chiếu',
+  both: 'both sides',
+  uncalled: 'no screen calls it',
+  feonly: 'API does not declare it',
+  unpaired: 'not reconciled',
 };
 const RECON_CLS = { both: 'd-both', uncalled: 'd-uncalled', feonly: 'd-feonly', unpaired: 'd-unpaired' };
 // cm:why Each state gets a sentence, not just a colour: "feonly" is a finding a reader has to act on,
 // and the action depends on WHY apiflow says it — which the colour cannot carry.
 const RECON_WHY = {
-  both: 'API khai route này và có màn gọi nó. Đổi nó là đổi cả hai phía.',
-  uncalled: 'API khai route này nhưng không màn nào trong FE đã scan gọi tới. Ứng viên route chết — client khác vẫn có thể đang gọi.',
-  feonly: 'FE gọi đường dẫn này nhưng BE không khai. Hoặc sai đường dẫn, hoặc route nằm ở service khác.',
-  unpaired: 'Chưa đối chiếu được vì thiếu một phía. Scan phía còn lại rồi mới kết luận được.',
+  both: 'The API declares this route and screens call it. Changing it changes both sides.',
+  uncalled: 'The API declares this route but no screen in the scanned FE calls it. A dead-route candidate — another client may still be calling it.',
+  feonly: 'The FE calls this path but the BE does not declare it. Either the path is wrong, or the route lives in another service.',
+  unpaired: 'Not reconciled because one side is missing. Scan the other side before concluding anything.',
 };
 
 const screensFor = (endpointId) =>
@@ -450,7 +450,7 @@ const bestConf = (calls) => {
 function microBar(id) {
   const r = RELIABILITY.get(id);
   const wrap = h('div', 'micro');
-  if (!r) { wrap.title = 'chưa có lời gọi nào truy được'; return wrap; }
+  if (!r) { wrap.title = 'no call traced yet'; return wrap; }
   const total = r.exact + r.inferred + r.guess;
   for (const k of ['exact', 'inferred', 'guess']) {
     if (!r[k]) continue;
@@ -460,7 +460,7 @@ function microBar(id) {
   }
   // cm:why Title carries the COUNT, not just the split: one call at exact is not stronger evidence
   // than twenty calls at 90% exact, and a bare percentage hides exactly that.
-  wrap.title = total + ' lời gọi · exact ' + r.exact + ' · inferred ' + r.inferred + ' · guess ' + r.guess;
+  wrap.title = total + ' calls · exact ' + r.exact + ' · inferred ' + r.inferred + ' · guess ' + r.guess;
   return wrap;
 }
 
@@ -508,25 +508,25 @@ function kpiStrip(id) {
   const d = DIFF;
   const rows = [
     ['endpoint', MAP.endpoints.length, d && (d.endpoints.added.length - d.endpoints.removed.length), ''],
-    ['màn hình', MAP.screens.length, d && (d.screens.after - d.screens.before), ''],
-    ['lời gọi', MAP.calls.length, d && (d.calls.after - d.calls.before), ''],
+    ['screens', MAP.screens.length, d && (d.screens.after - d.screens.before), ''],
+    ['calls', MAP.calls.length, d && (d.calls.after - d.calls.before), ''],
     ['field', MAP.fields.length, null, ''],
     ['unresolved', MAP.unresolved.length, d && (d.unresolved.after - d.unresolved.before), MAP.unresolved.length ? 'alarm' : ''],
-    ['thấy hai phía', MAP.endpoints.filter((e) => reconOf(e) === 'both').length, null, ''],
+    ['both sides', MAP.endpoints.filter((e) => reconOf(e) === 'both').length, null, ''],
   ];
-  const SERIES_KEY = { endpoint: 'endpoints', 'màn hình': 'screens', 'lời gọi': 'calls', unresolved: 'unresolved' };
+  const SERIES_KEY = { endpoint: 'endpoints', screens: 'screens', calls: 'calls', unresolved: 'unresolved' };
   for (const [lab, val, delta, cls] of rows) {
     const card = h('div', 'k1 ' + cls);
     card.appendChild(h('div', 'lab', lab));
-    card.appendChild(h('div', 'val', val.toLocaleString('vi-VN')));
+    card.appendChild(h('div', 'val', val.toLocaleString('en-US')));
     // cm:why A delta is shown only when two scans exist — an unchanged "▲ 0" on a first scan reads
     // as "measured, no movement" when the truth is that nothing has been measured against yet.
     if (delta === null || delta === undefined || delta === 0) {
-      card.appendChild(h('div', 'dlt', d ? '—' : 'chưa có bản trước để so'));
+      card.appendChild(h('div', 'dlt', d ? '—' : 'no earlier scan to compare with'));
     } else {
       const up = lab === 'unresolved' ? delta < 0 : delta > 0;
       card.appendChild(h('div', 'dlt ' + (up ? 'up' : 'down'),
-        (delta > 0 ? '▲ ' : '▼ ') + Math.abs(delta).toLocaleString('vi-VN') + ' so lần trước'));
+        (delta > 0 ? '▲ ' : '▼ ') + Math.abs(delta).toLocaleString('en-US') + ' vs last scan'));
     }
     const line = SERIES && SERIES[SERIES_KEY[lab]];
     if (line && line.length >= 3) card.appendChild(spark(line, cls === 'alarm'));
@@ -555,9 +555,9 @@ function spark(values, inverse) {
     points: pts, fill: 'none', 'stroke-width': '1.4', 'stroke-linejoin': 'round',
     stroke: 'var(--' + (values[0] === values[values.length - 1] ? 'muted' : good ? 'exact' : 'dead') + ')',
   }));
-  svg.setAttribute('aria-label', values.length + ' lần scan: ' + values.join(' → '));
+  svg.setAttribute('aria-label', values.length + ' scans: ' + values.join(' → '));
   const titleEl = svgEl('title', {});
-  titleEl.textContent = values.length + ' lần scan gần nhất: ' + values.join(' → ');
+  titleEl.textContent = 'last ' + values.length + ' scans: ' + values.join(' → ');
   svg.appendChild(titleEl);
   return svg;
 }
@@ -566,13 +566,13 @@ const FACET_GROUPS = [
   { key: 'method', title: 'method', values: () => [...new Set(MAP.endpoints.map((e) => e.method))].sort()
       .map((m) => ({ v: m, label: m, test: (e) => e.method === m })) },
   { key: 'auth', title: 'auth', values: () => [
-      { v: 'yes', label: 'có auth', test: (e) => e.auth === true },
-      { v: 'no', label: 'không auth', test: (e) => e.auth === false },
-      { v: 'murky', label: 'không rõ', test: (e) => e.auth === undefined },
+      { v: 'yes', label: 'has auth', test: (e) => e.auth === true },
+      { v: 'no', label: 'no auth', test: (e) => e.auth === false },
+      { v: 'murky', label: 'murky', test: (e) => e.auth === undefined },
     ] },
-  { key: 'recon', title: 'đối chiếu', values: () => Object.keys(RECON_LABEL)
+  { key: 'recon', title: 'reconciliation', values: () => Object.keys(RECON_LABEL)
       .map((k) => ({ v: k, label: RECON_LABEL[k], cls: RECON_CLS[k], test: (e) => reconOf(e) === k })) },
-  { key: 'conf', title: 'độ tin cậy của lời gọi', values: () => ['exact', 'inferred', 'guess']
+  { key: 'conf', title: 'confidence of the calls', values: () => ['exact', 'inferred', 'guess']
       .map((k) => ({ v: k, label: k, cls: 'c-bg-' + k, test: (e) => bestConf(callsByEndpoint.get(e.id) || []) === k })) },
 ];
 
@@ -591,7 +591,7 @@ function renderFacets() {
     allInput.name = 'f-' + group.key;
     allInput.checked = state[group.key] === '';
     allInput.onchange = () => { state[group.key] = ''; state.page = 1; render(); };
-    all.append(allInput, h('span', null, 'tất cả'), h('span', 'fn', String(MAP.endpoints.length)));
+    all.append(allInput, h('span', null, 'all'), h('span', 'fn', String(MAP.endpoints.length)));
     wrap.appendChild(all);
     for (const value of group.values()) {
       const n = MAP.endpoints.filter(value.test).length;
@@ -660,18 +660,18 @@ function renderEndpoints() {
   renderFacets();
 
   const rows = visibleEndpoints();
-  el('ep-count').textContent = rows.length.toLocaleString('vi-VN') + ' / '
-    + MAP.endpoints.length.toLocaleString('vi-VN') + ' endpoint';
+  el('ep-count').textContent = rows.length.toLocaleString('en-US') + ' / '
+    + MAP.endpoints.length.toLocaleString('en-US') + ' endpoint';
 
   const from = (state.page - 1) * PAGE;
   const page = rows.slice(from, from + PAGE);
   // cm:why Selects the first visible row when the current selection is filtered away: an inspector
-  // that says "bấm một dòng" next to a full table is a third of the pane spent on an instruction.
+  // that says "click a row" next to a full table is a third of the pane spent on an instruction.
   if (state.endpoint === null || !rows.some((e) => e.id === state.endpoint)) {
     state.endpoint = page.length > 0 ? page[0].id : null;
   }
-  el('ep-range').textContent = rows.length === 0 ? 'không có dòng nào khớp'
-    : 'đang xem ' + (from + 1) + '–' + (from + page.length) + ' trong ' + rows.length.toLocaleString('vi-VN');
+  el('ep-range').textContent = rows.length === 0 ? 'no row matches'
+    : 'showing ' + (from + 1) + '–' + (from + page.length) + ' of ' + rows.length.toLocaleString('en-US');
 
   const body = el('ep-rows');
   body.textContent = '';
@@ -690,12 +690,12 @@ function renderEndpoints() {
     path.appendChild(pathText);
     const where = e.handler
       ? e.handler + (e.source ? '  ·  ' + e.source.file + ':' + e.source.line : '')
-      : e.source ? e.source.file + ':' + e.source.line : 'BE không khai route này';
+      : e.source ? e.source.file + ':' + e.source.line : 'the BE does not declare this route';
     const sub = h('div', 'sub2 clip', where);
     sub.title = where;
     path.appendChild(sub);
     tr.appendChild(path);
-    tr.appendChild(h('td', 'nowrap', e.auth === true ? 'có' : e.auth === false ? 'KHÔNG' : '?'));
+    tr.appendChild(h('td', 'nowrap', e.auth === true ? 'yes' : e.auth === false ? 'NO' : '?'));
     const st = h('td', 'nowrap');
     st.appendChild(h('span', 'dot ' + RECON_CLS[reconOf(e)]));
     st.appendChild(document.createTextNode(' ' + RECON_LABEL[reconOf(e)]));
@@ -711,7 +711,7 @@ function renderEndpoints() {
   renderInspector();
 }
 
-const INSP_TABS = [['overview', 'Tổng quan'], ['calls', 'Lời gọi'], ['fields', 'Field'], ['chain', 'Chuỗi'], ['alerts', 'Alert']];
+const INSP_TABS = [['overview', 'Overview'], ['calls', 'Calls'], ['fields', 'Fields'], ['chain', 'Chain'], ['alerts', 'Alerts']];
 
 function renderInspector() {
   const tabs = el('insp-tabs');
@@ -720,7 +720,7 @@ function renderInspector() {
   body.textContent = '';
   const e = state.endpoint ? endpoints.get(state.endpoint) : null;
   if (!e) {
-    body.appendChild(h('p', 'empty2', 'Bấm một dòng để xem chi tiết.'));
+    body.appendChild(h('p', 'empty2', 'Click a row to see the detail.'));
     return;
   }
   for (const [id, label] of INSP_TABS) {
@@ -744,18 +744,18 @@ function renderInspector() {
     body.appendChild(callout);
     const kv = h('div', 'kv');
     const add = (k, v) => { kv.appendChild(h('span', null, k)); kv.appendChild(h('span', 'mono', v)); };
-    add('đối chiếu', RECON_LABEL[reconOf(e)]);
-    add('auth', e.auth === true ? 'có cổng' : e.auth === false ? 'KHÔNG thấy cổng nào' : 'có cổng nhưng không phân loại được');
+    add('reconciliation', RECON_LABEL[reconOf(e)]);
+    add('auth', e.auth === true ? 'gated' : e.auth === false ? 'NO gate found' : 'gated but could not be classified');
     add('handler', e.handler || '—');
-    add('khai ở', e.source ? e.source.file + ':' + e.source.line : 'không thấy trong BE');
+    add('declared at', e.source ? e.source.file + ':' + e.source.line : 'not found in the BE');
     const seen = seenText(e.id);
-    if (seen) add('lịch sử', seen);
-    add('số lời gọi', String(calls.length));
-    add('độ tin cậy', calls.length ? bestConf(calls) + ' (tốt nhất)' : '—');
+    if (seen) add('history', seen);
+    add('calls', String(calls.length));
+    add('confidence', calls.length ? bestConf(calls) + ' (best)' : '—');
     body.appendChild(kv);
     const r = RELIABILITY.get(e.id);
     if (r) {
-      body.appendChild(h('p', 'sub2', 'phân bố bằng chứng: exact ' + r.exact + ' · inferred ' + r.inferred + ' · guess ' + r.guess));
+      body.appendChild(h('p', 'sub2', 'evidence spread: exact ' + r.exact + ' · inferred ' + r.inferred + ' · guess ' + r.guess));
       body.appendChild(microBar(e.id));
     }
     const mine = alertsByEndpoint.get(e.id) || [];
@@ -766,8 +766,8 @@ function renderInspector() {
       body.appendChild(p);
     }
     const go = h('button', 'btn primary wide2', calls.length
-      ? 'Xem ' + calls.length + ' lời gọi tới ' + (screensFor(e.id).length) + ' màn →'
-      : 'Xem pane ảnh hưởng →');
+      ? 'See ' + calls.length + ' calls reaching ' + (screensFor(e.id).length) + ' screens →'
+      : 'Open the impact pane →');
     go.onclick = () => {
       state.section = 'impact';
       location.hash = 'impact';
@@ -779,7 +779,7 @@ function renderInspector() {
 
   if (state.insp === 'calls') {
     if (!calls.length) {
-      body.appendChild(h('p', 'empty2', 'Không lời gọi nào truy được. Đó không phải bằng chứng là không ai gọi — xem Unresolved.'));
+      body.appendChild(h('p', 'empty2', 'No call could be traced. That is not evidence nobody calls it — see Unresolved.'));
       return;
     }
     for (const c of calls) {
@@ -787,7 +787,7 @@ function renderInspector() {
       const line = h('div');
       line.appendChild(h('span', 'badge ' + c.confidence, c.confidence));
       const s = screens.get(c.screenId);
-      line.appendChild(document.createTextNode(' ' + (s && s.route ? s.route : (s ? s.label + ' (chưa gắn route)' : '?'))));
+      line.appendChild(document.createTextNode(' ' + (s && s.route ? s.route : (s ? s.label + ' (no route attached)' : '?'))));
       row.appendChild(line);
       row.appendChild(h('div', 'sub2', c.source.file + ':' + c.source.line + ' · qua ' + c.via));
       body.appendChild(row);
@@ -798,7 +798,7 @@ function renderInspector() {
   if (state.insp === 'fields') {
     const fs = fieldsByEndpoint.get(e.id) || [];
     if (!fs.length) {
-      body.appendChild(h('p', 'empty2', 'Chưa thấy field nào. Code có thể dùng type TS thay vì đọc field tại call site, hoặc chưa chạy apiflow probe.'));
+      body.appendChild(h('p', 'empty2', 'No field seen yet. The code may use a TS type instead of reading fields at the call site, or apiflow probe has not been run.'));
       return;
     }
     for (const f of fs) {
@@ -806,8 +806,8 @@ function renderInspector() {
       row.appendChild(h('div', 'mono', f.path + (f.type ? ' : ' + f.type : '')));
       const tag = [];
       if (f.declared) tag.push('code khai');
-      if (f.observed) tag.push('probe thấy thật');
-      row.appendChild(h('div', 'sub2', f.kind + (tag.length ? ' · ' + tag.join(' · ') : ' · chưa rõ')));
+      if (f.observed) tag.push('seen live by probe');
+      row.appendChild(h('div', 'sub2', f.kind + (tag.length ? ' · ' + tag.join(' · ') : ' · unclear')));
       body.appendChild(row);
     }
     return;
@@ -816,7 +816,7 @@ function renderInspector() {
   if (state.insp === 'chain') {
     const withChain = calls.filter((c) => c.chain && c.chain.length);
     if (!withChain.length) {
-      body.appendChild(h('p', 'empty2', 'Không lời gọi nào có chuỗi truy được về màn.'));
+      body.appendChild(h('p', 'empty2', 'No call has a chain that reaches a screen.'));
       return;
     }
     for (const c of withChain.slice(0, 8)) {
@@ -834,12 +834,12 @@ function renderInspector() {
       }
       body.appendChild(box);
     }
-    if (withChain.length > 8) body.appendChild(h('p', 'cut', 'Còn ' + (withChain.length - 8) + ' chuỗi nữa — mở tab Ảnh hưởng để xem hết.'));
+    if (withChain.length > 8) body.appendChild(h('p', 'cut', (withChain.length - 8) + ' more chains — open the Impact tab to see them all.'));
     return;
   }
 
   const mine = alertsByEndpoint.get(e.id) || [];
-  if (!mine.length) { body.appendChild(h('p', 'empty2', 'Không alert nào cho endpoint này.')); return; }
+  if (!mine.length) { body.appendChild(h('p', 'empty2', 'No alert for this endpoint.')); return; }
   for (const a of mine) {
     const row = h('div', 'gb');
     const t = h('div');
@@ -847,14 +847,14 @@ function renderInspector() {
     t.appendChild(document.createTextNode(' ' + a.kind));
     row.appendChild(t);
     row.appendChild(h('div', 'sub2', a.detail));
-    if (a.screens.length) row.appendChild(h('div', 'sub2', 'màn: ' + a.screens.join(' · ')));
+    if (a.screens.length) row.appendChild(h('div', 'sub2', 'screens: ' + a.screens.join(' · ')));
     body.appendChild(row);
   }
 }
 `;
 
 export const PANES_SCRIPT_2 = String.raw`
-const ROLE_COLS = [['client', 'api client'], ['hook', 'hook / util'], ['component', 'component'], ['screen', 'màn']];
+const ROLE_COLS = [['client', 'api client'], ['hook', 'hook / util'], ['component', 'component'], ['screen', 'screen']];
 const COL_CAP = 14;
 
 // cm:why Draws the edges, not four independent lists: the columns alone tell you WHICH components
@@ -952,7 +952,7 @@ function chainGraph(chains) {
     g.appendChild(where);
     const tip = svgEl('title', {});
     tip.textContent = step.symbol + '\n' + step.file + ':' + step.line
-      + (step.precise ? '' : '\nbước này đã mất độ chắc');
+      + (step.precise ? '' : '\nthis step lost precision');
     g.appendChild(tip);
     g.onmouseenter = () => {
       svg.classList.add('dim');
@@ -991,8 +991,8 @@ function chainGraph(chains) {
   const dropped = ROLE_COLS.filter(([role]) => cut.get(role) > 0)
     .map(([role, label]) => cut.get(role) + ' ' + label);
   if (dropped.length) {
-    wrap.appendChild(h('p', 'cut', 'Không vẽ: ' + dropped.join(' · ')
-      + ' — mỗi cột chỉ vẽ ' + COL_CAP + ' hộp đầu.'));
+    wrap.appendChild(h('p', 'cut', 'Not drawn: ' + dropped.join(' · ')
+      + ' — each column draws only its first ' + COL_CAP + ' boxes.'));
   }
   return wrap;
 }
@@ -1015,13 +1015,13 @@ function renderImpact() {
   const none = document.createElement('option');
   none.value = '';
   none.textContent = matched.length > options.length
-    ? '— chọn endpoint (' + options.length + '/' + matched.length + ', gõ để lọc hẹp) —'
-    : '— chọn endpoint (' + matched.length + ') —';
+    ? '— pick an endpoint (' + options.length + '/' + matched.length + ', type to narrow) —'
+    : '— pick an endpoint (' + matched.length + ') —';
   pick.appendChild(none);
   for (const e of options) {
     const o = document.createElement('option');
     o.value = e.id;
-    o.textContent = e.method + ' ' + e.path + '  (' + (callsByEndpoint.get(e.id) || []).length + ' gọi)';
+    o.textContent = e.method + ' ' + e.path + '  (' + (callsByEndpoint.get(e.id) || []).length + ' calls)';
     pick.appendChild(o);
   }
   pick.value = state.endpoint || '';
@@ -1030,7 +1030,7 @@ function renderImpact() {
   const box = el('imp-body');
   box.textContent = '';
   const e = state.endpoint ? endpoints.get(state.endpoint) : null;
-  if (!e) { box.appendChild(h('p', 'empty2', 'Chọn một endpoint để xem vòng ảnh hưởng.')); return; }
+  if (!e) { box.appendChild(h('p', 'empty2', 'Pick an endpoint to see its impact ring.')); return; }
 
   const calls = callsByEndpoint.get(e.id) || [];
   const head = h('div', 'panel');
@@ -1040,19 +1040,19 @@ function renderImpact() {
   head.appendChild(title);
   const r = RELIABILITY.get(e.id) || { exact: 0, inferred: 0, guess: 0 };
   const tot = r.exact + r.inferred + r.guess;
-  head.appendChild(h('p', 'sub2', RECON_LABEL[reconOf(e)] + ' · ' + calls.length + ' lời gọi · '
-    + (tot ? 'exact ' + r.exact + ' · inferred ' + r.inferred + ' · guess ' + r.guess : 'chưa có lời gọi nào truy được')));
+  head.appendChild(h('p', 'sub2', RECON_LABEL[reconOf(e)] + ' · ' + calls.length + ' calls · '
+    + (tot ? 'exact ' + r.exact + ' · inferred ' + r.inferred + ' · guess ' + r.guess : 'no call could be traced')));
   box.appendChild(head);
 
   // cm:guard States what is UNKNOWN before what is found: on a guess-heavy endpoint the list below is
   // a set of candidates, and a reader who missed that reads it as a list of screens that will break.
   const warn = [];
-  if (e.source === undefined && HAS_BE) warn.push('API không khai endpoint này — vòng ảnh hưởng dưới đây chỉ dựa trên phía FE.');
-  if (tot > 0 && r.guess / tot > 0.5) warn.push(Math.round((r.guess / tot) * 100) + '% lời gọi ở mức guess — chuỗi đi qua re-export, không chắc đúng màn.');
+  if (e.source === undefined && HAS_BE) warn.push('The API does not declare this endpoint — the ring below rests on the FE side alone.');
+  if (tot > 0 && r.guess / tot > 0.5) warn.push(Math.round((r.guess / tot) * 100) + '% of the calls are guess-level — the chain went through a re-export, so the screen may be wrong.');
   if (warn.length) box.appendChild(h('p', 'hintbox', warn.join(' ')));
 
   if (!calls.length) {
-    box.appendChild(h('p', 'empty2', 'Không lời gọi nào truy được tới endpoint này. Đó không phải bằng chứng là không ai gọi — xem Unresolved.'));
+    box.appendChild(h('p', 'empty2', 'No call could be traced to this endpoint. That is not evidence nobody calls it — see Unresolved.'));
     return;
   }
 
@@ -1060,7 +1060,7 @@ function renderImpact() {
   const perScreen = new Map();
   for (const c of calls) {
     const s = screens.get(c.screenId);
-    const label = s ? (s.route || s.label + ' (chưa gắn route)') : '?';
+    const label = s ? (s.route || s.label + ' (no route attached)') : '?';
     const cur = perScreen.get(label);
     if (!cur) perScreen.set(label, { call: c, confidence: c.confidence, screen: s, n: 1 });
     else {
@@ -1073,12 +1073,12 @@ function renderImpact() {
 
   const wrap = h('div', 'impgrid');
   const left = h('div', 'tblwrap');
-  left.appendChild(h('h3', null, 'Màn bị ảnh hưởng — ' + ordered.length));
+  left.appendChild(h('h3', null, 'Screens affected — ' + ordered.length));
   const tbl = document.createElement('table');
   tbl.className = 'rows dense';
   const thead = document.createElement('thead');
   const hr = document.createElement('tr');
-  for (const [label, cls] of [['màn', ''], ['tin cậy', 'nowrap'], ['#gọi', 'num']]) {
+  for (const [label, cls] of [['screen', ''], ['confidence', 'nowrap'], ['#calls', 'num']]) {
     hr.appendChild(h('th', cls, label));
   }
   thead.appendChild(hr);
@@ -1096,7 +1096,7 @@ function renderImpact() {
     // shares one api-module line, and printing that made thirteen different screens look identical.
     const where = info.screen && info.screen.source
       ? info.screen.source.file + ':' + info.screen.source.line
-      : info.call.source.file + ':' + info.call.source.line + ' (vị trí lời gọi)';
+      : info.call.source.file + ':' + info.call.source.line + ' (call site)';
     const sub = h('div', 'sub2 clip', where);
     sub.title = where;
     c1.appendChild(sub);
@@ -1111,22 +1111,22 @@ function renderImpact() {
   tbl.appendChild(tb);
   left.appendChild(tbl);
   if (ordered.length > SCREEN_CAP) {
-    left.appendChild(h('p', 'cut', 'Hiện ' + SCREEN_CAP + ' màn được biết rõ nhất. Còn ' + (ordered.length - SCREEN_CAP)
-      + ' màn nữa — ' + SCREEN_CAP + ' KHÔNG phải toàn bộ.'));
+    left.appendChild(h('p', 'cut', 'Showing the ' + SCREEN_CAP + ' best-known screens. ' + (ordered.length - SCREEN_CAP)
+      + ' more — ' + SCREEN_CAP + ' is NOT all of them.'));
   }
   wrap.appendChild(left);
 
   const right = h('div', 'panel');
-  right.appendChild(h('h3', null, 'Chuỗi phụ thuộc'));
+  right.appendChild(h('h3', null, 'Dependency chains'));
   const chains = calls.filter((c) => c.chain && c.chain.length);
   if (!chains.length) {
     // cm:why Drops the abstraction instead of refusing: naming no screen still leaves the count of
     // downstream references, and that count is the honest answer when the chain is too wide to name.
-    right.appendChild(h('p', 'empty2', 'Không chuỗi nào truy được về màn. Có ' + calls.length
-      + ' lời gọi tới endpoint này ở mức module — mở tab Endpoints để xem vị trí.'));
+    right.appendChild(h('p', 'empty2', 'No chain reaches a screen. There are ' + calls.length
+      + ' module-level calls to this endpoint — open the Endpoints tab to see where.'));
   } else {
     right.appendChild(chainGraph(chains));
-    right.appendChild(h('p', 'sub2', 'Nét đứt = bước mà chuỗi đã mất độ chắc (đi qua re-export hoặc default export không tên). Trỏ vào một hộp để soi riêng nhánh của nó.'));
+    right.appendChild(h('p', 'sub2', 'A dashed step is where the chain lost precision (a re-export, or an unnamed default export). Hover a box to isolate its branch.'));
   }
   wrap.appendChild(right);
   box.appendChild(wrap);
@@ -1138,7 +1138,7 @@ function renderScreens() {
     .filter((s) => !q || (s.route || s.label || '').toLowerCase().includes(q))
     .map((s) => ({ s, calls: callsByScreen.get(s.id) || [] }))
     .sort((a, b) => b.calls.length - a.calls.length || (a.s.route || a.s.label).localeCompare(b.s.route || b.s.label));
-  el('sc-count').textContent = rows.length + '/' + MAP.screens.length + ' màn';
+  el('sc-count').textContent = rows.length + '/' + MAP.screens.length + ' screens';
   const body = el('sc-rows');
   body.textContent = '';
   const scFrom = (state.scPage - 1) * PAGE;
@@ -1146,7 +1146,7 @@ function renderScreens() {
     const tr = document.createElement('tr');
     if (state.screen === row.s.id) tr.className = 'on';
     const c1 = h('td');
-    c1.appendChild(h('div', 'mono', row.s.route || row.s.label + ' (chưa gắn route)'));
+    c1.appendChild(h('div', 'mono', row.s.route || row.s.label + ' (no route attached)'));
     c1.appendChild(h('div', 'sub2', row.s.source.file + ':' + row.s.source.line));
     tr.appendChild(c1);
     tr.appendChild(h('td', 'nowrap', String(new Set(row.calls.map((c) => c.endpointId)).size)));
@@ -1162,7 +1162,7 @@ function renderScreens() {
   const insp = el('sc-insp');
   insp.textContent = '';
   const s = state.screen ? screens.get(state.screen) : null;
-  if (!s) { insp.appendChild(h('p', 'empty2', 'Bấm một màn để xem nó phụ thuộc endpoint nào.')); return; }
+  if (!s) { insp.appendChild(h('p', 'empty2', 'Click a screen to see which endpoints it depends on.')); return; }
   insp.appendChild(h('h4', null, s.route || s.label));
   insp.appendChild(h('p', 'sub2', s.source.file + ':' + s.source.line + (s.viaHops ? ' · ' + s.viaHops + ' hop' : '')));
   const deps = new Map();
@@ -1173,8 +1173,8 @@ function renderScreens() {
     const rank = { exact: 0, inferred: 1, guess: 2 };
     if (!cur || rank[c.confidence] < rank[cur.confidence]) deps.set(e.id, { e, confidence: c.confidence, call: c });
   }
-  if (!deps.size) { insp.appendChild(h('p', 'empty2', 'Không endpoint nào truy được từ màn này.')); return; }
-  insp.appendChild(h('p', 'sub2', 'phụ thuộc ' + deps.size + ' endpoint'));
+  if (!deps.size) { insp.appendChild(h('p', 'empty2', 'No endpoint could be traced from this screen.')); return; }
+  insp.appendChild(h('p', 'sub2', 'depends on ' + deps.size + ' endpoints'));
   for (const d of [...deps.values()].sort((a, b) => a.e.path.localeCompare(b.e.path))) {
     const row = h('div', 'gb');
     const t = h('div');
@@ -1195,13 +1195,13 @@ function renderScreens() {
 
 export const PANES_SCRIPT_3 = String.raw`
 // cm:why Grouped by REASON, not listed flat: 9 311 unresolved calls as one list is unreadable, while
-// "url là biến: 4 812" tells you which single fix would move the coverage number most.
+// "url is a variable: 4,812" tells you which single fix would move the coverage number most.
 function reasonKey(reason) {
-  if (/no request or response schema/.test(reason)) return 'không thấy schema request/response trong code';
-  if (/entirely interpolated/.test(reason)) return 'url toàn bộ là nội suy';
-  if (/variable or expression/.test(reason)) return 'url là biến hoặc biểu thức';
-  if (/too wide to name/.test(reason)) return 'fan-out quá rộng để nêu tên màn';
-  if (/wrapper/.test(reason)) return 'đi qua wrapper không truy được';
+  if (/no request or response schema/.test(reason)) return 'no request/response schema found in the code';
+  if (/entirely interpolated/.test(reason)) return 'the url is entirely interpolated';
+  if (/variable or expression/.test(reason)) return 'the url is a variable or an expression';
+  if (/too wide to name/.test(reason)) return 'fan-out too wide to name a screen';
+  if (/wrapper/.test(reason)) return 'goes through a wrapper that cannot be traced';
   // cm:guard Strips the endpoint out of the reason before grouping: a BE reason embeds the route it
   // is about, so keeping it made 880 groups of one — a list wearing the costume of a summary.
   return reason.replace(/^[A-Z]+ \S+ — /, '').split(':')[0].slice(0, 60);
@@ -1211,7 +1211,7 @@ function renderUnresolved() {
   const q = state.unQ.toLowerCase();
   const rows = MAP.unresolved.filter((u) =>
     !q || (u.source.file + ' ' + u.reason + ' ' + (u.snippet || '')).toLowerCase().includes(q));
-  el('un-count').textContent = rows.length + '/' + MAP.unresolved.length + ' mục';
+  el('un-count').textContent = rows.length + '/' + MAP.unresolved.length + ' entries';
   const groups = new Map();
   for (const u of rows) {
     const k = reasonKey(u.reason);
@@ -1220,7 +1220,7 @@ function renderUnresolved() {
   }
   const box = el('un-body');
   box.textContent = '';
-  if (!groups.size) { box.appendChild(h('p', 'empty2', 'Không mục nào.')); return; }
+  if (!groups.size) { box.appendChild(h('p', 'empty2', 'No entries.')); return; }
   for (const [name, items] of [...groups].sort((a, b) => b[1].length - a[1].length)) {
     const g = h('div', 'group');
     const head = h('div', 'gh');
@@ -1233,7 +1233,7 @@ function renderUnresolved() {
       if (u.snippet) item.appendChild(h('div', 'mono', u.snippet));
       bodyEl.appendChild(item);
     }
-    if (items.length > 60) bodyEl.appendChild(h('p', 'cut', 'Còn ' + (items.length - 60) + ' mục nữa trong nhóm này.'));
+    if (items.length > 60) bodyEl.appendChild(h('p', 'cut', (items.length - 60) + ' more entries in this group.'));
     head.onclick = () => g.classList.toggle('open');
     g.appendChild(head);
     g.appendChild(bodyEl);
@@ -1242,21 +1242,21 @@ function renderUnresolved() {
 }
 
 const KIND_LABEL = {
-  'method-mismatch': 'FE gọi sai method',
-  'fe-only-path': 'FE gọi path API không khai',
-  'open-auth': 'không thấy cổng auth',
-  uncalled: 'API khai mà không ai gọi',
-  'murky-auth': 'cổng auth không phân loại được',
-  'be-partial': 'phía BE đọc được quá ít để so sánh',
+  'method-mismatch': 'FE calls an undeclared method',
+  'fe-only-path': 'FE calls a path the API does not declare',
+  'open-auth': 'no auth gate found',
+  uncalled: 'declared but called by nobody',
+  'murky-auth': 'auth gate could not be classified',
+  'be-partial': 'too little of the BE was read to compare',
 };
 
 function renderAlerts() {
   const count = (fn) => ALERTS.filter(fn).length;
-  fillFacet('al-kind', 'loại — tất cả (' + ALERTS.length + ')',
+  fillFacet('al-kind', 'kind — all (' + ALERTS.length + ')',
     Object.keys(KIND_LABEL).filter((k) => count((a) => a.kind === k) > 0)
       .map((k) => [k, KIND_LABEL[k] + ' (' + count((a) => a.kind === k) + ')']),
     state.alertKind, (v) => { state.alertKind = v; state.alPage = 1; renderAlerts(); });
-  fillFacet('al-sev', 'mức — tất cả', ['high', 'medium', 'low']
+  fillFacet('al-sev', 'severity — all', ['high', 'medium', 'low']
     .filter((s) => count((a) => a.severity === s) > 0)
     .map((s) => [s, s + ' (' + count((a) => a.severity === s) + ')']),
     state.alertSev, (v) => { state.alertSev = v; state.alPage = 1; renderAlerts(); });
@@ -1266,14 +1266,14 @@ function renderAlerts() {
   el('al-count').textContent = rows.length + '/' + ALERTS.length + ' alert';
   const box = el('al-body');
   box.textContent = '';
-  if (!rows.length) { box.appendChild(h('p', 'empty2', 'Không alert nào khớp bộ lọc.')); return; }
+  if (!rows.length) { box.appendChild(h('p', 'empty2', 'No alert matches the filters.')); return; }
 
   const wrap = h('div', 'tblwrap');
   const tbl = document.createElement('table');
   tbl.className = 'rows';
   tbl.id = 'al-rows';
   const thead = document.createElement('thead');
-  thead.innerHTML = '<tr><th>mức</th><th>loại</th><th>endpoint</th><th>chi tiết</th><th>màn ảnh hưởng</th></tr>';
+  thead.innerHTML = '<tr><th>severity</th><th>kind</th><th>endpoint</th><th>detail</th><th>screens affected</th></tr>';
   tbl.appendChild(thead);
   const tb = document.createElement('tbody');
   const alFrom = (state.alPage - 1) * PAGE;
@@ -1290,16 +1290,16 @@ function renderAlerts() {
       c2.appendChild(h('span', 'verb ' + a.method, a.method));
       c2.appendChild(h('div', 'mono', a.path));
     } else {
-      c2.appendChild(h('div', 'sub2', 'cả bản đồ'));
+      c2.appendChild(h('div', 'sub2', 'the whole map'));
     }
     tr.appendChild(c2);
     const c3 = h('td');
     c3.appendChild(h('div', null, a.detail));
-    if (a.bestConfidence) c3.appendChild(h('div', 'sub2', 'lời gọi rõ nhất: ' + a.bestConfidence));
+    if (a.bestConfidence) c3.appendChild(h('div', 'sub2', 'clearest call: ' + a.bestConfidence));
     tr.appendChild(c3);
     const c4 = h('td');
-    c4.appendChild(h('div', 'mono', a.screens.length ? a.screens.slice(0, 4).join(' · ') : (a.endpointId ? '(chưa truy được về màn nào)' : '—')));
-    if (a.screens.length > 4) c4.appendChild(h('div', 'sub2', '+' + (a.screens.length - 4) + ' màn nữa'));
+    c4.appendChild(h('div', 'mono', a.screens.length ? a.screens.slice(0, 4).join(' · ') : (a.endpointId ? '(no screen traced yet)' : '—')));
+    if (a.screens.length > 4) c4.appendChild(h('div', 'sub2', '+' + (a.screens.length - 4) + ' more screens'));
     tr.appendChild(c4);
     tr.onclick = () => { state.endpoint = a.endpointId; state.section = 'impact'; location.hash = 'impact'; render(); };
     tb.appendChild(tr);
@@ -1317,15 +1317,15 @@ function renderCompare() {
   const box = el('cmp-body');
   box.textContent = '';
   if (!DIFF) {
-    box.appendChild(h('p', 'hintbox', 'Chưa có hai lần scan để so. apiflow lưu mỗi bản scan theo hash nội dung, '
-      + 'nên một lần scan lại mà không có gì đổi sẽ KHÔNG tạo bản mới. Chạy lại scan sau khi code đổi rồi quay lại đây.'));
+    box.appendChild(h('p', 'hintbox', 'There are not two scans to compare. apiflow stores each scan by content hash, '
+      + 'so re-scanning an unchanged repo does NOT create a new one. Scan again after the code changes, then come back.'));
     return;
   }
   const d = DIFF;
-  const bad = /kém đi|hẹp hơn/.test(d.headline);
+  const bad = /worse|narrower/.test(d.headline);
   box.appendChild(h('p', 'headline ' + (bad ? 'bad' : 'good'), d.headline));
 
-  const num = (n) => n.toLocaleString('vi-VN');
+  const num = (n) => n.toLocaleString('en-US');
   const arrow = (before, after, invert) => {
     const row = h('div', 'ba');
     row.appendChild(h('span', 'b1', num(before)));
@@ -1343,10 +1343,10 @@ function renderCompare() {
   const panels = h('div', 'cmp4');
 
   const p1 = h('div', 'panel');
-  p1.appendChild(h('h3', null, 'Tổng quan'));
+  p1.appendChild(h('h3', null, 'Overview'));
   const rows1 = [
-    ['màn hình', d.screens.before, d.screens.after, false],
-    ['lời gọi', d.calls.before, d.calls.after, false],
+    ['screens', d.screens.before, d.screens.after, false],
+    ['calls', d.calls.before, d.calls.after, false],
     ['unresolved', d.unresolved.before, d.unresolved.after, true],
   ];
   const epLine = h('div', 'barow');
@@ -1355,7 +1355,7 @@ function renderCompare() {
   epTxt.appendChild(h('span', 'b2', '+' + d.endpoints.added.length));
   epTxt.appendChild(h('span', 'ar', '/'));
   epTxt.appendChild(h('span', 'b1', '−' + d.endpoints.removed.length));
-  epTxt.appendChild(h('span', 'dl', d.endpoints.changed.length + ' đổi'));
+  epTxt.appendChild(h('span', 'dl', d.endpoints.changed.length + ' changed'));
   epLine.appendChild(epTxt);
   p1.appendChild(epLine);
   for (const [label, before, after, invert] of rows1) {
@@ -1367,7 +1367,7 @@ function renderCompare() {
   panels.appendChild(p1);
 
   const p2 = h('div', 'panel');
-  p2.appendChild(h('h3', null, 'Độ chắc của lời gọi'));
+  p2.appendChild(h('h3', null, 'Confidence of the calls'));
   const stack = (counts, total, tag) => {
     const wrap = h('div', 'stk');
     wrap.appendChild(h('span', 'tg', tag));
@@ -1383,7 +1383,7 @@ function renderCompare() {
     wrap.appendChild(h('span', 'tot', num(total)));
     return wrap;
   };
-  p2.appendChild(stack(d.confidence.before, d.calls.before, 'trước'));
+  p2.appendChild(stack(d.confidence.before, d.calls.before, 'before'));
   p2.appendChild(stack(d.confidence.after, d.calls.after, 'sau'));
   // cm:why Percentage POINTS, not a ratio: guess going 571 → 13 144 while total calls triple is a
   // different story from guess tripling on a fixed total, and only the share tells them apart.
@@ -1400,9 +1400,9 @@ function renderCompare() {
     line.textContent = '';
     line.appendChild(lab);
     line.appendChild(Math.abs(delta) < 0.05
-      ? h('span', 'pp', 'tỉ trọng không đổi')
+      ? h('span', 'pp', 'share unchanged')
       : h('span', 'pp ' + (good ? 'up' : 'down'),
-        (delta > 0 ? '▲ ' : '▼ ') + Math.abs(delta).toFixed(1) + 'pp tỉ trọng'));
+        (delta > 0 ? '▲ ' : '▼ ') + Math.abs(delta).toFixed(1) + 'pp share'));
     p2.appendChild(line);
   }
   panels.appendChild(p2);
@@ -1415,18 +1415,18 @@ function renderCompare() {
   big.appendChild(h('span', 'b2' + (d.unresolved.after > d.unresolved.before ? ' worse' : ''), num(d.unresolved.after)));
   p3.appendChild(big);
   const share = (n, calls) => (calls + n === 0 ? '0%' : ((n / (calls + n)) * 100).toFixed(1) + '%');
-  p3.appendChild(h('p', 'sub2', 'chiếm ' + share(d.unresolved.before, d.calls.before) + ' → '
-    + share(d.unresolved.after, d.calls.after) + ' số lời gọi apiflow nhìn thấy'));
+  p3.appendChild(h('p', 'sub2', share(d.unresolved.before, d.calls.before) + ' → '
+    + share(d.unresolved.after, d.calls.after) + ' of the calls apiflow can see'));
   // cm:guard Says out loud that unresolved is NOT part of the three confidence levels — the two
   // panels sit side by side, and a reader adding them up gets a total that does not exist.
-  p3.appendChild(h('p', 'sub2', 'Unresolved không nằm trong exact/inferred/guess bên cạnh — đó là những lời gọi apiflow không đọc được đường dẫn.'));
+  p3.appendChild(h('p', 'sub2', 'Unresolved is not part of the exact/inferred/guess beside it — those are calls whose path apiflow could not read.'));
   panels.appendChild(p3);
   box.appendChild(panels);
 
   const CHG = {
-    added: { label: 'mới', cls: 'ok' },
-    removed: { label: 'mất', cls: 'bad' },
-    changed: { label: 'đổi', cls: 'warn' },
+    added: { label: 'added', cls: 'ok' },
+    removed: { label: 'removed', cls: 'bad' },
+    changed: { label: 'changed', cls: 'warn' },
   };
   const all = [
     ...d.endpoints.added.map((x) => ({ ...x, chg: 'added' })),
@@ -1434,17 +1434,17 @@ function renderCompare() {
     ...d.endpoints.changed.map((x) => ({ ...x, chg: 'changed' })),
   ];
   if (all.length === 0) {
-    box.appendChild(h('p', 'hintbox', 'Không endpoint nào thêm, mất hay đổi giữa hai bản. Thay đổi nằm ở phía lời gọi và độ chắc, xem bốn ô trên.'));
+    box.appendChild(h('p', 'hintbox', 'No endpoint was added, removed or changed between the two scans. What moved is on the call and confidence side — see the four cards above.'));
     return;
   }
 
   const wrap = h('div', 'tblwrap');
-  wrap.appendChild(h('h3', null, 'Endpoint thay đổi — ' + all.length));
+  wrap.appendChild(h('h3', null, 'Endpoints changed — ' + all.length));
   const tbl = document.createElement('table');
   tbl.className = 'rows dense';
   const thead = document.createElement('thead');
   const hr = document.createElement('tr');
-  for (const [label, cls] of [['loại', 'nowrap'], ['method', 'nowrap'], ['endpoint', ''], ['chi tiết', ''], ['màn ảnh hưởng', 'num']]) {
+  for (const [label, cls] of [['kind', 'nowrap'], ['method', 'nowrap'], ['endpoint', ''], ['detail', ''], ['screens affected', 'num']]) {
     hr.appendChild(h('th', cls, label));
   }
   thead.appendChild(hr);
@@ -1463,7 +1463,7 @@ function renderCompare() {
     path.title = it.path;
     c2.appendChild(path);
     tr.appendChild(c2);
-    tr.appendChild(h('td', 'sub2', it.detail || (it.chg === 'added' ? 'chưa có ở bản trước' : it.chg === 'removed' ? 'bản trước có, bản này không' : '')));
+    tr.appendChild(h('td', 'sub2', it.detail || (it.chg === 'added' ? 'not in the earlier scan' : it.chg === 'removed' ? 'in the earlier scan, not in this one' : '')));
     const c4 = h('td', 'num');
     c4.textContent = it.screens && it.screens.length ? String(it.screens.length) : '—';
     if (it.screens && it.screens.length) c4.title = it.screens.join('\n');
@@ -1472,7 +1472,7 @@ function renderCompare() {
   }
   tbl.appendChild(tb);
   wrap.appendChild(tbl);
-  if (all.length > 150) wrap.appendChild(h('p', 'cut', 'Còn ' + (all.length - 150) + ' thay đổi nữa không hiện ở đây.'));
+  if (all.length > 150) wrap.appendChild(h('p', 'cut', (all.length - 150) + ' more changes are not shown here.'));
   box.appendChild(wrap);
 }
 
@@ -1538,7 +1538,7 @@ function coverVisible() {
 
 function renderCover() {
   const visible = coverVisible();
-  fillFacet('cv-recon', 'trạng thái: tất cả',
+  fillFacet('cv-recon', 'state: all',
     Object.keys(RECON_LABEL).map((k) => [k, RECON_LABEL[k]]), state.cvRecon,
     (v) => { state.cvRecon = v; render(); });
   el('cv-count').textContent = visible.length + ' / ' + MAP.endpoints.length + ' endpoint';
@@ -1563,8 +1563,8 @@ function renderCover() {
       const callers = (callsByEndpoint.get(e.id) || []).length;
       const cell = h('div', 'cell s-' + st + (e.auth === false ? ' open' : '')
         + (state.endpoint === e.id ? ' sel' : ''));
-      cell.title = e.method + ' ' + e.path + '\n' + RECON_LABEL[st] + '\nmàn gọi: ' + callers
-        + (e.auth === false ? '\nkhông thấy cổng auth nào' : '');
+      cell.title = e.method + ' ' + e.path + '\n' + RECON_LABEL[st] + '\ncalling screens: ' + callers
+        + (e.auth === false ? '\nno auth gate found' : '');
       cell.onclick = () => {
         // cm:why Sets the GRAPH's own scope, not the table selection: picking a row in the endpoints
         // table must not silently narrow this diagram to one endpoint behind the reader's back.
@@ -1579,7 +1579,7 @@ function renderCover() {
     block.appendChild(cells);
     box.appendChild(block);
   }
-  if (sorted.length === 0) box.appendChild(h('p', 'empty', 'Không endpoint nào khớp bộ lọc.'));
+  if (sorted.length === 0) box.appendChild(h('p', 'empty', 'No endpoint matches the filters.'));
 }
 
 // cm:why Falls back to the biggest group rather than drawing everything: a bipartite of 1000
@@ -1618,7 +1618,7 @@ function renderGraph() {
   const label = el('scope-label');
   label.textContent = scope.label || '—';
   if (scope.one) {
-    const wider = h('a', 'link', ' — xem cả nhóm ' + groupOf(scope.eps[0].path));
+    const wider = h('a', 'link', ' — see the whole ' + groupOf(scope.eps[0].path) + ' group');
     wider.href = '#graph';
     wider.onclick = (ev) => {
       ev.preventDefault();
@@ -1636,8 +1636,8 @@ function renderGraph() {
     }
   }
   if (edges.length === 0) {
-    note.textContent = 'Không lời gọi nào tới ' + (scope.label || 'nhóm này')
-      + '. Đó không phải bằng chứng là không ai gọi — xem pane Unresolved.';
+    note.textContent = 'No call reaches ' + (scope.label || 'this group')
+      + '. That is not evidence nobody calls it — see the Unresolved pane.';
     return;
   }
 
@@ -1646,15 +1646,15 @@ function renderGraph() {
   // cm:guard Reports the cut instead of silently drawing the first 90 — a diagram that looks
   // complete but is not answers the question wrongly, which is worse than not drawing it.
   if (screenIds.length > MAX_ROWS) {
-    note.textContent = scope.label + ' được ' + screenIds.length + ' màn gọi — quá rộng để vẽ.'
-      + ' Bấm một ô ở Bản đồ phủ để thu về một endpoint.';
+    note.textContent = scope.label + ' is called by ' + screenIds.length + ' screens — too wide to draw.'
+      + ' Click a cell in Coverage to narrow it to one endpoint.';
     return;
   }
 
   const labelOf = (id) => {
     const sc = screens.get(id);
     if (!sc) return id;
-    return sc.route || (sc.label + ' (chưa gắn route)');
+    return sc.route || (sc.label + ' (no route attached)');
   };
   screenIds.sort((a, b) => labelOf(a).localeCompare(labelOf(b)));
   epIds.sort((a, b) => {
@@ -1677,7 +1677,7 @@ function renderGraph() {
     t.textContent = text;
     svg.appendChild(t);
   };
-  head(xs, 'end', 'màn (' + screenIds.length + ')');
+  head(xs, 'end', 'screens (' + screenIds.length + ')');
   head(xe, 'start', 'endpoint (' + epIds.length + ')');
 
   // cm:why Each column is spread over the SAME vertical extent — laying both out at a fixed row
@@ -1745,7 +1745,7 @@ function renderGraph() {
 
   host.appendChild(svg);
   const guesses = edges.filter((x) => x.confidence === 'guess').length;
-  note.textContent = edges.length + ' cạnh · ' + guesses + ' ở mức guess'
-    + (guesses > 0 ? ' (nét đứt cam — chuỗi đi qua re-export, không chắc đúng màn)' : '');
+  note.textContent = edges.length + ' edges · ' + guesses + ' at guess level'
+    + (guesses > 0 ? ' (dashed orange — the chain went through a re-export, the screen may be wrong)' : '');
 }
 `;

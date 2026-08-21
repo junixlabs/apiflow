@@ -25,7 +25,7 @@ dist-ssr
 .playwright-mcp/
 .claude/specs/
 
-# Local agent config — chứa nội bộ (sidcorp / epodsystem), không được publish
+# Local agent config — holds internal names, must not be published
 .claude/
 .mcp.json
 

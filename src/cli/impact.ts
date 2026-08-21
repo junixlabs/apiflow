@@ -66,7 +66,7 @@ export function renderImpact(answer: ImpactAnswer, label: string): string {
     const via = s.screen.viaHops ? ` · via ${s.screen.viaHops} hop(s) → ${s.screen.source.file}:${s.screen.source.line}` : '';
     // cm:why A screen with no route never reached a route table — printing it like the others reads
     // as "this URL breaks", when all that is known is the module the call sits in.
-    const label = s.screen.route ?? `${s.screen.label} (chưa gắn được vào route nào)`;
+    const label = s.screen.route ?? `${s.screen.label} (never reached a route)`;
     lines.push(`- **${label}** [${s.confidence}] — ${s.source.file}:${s.source.line}${via}`);
     // cm:why Prints the chain, not the hop COUNT: "3 hop" cannot be checked by hand, while every
     // step with its file:line can — and that is the difference between a claim and evidence.
@@ -85,15 +85,15 @@ export function renderScreenDeps(map: ApiMapFile, route: string): string {
   const ids = screenIdsForRoute(map, route);
   if (ids.length === 0) {
     const known = [...new Set(map.screens.map((s) => s.route).filter((r): r is string => r !== undefined))].sort();
-    return `Không có màn nào tên ${route}.\n\nMàn có route trong map: ${known.length}` +
-      (known.length > 0 ? `\nVí dụ: ${known.slice(0, 6).join(' · ')}` : '');
+    return `No screen named ${route}.\n\nScreens with a route in this map: ${known.length}` +
+      (known.length > 0 ? `\nFor example: ${known.slice(0, 6).join(' · ')}` : '');
   }
   const deps = ids.flatMap((id) => endpointsForScreen(map, id));
   const seen = new Map(deps.map((d) => [`${d.endpoint.id}|${d.confidence}`, d]));
-  const lines = [`## ${route} phụ thuộc ${seen.size} endpoint`, ''];
+  const lines = [`## ${route} depends on ${seen.size} endpoint(s)`, ''];
   if (seen.size === 0) {
-    lines.push('Không lời gọi nào truy được về màn này. Đó không phải bằng chứng là không có —');
-    lines.push('xem danh sách Unresolved trong file .apimap.');
+    lines.push('No call could be traced back to this screen. That is not proof none exists —');
+    lines.push('check the Unresolved list in the .apimap first.');
     return lines.join('\n');
   }
   const order = { exact: 0, inferred: 1, guess: 2 };
@@ -232,9 +232,9 @@ function main(): void {
   );
   if (asJson) emit(impactJson(map, kind, query, answers));
   if (ids.length === 0) {
-    console.error(`Không có gì khớp ${query} trong ${map.metadata.name}.`);
+    console.error(`Nothing matches ${query} in ${map.metadata.name}.`);
     const others = endpointQuery ? otherMethodsOn(map, query) : [];
-    if (others.length > 0) console.error(`Cùng đường dẫn đó, bản đồ có: ${others.join(' · ')}`);
+    if (others.length > 0) console.error(`On that path the map does have: ${others.join(' · ')}`);
     process.exit(2);
   }
   console.log(answers.map((a, i) => renderImpact(a, ids[i])).join('\n\n'));

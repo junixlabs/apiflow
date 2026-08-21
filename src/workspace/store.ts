@@ -11,7 +11,7 @@ const KINDS: MapKind[] = ['fe', 'be', 'linked'];
 // cm:guard Re-checks the id against ID even though the registry did — this function turns a string
 // into a filesystem path, and a caller reaching it from an HTTP route is one typo from `../../`.
 export function projectDir(id: string): string {
-  if (!ID.test(id)) throw new Error(`id không hợp lệ: ${id}`);
+  if (!ID.test(id)) throw new Error(`invalid id: ${id}`);
   return join(workspaceRoot(), 'projects', id);
 }
 
@@ -23,7 +23,7 @@ export function readMap(id: string, kind: MapKind): ApiMapFile | null {
   const file = mapPath(id, kind);
   if (!existsSync(file)) return null;
   const map = parseMap(readFileSync(file, 'utf8'));
-  if (map.version !== 1) throw new Error(`.apimap version không hỗ trợ: ${String(map.version)}`);
+  if (map.version !== 1) throw new Error(`unsupported .apimap version: ${String(map.version)}`);
   return map;
 }
 

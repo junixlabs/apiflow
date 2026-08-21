@@ -32,15 +32,15 @@ export type Section =
   | 'overview' | 'endpoints' | 'cover' | 'graph' | 'impact' | 'screens' | 'unresolved' | 'alerts' | 'compare';
 
 export const SECTIONS: Array<{ id: Section; label: string }> = [
-  { id: 'overview', label: 'Tổng quan' },
+  { id: 'overview', label: 'Overview' },
   { id: 'endpoints', label: 'Endpoints' },
-  { id: 'cover', label: 'Bản đồ phủ' },
-  { id: 'graph', label: 'Vòng ảnh hưởng' },
-  { id: 'impact', label: 'Ảnh hưởng' },
-  { id: 'screens', label: 'Màn hình' },
+  { id: 'cover', label: 'Coverage' },
+  { id: 'graph', label: 'Impact ring' },
+  { id: 'impact', label: 'Impact' },
+  { id: 'screens', label: 'Screens' },
   { id: 'unresolved', label: 'Unresolved' },
   { id: 'alerts', label: 'Alerts' },
-  { id: 'compare', label: 'So sánh' },
+  { id: 'compare', label: 'Compare' },
 ];
 
 export function escapeHtml(value: string): string {
@@ -95,11 +95,11 @@ const KIND_WORD: Record<string, string> = { fe: 'FE', be: 'BE', linked: 'FE+BE' 
 
 // cm:why Names the revision each half was scanned AT, not the revision it is on now: the map is a
 // photograph, and a header that quietly shows today's branch makes a stale map look current.
-// cm:guard Prints "không đọc được revision" rather than nothing when .git is unreadable — a blank
+// cm:guard Prints "revision unreadable" rather than nothing when .git is unreadable — a blank
 // where a sha belongs reads as "same as before".
 function sideLine(side: SideInfo, now: number): string {
   const rev = side.branch === undefined && side.sha === undefined
-    ? '<span class="dim">không đọc được revision</span>'
+    ? '<span class="dim">revision unreadable</span>'
     : `<span class="rev">${escapeHtml([side.branch, side.sha].filter((x) => x !== undefined).join(' · '))}</span>`;
   return `<div class="side-row"><span class="tagk">${side.kind.toUpperCase()}</span>
     <code>${escapeHtml(side.root)}</code> ${rev}
@@ -117,13 +117,13 @@ function header(payload: AppPayload, name: string): string {
   const editBtn = payload.projectId === undefined ? '' : `<button class="btn" data-edit="${escapeHtml(payload.projectId)}"
         data-name="${escapeHtml(payload.projectName ?? payload.map.metadata.name)}"
         data-fe="${escapeHtml(root('fe'))}" data-be="${escapeHtml(root('be'))}"
-        data-hints="${escapeHtml(payload.hints ?? '')}">Sửa gốc</button>`;
-  // cm:why `+ Thêm project` is a workspace action, so it lives at the foot of the rail on this page and
+        data-hints="${escapeHtml(payload.hints ?? '')}">Edit roots</button>`;
+  // cm:why `+ Add project` is a workspace action, so it lives at the foot of the rail on this page and
   // on the hub alike. In this row it read as one of the things you can do TO the project you opened.
   const scanBtns = payload.live
     ? `<div class="btnrow">
-        ${payload.projectId === undefined ? '' : `<button class="btn primary" id="scan-fe">Scan lại FE</button>
-        <button class="btn" id="scan-be">Scan lại BE</button>`}
+        ${payload.projectId === undefined ? '' : `<button class="btn primary" id="scan-fe">Re-scan FE</button>
+        <button class="btn" id="scan-be">Re-scan BE</button>`}
         ${editBtn}
       </div>`
     : '';
@@ -131,11 +131,11 @@ function header(payload: AppPayload, name: string): string {
     <div class="pident">
       <h1>${escapeHtml(name)}</h1>
       ${payload.kind === undefined ? '' : `<span class="kind">${escapeHtml(KIND_WORD[payload.kind] ?? payload.kind)}</span>`}
-      ${payload.live ? '<span class="kind live">bản sống</span>' : '<span class="kind">bản tĩnh</span>'}
+      ${payload.live ? '<span class="kind live">live</span>' : '<span class="kind">static</span>'}
     </div>
     <div class="pmeta">
       ${sides.length === 0
-        ? `<div class="side-row"><span class="tagk">GỐC</span><code>${escapeHtml(payload.map.metadata.root)}</code></div>`
+        ? `<div class="side-row"><span class="tagk">ROOT</span><code>${escapeHtml(payload.map.metadata.root)}</code></div>`
         : sides.map((side) => sideLine(side, now)).join('\n')}
       <div class="side-row gen"><span class="dim">${escapeHtml(payload.map.metadata.generator)}</span></div>
     </div>
@@ -153,23 +153,23 @@ function rail(payload: AppPayload, counts: { alerts: number; high: number }, unr
   // of them shifted the whole rail by 16px, which is exactly the kind of drift nobody can name.
   return `<div class="rail">
   <div class="brandbar">${payload.homeHref === undefined ? `<span class="home">${brand}</span>`
-    : `<a class="home" href="${escapeHtml(payload.homeHref)}" title="về danh sách project">${brand}</a>`}</div>
+    : `<a class="home" href="${escapeHtml(payload.homeHref)}" title="back to the project list">${brand}</a>`}</div>
   <nav>
-    ${link('overview', 'Tổng quan')}
+    ${link('overview', 'Overview')}
     ${link('endpoints', 'Endpoints', payload.map.endpoints.length)}
-    ${link('cover', 'Bản đồ phủ')}
-    ${link('graph', 'Vòng ảnh hưởng')}
-    ${link('impact', 'Ảnh hưởng')}
-    ${link('screens', 'Màn hình', payload.map.screens.length)}
+    ${link('cover', 'Coverage')}
+    ${link('graph', 'Impact ring')}
+    ${link('impact', 'Impact')}
+    ${link('screens', 'Screens', payload.map.screens.length)}
     <div class="sep"></div>
     ${link('unresolved', 'Unresolved', unresolved, 'warn')}
     ${link('alerts', 'Alerts', counts.high > 0 ? counts.high : counts.alerts, counts.high > 0 ? 'bad' : '')}
-    ${link('compare', 'So sánh')}
+    ${link('compare', 'Compare')}
   </nav>
   <div class="railfoot">
-    ${payload.live ? '<button class="btn" id="add-open">+ Thêm project</button>' : ''}
-    <button class="thbtn" id="theme-btn" type="button" title="đổi nền sáng / tối" style="width:100%">
-      <span class="sw2"></span><span id="theme-label">theo hệ điều hành</span>
+    ${payload.live ? '<button class="btn" id="add-open">+ Add project</button>' : ''}
+    <button class="thbtn" id="theme-btn" type="button" title="switch light / dark" style="width:100%">
+      <span class="sw2"></span><span id="theme-label">follow the OS</span>
     </button>
     <p class="foot">${escapeHtml(payload.sourcePath)}</p>
   </div>
@@ -192,7 +192,7 @@ function overview(payload: AppPayload, list: Alert[]): string {
 
   <div class="panels">
     <div class="panel">
-      <h3>Trạng thái đối chiếu — ${sum.endpoints} endpoint</h3>
+      <h3>Reconciliation — ${sum.endpoints} endpoints</h3>
       <div class="recon">
         <i class="d-both" style="width:${pct(sum.both)}"></i>
         <i class="d-uncalled" style="width:${pct(sum.uncalled)}"></i>
@@ -200,15 +200,15 @@ function overview(payload: AppPayload, list: Alert[]): string {
         <i class="d-unpaired" style="width:${pct(sum.unpaired)}"></i>
       </div>
       <div class="legend4">
-        <div class="li"><b>${sum.both}</b><span class="dot d-both"></span> khớp cả hai phía</div>
-        <div class="li"><b>${sum.uncalled}</b><span class="dot d-uncalled"></span> API khai, không màn nào gọi</div>
-        <div class="li"><b>${sum.feOnly}</b><span class="dot d-feonly"></span> FE gọi, API không khai</div>
-        <div class="li"><b>${sum.unpaired}</b><span class="dot d-unpaired"></span> chưa đối chiếu được</div>
+        <div class="li"><b>${sum.both}</b><span class="dot d-both"></span> seen from both sides</div>
+        <div class="li"><b>${sum.uncalled}</b><span class="dot d-uncalled"></span> declared, no screen calls it</div>
+        <div class="li"><b>${sum.feOnly}</b><span class="dot d-feonly"></span> FE calls it, API does not declare it</div>
+        <div class="li"><b>${sum.unpaired}</b><span class="dot d-unpaired"></span> not reconciled yet</div>
       </div>
     </div>
 
     <div class="panel">
-      <h3>Độ tin cậy — ${callTotal} lời gọi</h3>
+      <h3>Confidence — ${callTotal} calls</h3>
       <div class="donut">
         <span style="color:var(--exact)">${donut([
           { n: calls.exact, cls: 'c-exact' },
@@ -224,20 +224,20 @@ function overview(payload: AppPayload, list: Alert[]): string {
     </div>
 
     <div class="panel">
-      <h3>Đáng để mắt</h3>
+      <h3>Worth a look</h3>
       <div class="watch">
-        ${counts.byKind['method-mismatch'] > 0 ? `<a href="#alerts" data-section="alerts" data-kind="method-mismatch" class="bad"><span class="num">${counts.byKind['method-mismatch']}</span><span class="txt">FE gọi sai method — path có nhưng method thì không</span></a>` : ''}
-        ${counts.byKind['fe-only-path'] > 0 ? `<a href="#alerts" data-section="alerts" data-kind="fe-only-path" class="bad"><span class="num">${counts.byKind['fe-only-path']}</span><span class="txt">FE gọi đường dẫn API không khai</span></a>` : ''}
-        ${counts.byKind['open-auth'] > 0 ? `<a href="#alerts" data-section="alerts" data-kind="open-auth" class="bad"><span class="num">${counts.byKind['open-auth']}</span><span class="txt">không thấy cổng auth nào</span></a>` : ''}
-        ${counts.byKind.uncalled > 0 ? `<a href="#alerts" data-section="alerts" data-kind="uncalled" class="txt"><span class="num">${counts.byKind.uncalled}</span><span class="txt">API khai mà không màn nào gọi</span></a>` : ''}
-        ${sum.unresolved > 0 ? `<a href="#unresolved" data-section="unresolved" class="warn"><span class="num">${sum.unresolved}</span><span class="txt">lời gọi không giải được đường dẫn</span></a>` : ''}
+        ${counts.byKind['method-mismatch'] > 0 ? `<a href="#alerts" data-section="alerts" data-kind="method-mismatch" class="bad"><span class="num">${counts.byKind['method-mismatch']}</span><span class="txt">FE calls a method the API does not declare on that path</span></a>` : ''}
+        ${counts.byKind['fe-only-path'] > 0 ? `<a href="#alerts" data-section="alerts" data-kind="fe-only-path" class="bad"><span class="num">${counts.byKind['fe-only-path']}</span><span class="txt">FE calls a path the API does not declare</span></a>` : ''}
+        ${counts.byKind['open-auth'] > 0 ? `<a href="#alerts" data-section="alerts" data-kind="open-auth" class="bad"><span class="num">${counts.byKind['open-auth']}</span><span class="txt">no auth gate found</span></a>` : ''}
+        ${counts.byKind.uncalled > 0 ? `<a href="#alerts" data-section="alerts" data-kind="uncalled" class="txt"><span class="num">${counts.byKind.uncalled}</span><span class="txt">declared by the API, called by no screen</span></a>` : ''}
+        ${sum.unresolved > 0 ? `<a href="#unresolved" data-section="unresolved" class="warn"><span class="num">${sum.unresolved}</span><span class="txt">calls whose path could not be resolved</span></a>` : ''}
       </div>
     </div>
   </div>
 
-  <p class="hintbox">Mỗi con số là <b>ứng viên, không phải phán quyết</b>. Các số trong thanh đối chiếu
-  <b>không</b> bao gồm ${sum.unresolved} mục Unresolved — chúng là mẫu số của độ tin cậy, không phải endpoint.
-  “không auth” nghĩa là không thấy cổng chặn nào <i>trong code</i>.</p>
+  <p class="hintbox">Every number here is a <b>candidate, not a verdict</b>. The reconciliation bar does
+  <b>not</b> include the ${sum.unresolved} Unresolved entries — those are the denominator of confidence,
+  not endpoints. “no auth” means no gate was found <i>in the code</i>.</p>
 </section>`;
 }
 
@@ -251,7 +251,7 @@ export function renderApp(payload: AppPayload): string {
   const name = payload.projectName ?? payload.map.metadata.name;
 
   return `<!doctype html>
-<html lang="vi">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">

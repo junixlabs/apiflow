@@ -71,9 +71,9 @@ function main(): void {
 
   const root = flag('root') ?? localRootFor(map.metadata.root);
   if (root === undefined) {
-    console.error(`Không biết ${map.metadata.root} nằm ở đâu trên máy này.`);
-    console.error('Bản đồ chỉ ghi repo, không ghi đường dẫn máy — đưa nó vào bằng --root=<dir>,');
-    console.error('hoặc thêm project vào workspace: apiflow project add <tên> --be=<dir>');
+    console.error(`No idea where ${map.metadata.root} lives on this machine.`);
+    console.error('The map records the repo, not a machine path — pass --root=<dir>,');
+    console.error('or register the project: apiflow project add <name> --be=<dir>');
     process.exit(1);
   }
   const emitDir = resolve(flag('emit') ?? root);

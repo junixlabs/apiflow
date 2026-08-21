@@ -47,7 +47,7 @@ describe('registry', () => {
   });
 
   it('slugs a Vietnamese name into a usable id', () => {
-    expect(slug('Đơn hàng nội bộ')).toBe('don-hang-noi-bo');
+    expect(slug('Đơn hàng nội bộ')).toBe('don-hang-noi-bo');   // diacritics still fold
   });
 
   it('stores roots absolute and reads them back', () => {
@@ -57,16 +57,16 @@ describe('registry', () => {
   });
 
   it('refuses a root that is not an existing directory', () => {
-    expect(() => addProject({ name: 'ghost', fe: join(repo, 'nope') })).toThrow(/không phải một thư mục/);
+    expect(() => addProject({ name: 'ghost', fe: join(repo, 'nope') })).toThrow(/is not an existing directory/);
   });
 
   it('refuses a project with neither side', () => {
-    expect(() => addProject({ name: 'empty' })).toThrow(/thư mục FE hoặc BE/);
+    expect(() => addProject({ name: 'empty' })).toThrow(/an FE or a BE directory/);
   });
 
   it('refuses a duplicate id', () => {
     addProject({ name: 'Adminhub', fe: repo });
-    expect(() => addProject({ name: 'Adminhub', fe: repo })).toThrow(/đã tồn tại/);
+    expect(() => addProject({ name: 'Adminhub', fe: repo })).toThrow(/already exists/);
   });
 
   it('removes only the named project', () => {
@@ -87,7 +87,7 @@ describe('registry', () => {
 
 describe('store', () => {
   it('keeps every id inside the workspace', () => {
-    expect(() => projectDir('../../etc')).toThrow(/id không hợp lệ/);
+    expect(() => projectDir('../../etc')).toThrow(/invalid id/);
     expect(projectDir('adminhub').startsWith(home)).toBe(true);
   });
 
@@ -162,7 +162,7 @@ describe('one-sided scans', () => {
   });
 
   // cm:why This is the defect the hub shipped with: a FE-only scan called every endpoint
-  // "FE gọi mà API không khai", turning a missing half of the scan into a finding about the API.
+  // "the FE calls it and the API does not declare it", turning a missing half of the scan into a finding about the API.
   it('never claims the API is missing an endpoint when the BE was never scanned', () => {
     const sum = summarize(feOnlyMap);
     expect(sum).toMatchObject({ feOnly: 0, unpaired: 2, hasBe: false, hasFe: true });
@@ -253,24 +253,24 @@ describe('diff', () => {
   it('says coverage grew while certainty fell, not just that the number went up', () => {
     const before = mapWith({ calls: callsOf([['e', 'exact'], ['e', 'exact']]) });
     const after = mapWith({ calls: callsOf([['e', 'exact'], ['e', 'exact'], ['e', 'guess'], ['e', 'guess']]) });
-    expect(headlineFor(before, after)).toBe('Phủ rộng hơn, nhưng chắc chắn kém đi.');
+    expect(headlineFor(before, after)).toBe('Wider coverage, weaker certainty.');
   });
 
   it('does not claim more certainty when only coverage moved', () => {
     const before = mapWith({ calls: callsOf([['e', 'exact'], ['e', 'guess']]) });
     const after = mapWith({ calls: callsOf([['e', 'exact'], ['e', 'guess'], ['e', 'exact'], ['e', 'guess']]) });
-    expect(headlineFor(before, after)).toBe('Phủ rộng hơn, độ chắc gần như không đổi.');
+    expect(headlineFor(before, after)).toBe('Wider coverage, certainty about the same.');
   });
 
   it('calls a rescan that found the same thing twice unchanged', () => {
     const m = mapWith({ calls: callsOf([['e', 'exact'], ['e', 'guess']]) });
-    expect(headlineFor(m, m)).toBe('Không thay đổi đáng kể.');
+    expect(headlineFor(m, m)).toBe('No meaningful change.');
   });
 
   it('does not congratulate a scan that lost calls', () => {
     const before = mapWith({ calls: callsOf([['e', 'exact'], ['e', 'guess'], ['e', 'guess']]) });
     const after = mapWith({ calls: callsOf([['e', 'exact']]) });
-    expect(headlineFor(before, after)).toBe('Phủ hẹp hơn, phần còn lại chắc hơn.');
+    expect(headlineFor(before, after)).toBe('Narrower coverage, what is left is firmer.');
   });
 
   it('names the screens that lose an endpoint, so removal is actionable', () => {
@@ -289,7 +289,7 @@ describe('diff', () => {
     const after = mapWith({ endpoints: [{ id: 'e', method: 'GET', path: '/a', auth: false }] });
     const d = diffMaps(before, after);
     expect(d.endpoints.added).toEqual([]);
-    expect(d.endpoints.changed[0].detail).toBe('cổng auth: có auth → không auth');
+    expect(d.endpoints.changed[0].detail).toBe('auth gate: auth → no auth');
   });
 });
 
@@ -307,12 +307,12 @@ const collect = (id: string, kind: 'fe' | 'be'): Promise<ScanEvent[]> =>
 
 describe('scanInBackground', () => {
   it('refuses an id that is not in the registry instead of scanning something else', async () => {
-    expect(await collect('khong-co', 'fe')).toEqual([{ kind: 'error', text: 'không có project nào tên khong-co' }]);
+    expect(await collect('khong-co', 'fe')).toEqual([{ kind: 'error', text: 'no project named khong-co' }]);
   });
 
   it('says which side was never declared rather than reporting an empty map', async () => {
     addProject({ name: 'fe only', fe: repo });
-    expect(await collect('fe-only', 'be')).toEqual([{ kind: 'error', text: 'fe-only chưa khai thư mục BE' }]);
+    expect(await collect('fe-only', 'be')).toEqual([{ kind: 'error', text: 'fe-only has no BE directory' }]);
   });
 
   it('runs a real scan and leaves no staging file behind', async () => {
@@ -352,7 +352,7 @@ describe('history order', () => {
     const entries = historyOf('rev', 'fe');
     expect(entries).toHaveLength(3);
     const read = (f: string) => parseMap(readFileSync(join(projectDir('rev'), 'history', f), 'utf8'));
-    expect(diffMaps(read(entries[1]), read(entries[2])).headline).toBe('Phủ hẹp hơn.');
+    expect(diffMaps(read(entries[1]), read(entries[2])).headline).toBe('Narrower coverage.');
   });
 
   it('does not log a re-scan that found exactly the same map', () => {
@@ -377,7 +377,7 @@ describe('updateProject', () => {
 
   beforeEach(() => {
     other = mkdtempSync(join(tmpdir(), 'apiflow-other-'));
-    addProject({ name: 'Đổi gốc', fe: repo, be: repo });
+    addProject({ name: 'moved root', fe: repo, be: repo, id: 'doi-goc' });
   });
 
   afterEach(() => rmSync(other, { recursive: true, force: true }));
@@ -391,25 +391,25 @@ describe('updateProject', () => {
 
   it('clears a side on null and leaves it alone on undefined', () => {
     expect(updateProject('doi-goc', { be: null }).be).toBeUndefined();
-    expect(updateProject('doi-goc', { name: 'vẫn thế' }).fe).toBe(repo);
+    expect(updateProject('doi-goc', { name: 'same again' }).fe).toBe(repo);
   });
 
   it('refuses to leave a project with neither side', () => {
     updateProject('doi-goc', { be: null });
-    expect(() => updateProject('doi-goc', { fe: null })).toThrow(/thư mục FE hoặc BE/);
+    expect(() => updateProject('doi-goc', { fe: null })).toThrow(/an FE or a BE directory/);
   });
 
   it('refuses a root that is not a directory, and keeps the old one', () => {
-    expect(() => updateProject('doi-goc', { fe: join(other, 'nope') })).toThrow(/không phải một thư mục/);
+    expect(() => updateProject('doi-goc', { fe: join(other, 'nope') })).toThrow(/is not an existing directory/);
     expect(findProject('doi-goc')?.fe).toBe(repo);
   });
 
   it('refuses an id that is not registered', () => {
-    expect(() => updateProject('khong-co', { name: 'x' })).toThrow(/không có project nào/);
+    expect(() => updateProject('khong-co', { name: 'x' })).toThrow(/no project named/);
   });
 
   it('refuses a blank name', () => {
-    expect(() => updateProject('doi-goc', { name: '   ' })).toThrow(/tên không được để trống/);
+    expect(() => updateProject('doi-goc', { name: '   ' })).toThrow(/name must not be blank/);
   });
 });
 
@@ -459,7 +459,7 @@ describe('a BE half too thin to compare', () => {
     const counts = alertCounts(list);
     expect(counts.byKind['fe-only-path']).toBe(0);
     expect(counts.byKind['be-partial']).toBe(1);
-    expect(list.find((a) => a.kind === 'be-partial')?.detail).toContain('scanner chưa đọc được');
+    expect(list.find((a) => a.kind === 'be-partial')?.detail).toContain('the reader failing to read');
   });
 
   it('leaves the comparison alone once the BE side is the bigger half', () => {

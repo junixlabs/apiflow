@@ -26,19 +26,19 @@ export interface Target {
 export function resolveTarget(project?: string, mapFile?: string): Target {
   if (mapFile !== undefined) {
     const path = resolve(mapFile);
-    if (!existsSync(path)) throw new Error(`không có file ${path}`);
+    if (!existsSync(path)) throw new Error(`no such file: ${path}`);
     return { map: parseMap(readFileSync(path, 'utf8')), label: path };
   }
   const workspace = readWorkspace();
   const id = project ?? process.env.APIFLOW_PROJECT ?? (workspace.projects.length === 1 ? workspace.projects[0].id : undefined);
   const names = workspace.projects.map((p) => p.id).join(' · ');
-  if (id === undefined) throw new Error(`chưa nói project nào. Có: ${names}`);
-  if (findProject(id) === undefined) throw new Error(`không có project ${id}. Có: ${names}`);
+  if (id === undefined) throw new Error(`no project named. Available: ${names}`);
+  if (findProject(id) === undefined) throw new Error(`no project ${id}. Available: ${names}`);
   for (const kind of PREFERRED) {
     const map = readMap(id, kind);
     if (map !== null) return { map, label: `${id}/${kind}`, id };
   }
-  throw new Error(`${id} chưa scan lần nào — chạy: apiflow project scan ${id}`);
+  throw new Error(`${id} has never been scanned — run: apiflow project scan ${id}`);
 }
 
 const at = (s: { file: string; line: number }): string => `${s.file}:${s.line}`;
@@ -51,9 +51,9 @@ function counts(list: Array<{ confidence: Confidence }>): string {
 }
 
 // cm:guard Every answer ends with the unresolved count and the map it came from. An agent reading
-// "0 màn" without those two facts will report "nothing uses this endpoint" as if it were measured.
+// "0 screens" without those two facts will report "nothing uses this endpoint" as if it were measured.
 export function footer(target: Target): string {
-  return `\n(bản đồ ${target.label} · ${target.map.metadata.root} · ${target.map.unresolved.length} lời gọi chưa giải được đường dẫn — không nằm trong các số trên)`;
+  return `\n(map ${target.label} · ${target.map.metadata.root} · ${target.map.unresolved.length} calls whose path could not be resolved — not part of the numbers above)`;
 }
 
 function renderImpact(target: Target, label: string, answers: ImpactAnswer[], verbose: boolean): string {
@@ -61,19 +61,19 @@ function renderImpact(target: Target, label: string, answers: ImpactAnswer[], ve
   for (const a of answers) {
     const name = a.endpoint === null ? label : `${a.endpoint.method} ${a.endpoint.path}`;
     if (a.screens.length === 0) {
-      lines.push(`${name} — không màn nào trong bản đồ gọi tới.`);
+      lines.push(`${name} — no screen in this map calls it.`);
       continue;
     }
-    lines.push(`${name} — ${a.screens.length} màn vỡ nếu đổi (${counts(a.screens)})`);
+    lines.push(`${name} — ${a.screens.length} screen(s) break if this changes (${counts(a.screens)})`);
     const sorted = [...a.screens].sort((x, y) => ORDER[x.confidence] - ORDER[y.confidence]);
     for (const s of sorted.slice(0, SCREEN_CAP)) {
-      const route = s.screen.route ?? `${s.screen.label} (chưa gắn được vào route nào)`;
+      const route = s.screen.route ?? `${s.screen.label} (no route attached)`;
       lines.push(`- ${route} [${s.confidence}] ${at(s.source)}`);
       if (verbose && s.chain !== undefined && s.chain.length > 1) {
         for (const step of s.chain) lines.push(`    ${step.role} ${step.symbol}${step.precise ? '' : ' ~'} ${at(step)}`);
       }
     }
-    if (sorted.length > SCREEN_CAP) lines.push(`- … và ${sorted.length - SCREEN_CAP} màn nữa`);
+    if (sorted.length > SCREEN_CAP) lines.push(`- … and ${sorted.length - SCREEN_CAP} more screen(s)`);
   }
   return lines.join('\n') + footer(target);
 }
@@ -81,11 +81,11 @@ function renderImpact(target: Target, label: string, answers: ImpactAnswer[], ve
 export function impactEndpointText(target: Target, endpoint: string, verbose = false): string {
   const ids = resolveEndpointQuery(target.map, endpoint);
   if (ids.length === 0) {
-    // cm:why Names the verbs that DO exist on that path. "Không khớp" alone sends the agent hunting
+    // cm:why Names the verbs that DO exist on that path. "No match" alone sends the agent hunting
     // for a typo in the path when the real answer is that this path has no POST.
     const others = otherMethodsOn(target.map, endpoint);
-    const hint = others.length > 0 ? ` Cùng đường dẫn đó, bản đồ có: ${others.join(' · ')}.` : '';
-    return `Không có endpoint nào khớp "${endpoint}".${hint}${footer(target)}`;
+    const hint = others.length > 0 ? ` On that same path the map does have: ${others.join(' · ')}.` : '';
+    return `No endpoint matches "${endpoint}".${hint}${footer(target)}`;
   }
   return renderImpact(target, endpoint, ids.map((id) => screensAffectedByEndpoint(target.map, id)), verbose);
 }
@@ -93,7 +93,7 @@ export function impactEndpointText(target: Target, endpoint: string, verbose = f
 export function impactFieldText(target: Target, field: string): string {
   const ids = resolveFieldQuery(target.map, field);
   if (ids.length === 0) {
-    return `Không có field nào tên "${field}" trong bản đồ (${target.map.fields.length} field đã truy được).${footer(target)}`;
+    return `No field named "${field}" in this map (${target.map.fields.length} field(s) traced).${footer(target)}`;
   }
   return renderImpact(target, field, ids.map((id) => screensAffectedByField(target.map, id)), false);
 }
@@ -102,7 +102,7 @@ export function screenDepsText(target: Target, route: string): string {
   const ids = screenIdsForRoute(target.map, route);
   if (ids.length === 0) {
     const known = [...new Set(target.map.screens.map((s) => s.route).filter((r): r is string => r !== undefined))].sort();
-    return `Không có màn nào tên ${route}. Ví dụ có trong bản đồ: ${known.slice(0, 8).join(' · ')}${footer(target)}`;
+    return `No screen named ${route}. Examples from this map: ${known.slice(0, 8).join(' · ')}${footer(target)}`;
   }
   const deps = ids.flatMap((id) => endpointsForScreen(target.map, id));
   const seen = new Map(deps.map((d) => [`${d.endpoint.id}|${d.confidence}`, d]));
@@ -122,12 +122,12 @@ export function findText(target: Target, q: string): string {
     if (items.length === 0) return;
     lines.push(`${title} — ${items.length}`);
     for (const i of items.slice(0, FIND_CAP)) lines.push(`- ${i}`);
-    if (items.length > FIND_CAP) lines.push(`- … và ${items.length - FIND_CAP} cái nữa`);
+    if (items.length > FIND_CAP) lines.push(`- … and ${items.length - FIND_CAP} more`);
   };
   block('endpoint', eps.map((e) => `${e.method} ${e.path}`));
-  block('màn hình', screens.map((s) => s.route ?? s.label));
+  block('screens', screens.map((s) => s.route ?? s.label));
   block('field', [...new Set(fields.map((f) => f.path))]);
-  return (lines.length === 0 ? `Không có gì khớp "${q}".` : lines.join('\n')) + footer(target);
+  return (lines.length === 0 ? `Nothing matches "${q}".` : lines.join('\n')) + footer(target);
 }
 
 export function mapHealthText(target: Target): string {
@@ -135,17 +135,17 @@ export function mapHealthText(target: Target): string {
   const counted = alertCounts(alerts(target.map));
   const lines = [
     `${target.label} — ${target.map.metadata.root}`,
-    `endpoint ${sum.endpoints} · màn ${sum.screens} · lời gọi ${sum.calls} · field ${sum.fields}`,
-    `độ tin cậy: exact ${sum.confidence.exact} · inferred ${sum.confidence.inferred} · guess ${sum.confidence.guess}`,
-    `đối chiếu: khớp hai phía ${sum.both} · API khai không ai gọi ${sum.uncalled} · FE gọi API không khai ${sum.feOnly} · chưa đối chiếu được ${sum.unpaired}`,
+    `endpoints ${sum.endpoints} · screens ${sum.screens} · calls ${sum.calls} · fields ${sum.fields}`,
+    `confidence: exact ${sum.confidence.exact} · inferred ${sum.confidence.inferred} · guess ${sum.confidence.guess}`,
+    `reconciliation: both sides ${sum.both} · declared but uncalled ${sum.uncalled} · FE-only ${sum.feOnly} · unpaired ${sum.unpaired}`,
     // cm:guard The be-partial warning has to travel with the numbers, not sit in a separate tool: the
     // whole point is that the feOnly column above must not be read as a defect list when it fires.
-    `alert ${counted.total} (high ${counted.high})${counted.byKind['be-partial'] > 0 ? ' — phía BE đọc được quá ít để so sánh, đừng tin cột "FE gọi, API không khai"' : ''}`,
-    `unresolved ${sum.unresolved} — không nằm trong các số trên`,
+    `alert ${counted.total} (high ${counted.high})${counted.byKind['be-partial'] > 0 ? ' — too little of the BE was read to compare, do not trust the FE-only column' : ''}`,
+    `unresolved ${sum.unresolved} — not part of the numbers above`,
   ];
   if (target.id !== undefined) {
     for (const s of statusOf(target.id).filter((x) => x.exists)) {
-      lines.push(`${s.kind}: scan ${s.scannedAt ?? 'chưa'} — ${mapPath(target.id, s.kind)}`);
+      lines.push(`${s.kind}: scanned ${s.scannedAt ?? 'never'} — ${mapPath(target.id, s.kind)}`);
     }
   }
   return lines.join('\n');
@@ -154,29 +154,29 @@ export function mapHealthText(target: Target): string {
 export function mapCheckText(target: Target, side?: 'fe' | 'be'): string {
   const kind = side ?? sideOf(target.map);
   if (kind === null) {
-    return 'Bản đồ linked ghép hai phía — check từng phía một (side=fe hoặc side=be, hoặc trỏ map vào file fe/be).';
+    return 'A linked map joins both sides — check one side at a time (side=fe or side=be, or point map at the fe/be file).';
   }
   const root = localRootFor(target.map.metadata.root);
   if (root === undefined) {
-    return `Không biết ${target.map.metadata.root} nằm ở đâu trên máy này — thêm bằng: apiflow project add`;
+    return `Nothing on this machine says where ${target.map.metadata.root} lives — add it with: apiflow project add`;
   }
   const result = checkAgainst(target.map, rescan(kind, root, target.map.metadata.name));
-  if (!result.drifted) return `Bản đồ ${target.label} khớp code.`;
-  const lines = [`Bản đồ ${target.label} đã lệch code — ${result.diff.headline}`];
-  for (const e of result.diff.endpoints.added.slice(0, 10)) lines.push(`+ ${e.method} ${e.path} (code có, bản đồ chưa)`);
-  for (const e of result.diff.endpoints.removed.slice(0, 10)) lines.push(`- ${e.method} ${e.path} (bản đồ có, code không còn)`);
-  lines.push(`màn ${result.diff.screens.before} → ${result.diff.screens.after} · lời gọi ${result.diff.calls.before} → ${result.diff.calls.after} · unresolved ${result.diff.unresolved.before} → ${result.diff.unresolved.after}`);
-  lines.push('Cập nhật: apiflow project scan <id>');
+  if (!result.drifted) return `Map ${target.label} still matches the code.`;
+  const lines = [`Map ${target.label} has drifted from the code — ${result.diff.headline}`];
+  for (const e of result.diff.endpoints.added.slice(0, 10)) lines.push(`+ ${e.method} ${e.path} (in the code, not in the map)`);
+  for (const e of result.diff.endpoints.removed.slice(0, 10)) lines.push(`- ${e.method} ${e.path} (in the map, gone from the code)`);
+  lines.push(`screens ${result.diff.screens.before} → ${result.diff.screens.after} · calls ${result.diff.calls.before} → ${result.diff.calls.after} · unresolved ${result.diff.unresolved.before} → ${result.diff.unresolved.after}`);
+  lines.push('Refresh with: apiflow project scan <id>');
   return lines.join('\n');
 }
 
 export function mapListText(): string {
   const workspace = readWorkspace();
-  if (workspace.projects.length === 0) return 'Workspace trống — thêm bằng: apiflow project add <tên> --fe=<dir> [--be=<dir>]';
+  if (workspace.projects.length === 0) return 'The workspace is empty — add one with: apiflow project add <name> --fe=<dir> [--be=<dir>]';
   return workspace.projects
     .map((p) => {
       const kinds = statusOf(p.id).filter((s) => s.exists).map((s) => s.kind);
-      return `${p.id} — ${p.name} · ${kinds.length === 0 ? 'chưa scan' : kinds.join(', ')}`;
+      return `${p.id} — ${p.name} · ${kinds.length === 0 ? 'not scanned' : kinds.join(', ')}`;
     })
     .join('\n');
 }

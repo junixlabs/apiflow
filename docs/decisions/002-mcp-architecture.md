@@ -2,7 +2,7 @@
 
 **Status:** Accepted
 **Date:** 2026-03-19
-**Context:** API View cần tích hợp với Claude Code để auto-analyze codebase và chạy flows.
+**Context:** API View needs to integrate with Claude Code so it can auto-analyze a codebase and run flows.
 
 ---
 
@@ -10,7 +10,7 @@
 
 ### 1. MCP stdio transport (not HTTP, not CLI wrapper)
 
-**Chosen:** MCP Server với stdio transport.
+**Chosen:** an MCP server over stdio transport.
 
 **Options considered:**
 
@@ -18,49 +18,49 @@
 |--------|------|------|
 | **MCP stdio** | Native Claude Code support, no port conflicts, simple setup (`claude mcp add`) | Must run as child process |
 | MCP HTTP (SSE) | Can serve multiple clients, sharable | Port management, firewall issues, overkill for local tool |
-| CLI wrapper | Simple to build | No structured tool/resource protocol, Claude phải parse stdout text |
+| CLI wrapper | Simple to build | No structured tool/resource protocol; Claude has to parse stdout text |
 | VS Code extension | Rich UI integration | Tied to VS Code, not Claude Code native |
 
 **Why stdio:**
-- Claude Code dùng stdio cho MCP servers — `claude mcp add api-view -- node src/mcp/server.js`
-- Không cần manage ports, không conflict với dev server
+- Claude Code uses stdio for MCP servers — `claude mcp add api-view -- node src/mcp/server.js`
+- No ports to manage, no conflict with the dev server
 - JSON-RPC 2.0 over stdin/stdout = structured, typed communication
-- Official `@modelcontextprotocol/sdk` hỗ trợ đầy đủ
+- The official `@modelcontextprotocol/sdk` supports it fully
 
 ### 2. Separate Core Engine from UI
 
-**Chosen:** Tách Core Engine (`src/core/`) thành pure TypeScript, shared giữa MCP Server và Web UI.
+**Chosen:** split the core engine (`src/core/`) out as pure TypeScript, shared by the MCP server and the web UI.
 
 **Options considered:**
 
 | Option | Pros | Cons |
 |--------|------|------|
-| **Separate Core** | Testable, reusable, MCP Server không cần React | Refactor effort from current structure |
-| Keep in UI | No refactor needed | MCP Server phải import React components hoặc duplicate logic |
-| Separate npm package | Clean boundary | Over-engineering cho 1 project |
+| **Separate core** | Testable, reusable, the MCP server needs no React | Refactor effort from the current structure |
+| Keep it in the UI | No refactor needed | The MCP server would have to import React components or duplicate the logic |
+| Separate npm package | Clean boundary | Over-engineering for a single project |
 
 **Why separate:**
-- MCP Server chạy trong Node.js — không có DOM, không thể import React components
-- Core logic (execution, variable resolution, file I/O) không phụ thuộc UI
-- Tách ra → test Core Engine bằng unit tests, không cần browser/JSDOM
-- Không cần publish npm package riêng — just `src/core/` folder, import trực tiếp
+- The MCP server runs in Node.js — no DOM, so it cannot import React components
+- The core logic (execution, variable resolution, file I/O) does not depend on the UI
+- Split out → the core engine is unit-testable with no browser and no JSDOM
+- No separate npm package to publish — just the `src/core/` folder, imported directly
 
 ### 3. Laravel-first Skill approach
 
-**Chosen:** Build skill cho Laravel trước, mở rộng framework khác sau.
+**Chosen:** build the skill for Laravel first, widen to other frameworks later.
 
 **Options considered:**
 
 | Option | Pros | Cons |
 |--------|------|------|
-| **Laravel first** | Concrete patterns to parse, test ngay trên project thực tế | Only 1 framework initially |
-| Generic (all frameworks) | Broader coverage | Quá abstract, khó parse chính xác, chất lượng thấp |
-| Config-based (user define patterns) | Flexible | UX kém, user phải config nhiều |
+| **Laravel first** | Concrete patterns to parse, testable on a real project right away | Only 1 framework initially |
+| Generic (all frameworks) | Broader coverage | Too abstract, hard to parse accurately, low quality |
+| Config-based (the user defines the patterns) | Flexible | Poor UX, too much for the user to configure |
 
 **Why Laravel first:**
-- Laravel có conventions rõ ràng: routes/api.php, Controllers/, Services/ — dễ parse
-- Project hiện tại dùng Laravel — test ngay được
-- Skill pattern có thể replicate cho framework khác (Express, FastAPI, Spring Boot) sau khi validate approach
+- Laravel has clear conventions: routes/api.php, Controllers/, Services/ — easy to parse
+- The project at hand uses Laravel — it can be tested immediately
+- The skill pattern can be replicated for other frameworks (Express, FastAPI, Spring Boot) once the approach is validated
 - Better to do 1 framework well than many frameworks poorly
 
 ---
@@ -68,16 +68,16 @@
 ## Consequences
 
 **Positive:**
-- Claude Code tương tác trực tiếp với API View qua structured MCP tools
-- Core Engine testable independently, không bị coupled với React
-- Laravel analyzer cho kết quả chính xác nhờ framework conventions
-- Setup đơn giản: 1 command `claude mcp add`
+- Claude Code talks to API View directly through structured MCP tools
+- The core engine is testable on its own, not coupled to React
+- The Laravel analyzer is accurate because the framework conventions are predictable
+- Simple setup: one `claude mcp add` command
 
 **Negative:**
-- Cần refactor existing code để tách Core Engine ra khỏi UI components
-- Laravel-only ban đầu — team dùng framework khác phải chờ
-- stdio transport = chỉ 1 Claude Code session dùng 1 MCP server instance
+- The existing code must be refactored to lift the core engine out of the UI components
+- Laravel only at first — teams on another framework have to wait
+- stdio transport = one Claude Code session per MCP server instance
 
 **Risks:**
-- Core Engine tách ra có thể break existing Web UI imports → cần migration cẩn thận
-- Laravel code patterns không standard 100% (team custom structure) → skill cần fallback strategies
+- Splitting the core engine out may break existing web UI imports → the migration has to be careful
+- Laravel code patterns are not 100% standard (teams customize the structure) → the skill needs fallback strategies

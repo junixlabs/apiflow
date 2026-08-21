@@ -83,14 +83,14 @@ describe('POST /api/projects', () => {
     expect(res.status).toBe(400);
     // cm:why Asserts the message reads as prose: the same text is shown in the browser form, where
     // an error naming the CLI flag `--fe` points at a field that does not exist on screen.
-    expect(res.message).toContain('thư mục FE');
+    expect(res.message).toContain('FE directory');
     expect(res.message).not.toContain('--fe');
   });
 
   it('refuses a name it cannot turn into an id, and says which field to fill', async () => {
     const res = await post('/api/projects', { name: '日本語', fe: repo });
     expect(res.status).toBe(400);
-    expect(res.message).toContain('điền ô id');
+    expect(res.message).toContain('fill the id field');
   });
 
   it('refuses a project with neither side', async () => {
@@ -161,7 +161,7 @@ describe('PATCH /api/projects/:id', () => {
   // if an absent key did not mean "leave alone", the project view's form would wipe the hints file.
   it('treats an empty field as clear and an absent field as unchanged', async () => {
     expect((await patch('doi-goc', { be: '' })).project?.be).toBeUndefined();
-    expect((await patch('doi-goc', { name: 'tên mới' })).project?.fe).toBe(repo);
+    expect((await patch('doi-goc', { name: 'new name' })).project?.fe).toBe(repo);
   });
 
   it('refuses to clear the last remaining side', async () => {

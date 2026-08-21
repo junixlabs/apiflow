@@ -70,8 +70,8 @@ export function alerts(map: ApiMapFile): Alert[] {
       endpointId: '',
       method: 'GET',
       path: '',
-      detail: `Phía BE chỉ đọc được ${declaredCount} endpoint, trong khi FE gọi ${undeclaredCalled} endpoint không thấy khai — ` +
-        'con số đó là scanner chưa đọc được mặt API, không phải API thiếu. So sánh hai phía chưa dùng được.',
+      detail: `The BE reader understood only ${declaredCount} endpoint(s) while the FE calls ${undeclaredCalled} it never saw declared — ` +
+        'that number is the reader failing to read the API surface, not the API missing routes. The two-sided comparison is unusable here.',
       screens: [],
       evidence: [],
     });
@@ -87,14 +87,14 @@ export function alerts(map: ApiMapFile): Alert[] {
           ...base,
           kind: 'method-mismatch',
           severity: bySignal(ctx.best),
-          detail: `FE gọi ${e.method} nhưng API chỉ khai ${[...declared].sort().join(', ')} trên đường dẫn này`,
+          detail: `FE calls ${e.method} but the API only declares ${[...declared].sort().join(', ')} on this path`,
         });
       } else {
         out.push({
           ...base,
           kind: 'fe-only-path',
           severity: bySignal(ctx.best),
-          detail: 'FE gọi đường dẫn này nhưng API không khai đường dẫn nào như vậy',
+          detail: 'FE calls this path but the API declares no such path',
         });
       }
       continue;
@@ -103,13 +103,13 @@ export function alerts(map: ApiMapFile): Alert[] {
     if (e.source === undefined) continue;
 
     if (e.auth === false) {
-      out.push({ ...base, kind: 'open-auth', severity: 'high', detail: 'Không thấy cổng chặn nào trong code' });
+      out.push({ ...base, kind: 'open-auth', severity: 'high', detail: 'No auth gate found in the code' });
     } else if (e.auth === undefined) {
-      out.push({ ...base, kind: 'murky-auth', severity: 'low', detail: 'Có cổng nhưng không phân loại được' });
+      out.push({ ...base, kind: 'murky-auth', severity: 'low', detail: 'Has a gate, but it could not be classified' });
     }
 
     if (hasFe && ctx.calls.length === 0) {
-      out.push({ ...base, kind: 'uncalled', severity: 'low', detail: 'API khai nhưng không màn nào gọi' });
+      out.push({ ...base, kind: 'uncalled', severity: 'low', detail: 'Declared by the API, called by no screen' });
     }
   }
 

@@ -30,15 +30,15 @@ const guard = (fn: () => string) => {
 
 const WHERE = {
   project: z.string().optional().describe('id project trong workspace (apiflow project ls)'),
-  map: z.string().optional().describe('đường dẫn tới một file .apimap cụ thể, thay cho project'),
+  map: z.string().optional().describe('path to a specific .apimap file, instead of a project'),
 };
 
 server.tool(
   'impact_endpoint',
-  'Đổi một endpoint thì màn hình nào vỡ. Trả về từng màn kèm file:line của lời gọi.',
+  'Which screens break if this endpoint changes. Returns each screen with the file:line of the call.',
   {
-    endpoint: z.string().describe('ví dụ "PATCH /projects/:id/policy" hoặc chỉ một phần đường dẫn'),
-    verbose: z.boolean().optional().describe('kèm chuỗi client → hook → component → màn'),
+    endpoint: z.string().describe('e.g. "PATCH /projects/:id/policy", or just part of the path'),
+    verbose: z.boolean().optional().describe('include the client → hook → component → screen chain'),
     ...WHERE,
   },
   ({ endpoint, verbose, project, map }) => guard(() => impactEndpointText(resolveTarget(project, map), endpoint, verbose === true))
@@ -46,40 +46,40 @@ server.tool(
 
 server.tool(
   'impact_field',
-  'Đổi một field trong response thì màn hình nào vỡ.',
-  { field: z.string().describe('tên field, ví dụ "email" hoặc "data.items.status"'), ...WHERE },
+  'Which screens break if this response field changes.',
+  { field: z.string().describe('field name, e.g. "email" or "data.items.status"'), ...WHERE },
   ({ field, project, map }) => guard(() => impactFieldText(resolveTarget(project, map), field))
 );
 
 server.tool(
   'screen_deps',
-  'Một màn hình phụ thuộc những endpoint nào.',
-  { route: z.string().describe('route của màn, ví dụ "/users/:id"'), ...WHERE },
+  'Which endpoints one screen depends on.',
+  { route: z.string().describe('the screen route, e.g. "/users/:id"'), ...WHERE },
   ({ route, project, map }) => guard(() => screenDepsText(resolveTarget(project, map), route))
 );
 
 server.tool(
   'find',
-  'Tìm endpoint / màn hình / field theo một mẩu chuỗi, để biết tên chính xác trước khi hỏi impact.',
-  { q: z.string().describe('một mẩu đường dẫn, tên route hoặc tên field'), ...WHERE },
+  'Find an endpoint / screen / field by a fragment, to learn the exact name before asking for impact.',
+  { q: z.string().describe('a path fragment, a route name or a field name'), ...WHERE },
   ({ q, project, map }) => guard(() => findText(resolveTarget(project, map), q))
 );
 
 server.tool(
   'map_health',
-  'Bản đồ của project: số liệu, đối chiếu hai phía, alert, và lần scan gần nhất.',
+  'The project map: counts, both-sides reconciliation, alerts, and the latest scan.',
   { ...WHERE },
   ({ project, map }) => guard(() => mapHealthText(resolveTarget(project, map)))
 );
 
 server.tool(
   'map_check',
-  'Bản đồ còn đúng với code không: scan lại rồi so. Chậm (giây tới chục giây) — chỉ gọi khi cần biết map có mốc.',
-  { side: z.enum(['fe', 'be']).optional().describe('mặc định: phía suy từ chính bản đồ'), ...WHERE },
+  'Is the map still true to the code: re-scan and compare. Slow (seconds to tens of seconds) — call it only when it matters whether the map is stale.',
+  { side: z.enum(['fe', 'be']).optional().describe('default: the side inferred from the map itself'), ...WHERE },
   ({ side, project, map }) => guard(() => mapCheckText(resolveTarget(project, map), side))
 );
 
-server.tool('map_list', 'Các project trong workspace và bản đồ đã có.', {}, () => guard(mapListText));
+server.tool('map_list', 'The projects in the workspace and the maps that exist.', {}, () => guard(mapListText));
 
 async function main(): Promise<void> {
   await server.connect(new StdioServerTransport());

@@ -11,7 +11,7 @@ async function main(): Promise<void> {
   const flag = (n: string): string | undefined => args.find((a) => a.startsWith(`--${n}=`))?.split('=').slice(1).join('=');
   const port = Number(flag('port') ?? 3030);
   if (!Number.isInteger(port) || port < 0 || port > 65535) {
-    console.error(`--port không hợp lệ: ${String(flag('port'))}`);
+    console.error(`Invalid --port: ${String(flag('port'))}`);
     process.exit(1);
   }
 
@@ -24,12 +24,12 @@ async function main(): Promise<void> {
     // stack says nothing about the one thing that fixes it.
     const code = (err as { code?: string }).code;
     if (code === 'EADDRINUSE') {
-      console.error(`Cổng ${port} đang bị chiếm. Chạy lại với --port=<số khác>, hoặc dừng tiến trình đang giữ cổng đó:`);
+      console.error(`Port ${port} is taken. Retry with --port=<other>, or stop whatever holds it:`);
       console.error(`  ss -ltnp | grep :${port}`);
       process.exit(1);
     }
     if (code === 'EACCES') {
-      console.error(`Không có quyền mở cổng ${port}. Dùng một cổng >= 1024.`);
+      console.error(`Not allowed to open port ${port}. Use a port >= 1024.`);
       process.exit(1);
     }
     throw err;
@@ -37,17 +37,17 @@ async function main(): Promise<void> {
 
   console.log('## apiflow ui');
   console.log('');
-  console.log(`**Mở**: http://${HOST}:${running.port}`);
+  console.log(`**Open**: http://${HOST}:${running.port}`);
   console.log(`**Workspace**: ${workspaceRoot()}`);
   console.log(`**Project**: ${projects.length}`);
   for (const p of projects) {
     const kinds = p.maps.map((m) => m.kind).join(', ');
-    console.log(`- ${p.id} — ${kinds === '' ? 'chưa có map' : kinds}`);
+    console.log(`- ${p.id} — ${kinds === '' ? 'no map yet' : kinds}`);
   }
   console.log('');
-  console.log(`Chỉ nghe trên ${HOST}. Bản đồ chứa đường dẫn nội bộ và mọi endpoint không có cổng auth,`);
-  console.log('nên nó không nghe ra ngoài và không có cờ nào để mở ra.');
-  console.log('Ctrl-C để dừng.');
+  console.log(`Listens on ${HOST} only. A map holds internal paths and every endpoint with no auth gate,`);
+  console.log('so it is not served off this machine and there is no flag to widen that.');
+  console.log('Ctrl-C to stop.');
 }
 
 const invokedDirectly =

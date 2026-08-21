@@ -25,13 +25,13 @@ function tsxRunner(script, rest) {
 }
 
 const args = process.argv.slice(2);
-const HELP = `apiflow — bản đồ màn hình ↔ endpoint ↔ field
+const HELP = `apiflow — a screen ↔ endpoint ↔ field map
 
-  apiflow                        mở app (proxy + UI đã build)
-  apiflow ui [--port=3030]       mở workspace nhiều project ở 127.0.0.1
-  apiflow hub --out=<dir>        xuất workspace ra HTML tĩnh
+  apiflow                        open the app (proxy + built UI)
+  apiflow ui [--port=3030]       serve the multi-project workspace on 127.0.0.1
+  apiflow hub --out=<dir>        export the workspace as static HTML
 
-  apiflow project add <tên> --fe=<dir> [--be=<dir>] [--id=<slug>]
+  apiflow project add <name> --fe=<dir> [--be=<dir>] [--id=<slug>]
   apiflow project ls [--json]
   apiflow project scan <id> [--fe] [--be]
   apiflow project rm <id>
@@ -45,11 +45,11 @@ const HELP = `apiflow — bản đồ màn hình ↔ endpoint ↔ field
   apiflow check <map> [--root=<dir>] [--json] [--write]
   apiflow view <map> --out=<file.html>
 
-  apiflow mcp map                MCP server ĐỌC BẢN ĐỒ — 7 tool, cho agent
-  apiflow mcp run                MCP server CHẠY REQUEST — 13 tool, flow runner
-                                 (alias cũ: mcp-map = mcp map · --mcp = mcp run)
+  apiflow mcp map                MCP server that READS THE MAP — 7 tools, for an agent
+  apiflow mcp run                MCP server that RUNS REQUESTS — 13 tools, flow runner
+                                 (old aliases: mcp-map = mcp map · --mcp = mcp run)
 
-Workspace: ~/.apiflow — apiflow không ghi gì vào project được scan trừ khi --out trỏ vào đó.`;
+Workspace: ~/.apiflow — apiflow writes nothing into the project it scans unless --out points there.`;
 
 // cm:guard --help must be answered BEFORE dispatch: `apiflow scan-fe --help` used to fall through
 // with no positional argument, which means "scan the current directory" — it scanned this repo and
@@ -92,8 +92,8 @@ if (args[0] === 'mcp') {
   subcommand = MCP_SERVERS[args[1]];
   forwarded = args.slice(2);
   if (!subcommand) {
-    console.error('apiflow mcp map   — server đọc bản đồ (7 tool, cho agent)');
-    console.error('apiflow mcp run   — server chạy request (13 tool, flow runner)');
+    console.error('apiflow mcp map   — reads the map (7 tools, for an agent)');
+    console.error('apiflow mcp run   — runs requests (13 tools, flow runner)');
     process.exit(1);
   }
 }
@@ -101,7 +101,10 @@ if (args[0] === 'mcp') {
 if (subcommand) {
   const script = join(root, 'src', subcommand);
   const [cmd, argv] = tsxRunner(script, forwarded);
-  const child = spawn(cmd, argv, { stdio: 'inherit', cwd: root });
+  // cm:guard Keeps the caller's cwd: tsx resolves its tsconfig and node_modules from the script
+  // path, but every relative argument a user types (`--out=maps`, `scan-fe .`) resolves from cwd, so
+  // handing the child `root` made those land inside the apiflow install instead.
+  const child = spawn(cmd, argv, { stdio: 'inherit' });
   child.on('exit', (code) => process.exit(code ?? 0));
   // cm:guard Forwards the signal: `apiflow ui` is long-running, and without this, killing this
   // wrapper leaves the tsx child holding the port with no parent left to stop it.

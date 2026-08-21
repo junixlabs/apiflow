@@ -1,0 +1,82 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1160 584" width="1160" height="584" role="img" aria-labelledby="wf-title wf-desc">
+<title id="wf-title">How apiflow builds and reads a dependency map</title>
+<desc id="wf-desc">Three extractors run where the code is and produce one deterministic .apimap file, which is read three ways — a CLI, a local browser UI, and an MCP server for agents. The request-runner half sits apart and never imports the map half.</desc>
+<defs>
+<marker id="arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4B5563"/></marker>
+<marker id="arrow-accent" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2982FB"/></marker>
+</defs>
+<rect width="100%" height="100%" fill="#F4F7FC"/>
+<rect x="32" y="64" width="744" height="144" rx="8" fill="rgba(14,23,38,0.02)" stroke="rgba(14,23,38,0.14)" stroke-width="0.8"/><rect x="48" y="68" width="173" height="12" rx="2" fill="#F4F7FC"/><text x="56" y="77" fill="#4B5563" fill-opacity="0.7" font-size="7" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" letter-spacing="0.14em">EXTRACT — RUNS WHERE THE CODE IS</text>
+<rect x="32" y="384" width="744" height="120" rx="8" fill="rgba(14,23,38,0.02)" stroke="rgba(14,23,38,0.14)" stroke-width="0.8"/><rect x="48" y="388" width="104" height="12" rx="2" fill="#F4F7FC"/><text x="56" y="397" fill="#4B5563" fill-opacity="0.7" font-size="7" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" letter-spacing="0.14em">READ IT THREE WAYS</text>
+<rect x="816" y="64" width="312" height="440" rx="8" fill="rgba(14,23,38,0.02)" stroke="#2982FB" stroke-opacity="0.45" stroke-width="0.8" stroke-dasharray="4,4"/><rect x="832" y="68" width="188" height="12" rx="2" fill="#F4F7FC"/><text x="840" y="77" fill="#2982FB" fill-opacity="0.9" font-size="7" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" letter-spacing="0.14em">REQUEST RUNNER — TOUCHES IT 0 TIMES</text>
+<line x1="164" y1="160" x2="164" y2="240" stroke="#4B5563" stroke-width="1.2" marker-end="url(#arrow)"/>
+<rect x="174" y="194" width="55" height="12" rx="2" fill="#F4F7FC"/><text x="202" y="203" fill="#6B7280" font-size="8" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" text-anchor="middle" letter-spacing="0.06em">SCREEN→EP</text>
+<line x1="412" y1="160" x2="412" y2="240" stroke="#4B5563" stroke-width="1.2" marker-end="url(#arrow)"/>
+<rect x="422" y="194" width="75" height="12" rx="2" fill="#F4F7FC"/><text x="460" y="203" fill="#6B7280" font-size="8" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" text-anchor="middle" letter-spacing="0.06em">ROUTE→PAYLOAD</text>
+<line x1="652" y1="160" x2="652" y2="240" stroke="#4B5563" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#arrow)"/>
+<rect x="662" y="194" width="50" height="12" rx="2" fill="#F4F7FC"/><text x="687" y="203" fill="#6B7280" font-size="8" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" text-anchor="middle" letter-spacing="0.06em">OBSERVED</text>
+<line x1="164" y1="328" x2="164" y2="400" stroke="#4B5563" stroke-width="1.2" marker-end="url(#arrow)"/>
+<rect x="174" y="358" width="50" height="12" rx="2" fill="#F4F7FC"/><text x="199" y="367" fill="#6B7280" font-size="8" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" text-anchor="middle" letter-spacing="0.06em">TERMINAL</text>
+<line x1="412" y1="328" x2="412" y2="400" stroke="#4B5563" stroke-width="1.2" marker-end="url(#arrow)"/>
+<rect x="422" y="358" width="45" height="12" rx="2" fill="#F4F7FC"/><text x="444" y="367" fill="#6B7280" font-size="8" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" text-anchor="middle" letter-spacing="0.06em">BROWSER</text>
+<line x1="652" y1="328" x2="652" y2="400" stroke="#2982FB" stroke-width="1.2" marker-end="url(#arrow-accent)"/>
+<rect x="662" y="358" width="35" height="12" rx="2" fill="#F4F7FC"/><text x="680" y="367" fill="#6B7280" font-size="8" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" text-anchor="middle" letter-spacing="0.06em">AGENT</text>
+<rect x="56" y="96" width="216" height="64" rx="6" fill="#F4F7FC"/>
+<rect x="56" y="96" width="216" height="64" rx="6" fill="#ffffff" stroke="#0E1726" stroke-width="1"/>
+<rect x="68" y="104" width="24" height="12" rx="2" fill="none" stroke="#0E1726" stroke-opacity="0.4" stroke-width="0.8"/><text x="80" y="113" fill="#0E1726" fill-opacity="0.85" font-size="7" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" text-anchor="middle" letter-spacing="0.08em">FE</text>
+<text x="164" y="134" fill="#0E1726" font-size="12" font-weight="600" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" text-anchor="middle">scan-fe</text>
+<text x="164" y="150" fill="#4B5563" font-size="9" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" text-anchor="middle">screens · endpoints · fields</text>
+<rect x="304" y="96" width="216" height="64" rx="6" fill="#F4F7FC"/>
+<rect x="304" y="96" width="216" height="64" rx="6" fill="#ffffff" stroke="#0E1726" stroke-width="1"/>
+<rect x="316" y="104" width="24" height="12" rx="2" fill="none" stroke="#0E1726" stroke-opacity="0.4" stroke-width="0.8"/><text x="328" y="113" fill="#0E1726" fill-opacity="0.85" font-size="7" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" text-anchor="middle" letter-spacing="0.08em">BE</text>
+<text x="412" y="134" fill="#0E1726" font-size="12" font-weight="600" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" text-anchor="middle">scan-be</text>
+<text x="412" y="150" fill="#4B5563" font-size="9" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" text-anchor="middle">routes · payloads · shapes</text>
+<rect x="552" y="96" width="200" height="64" rx="6" fill="#F4F7FC"/>
+<rect x="552" y="96" width="200" height="64" rx="6" fill="#ffffff" stroke="#0E1726" stroke-width="1"/>
+<rect x="564" y="104" width="32" height="12" rx="2" fill="none" stroke="#0E1726" stroke-opacity="0.4" stroke-width="0.8"/><text x="580" y="113" fill="#0E1726" fill-opacity="0.85" font-size="7" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" text-anchor="middle" letter-spacing="0.08em">TEST</text>
+<text x="652" y="134" fill="#0E1726" font-size="12" font-weight="600" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" text-anchor="middle">probe</text>
+<text x="652" y="150" fill="#4B5563" font-size="9" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" text-anchor="middle">real response data</text>
+<rect x="56" y="248" width="696" height="80" rx="6" fill="#F4F7FC"/>
+<rect x="56" y="248" width="696" height="80" rx="6" fill="rgba(41,130,251,0.08)" stroke="#2982FB" stroke-width="1"/>
+<rect x="68" y="256" width="32" height="12" rx="2" fill="none" stroke="#2982FB" stroke-opacity="0.4" stroke-width="0.8"/><text x="84" y="265" fill="#2982FB" fill-opacity="0.85" font-size="7" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" text-anchor="middle" letter-spacing="0.08em">FILE</text>
+<text x="404" y="286" fill="#0E1726" font-size="12" font-weight="600" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" text-anchor="middle">.apimap — one deterministic file</text>
+<text x="404" y="302" fill="#4B5563" font-size="9" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" text-anchor="middle">screens · endpoints · fields · calls · reads · unresolved</text>
+<text x="404" y="316" fill="#6B7280" font-size="9" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" text-anchor="middle">no timestamp · no coordinates · content-derived ids</text>
+<rect x="56" y="408" width="216" height="64" rx="6" fill="#F4F7FC"/>
+<rect x="56" y="408" width="216" height="64" rx="6" fill="#ffffff" stroke="#0E1726" stroke-width="1"/>
+<rect x="68" y="416" width="26" height="12" rx="2" fill="none" stroke="#0E1726" stroke-opacity="0.4" stroke-width="0.8"/><text x="81" y="425" fill="#0E1726" fill-opacity="0.85" font-size="7" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" text-anchor="middle" letter-spacing="0.08em">CLI</text>
+<text x="164" y="446" fill="#0E1726" font-size="12" font-weight="600" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" text-anchor="middle">impact · check</text>
+<text x="164" y="462" fill="#4B5563" font-size="9" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" text-anchor="middle">--json · exit codes</text>
+<rect x="304" y="408" width="216" height="64" rx="6" fill="#F4F7FC"/>
+<rect x="304" y="408" width="216" height="64" rx="6" fill="#ffffff" stroke="#0E1726" stroke-width="1"/>
+<rect x="316" y="416" width="22" height="12" rx="2" fill="none" stroke="#0E1726" stroke-opacity="0.4" stroke-width="0.8"/><text x="327" y="425" fill="#0E1726" fill-opacity="0.85" font-size="7" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" text-anchor="middle" letter-spacing="0.08em">UI</text>
+<text x="412" y="446" fill="#0E1726" font-size="12" font-weight="600" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" text-anchor="middle">ui · hub · view</text>
+<text x="412" y="462" fill="#4B5563" font-size="9" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" text-anchor="middle">9 panes · 127.0.0.1</text>
+<rect x="552" y="408" width="200" height="64" rx="6" fill="#F4F7FC"/>
+<rect x="552" y="408" width="200" height="64" rx="6" fill="rgba(41,130,251,0.08)" stroke="#2982FB" stroke-width="1"/>
+<rect x="564" y="416" width="28" height="12" rx="2" fill="none" stroke="#2982FB" stroke-opacity="0.4" stroke-width="0.8"/><text x="578" y="425" fill="#2982FB" fill-opacity="0.85" font-size="7" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" text-anchor="middle" letter-spacing="0.08em">MCP</text>
+<text x="652" y="446" fill="#0E1726" font-size="12" font-weight="600" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" text-anchor="middle">mcp map</text>
+<text x="652" y="462" fill="#4B5563" font-size="9" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" text-anchor="middle">7 read-only tools</text>
+<rect x="848" y="248" width="248" height="80" rx="6" fill="#F4F7FC"/>
+<rect x="848" y="248" width="248" height="80" rx="6" fill="rgba(14,23,38,0.02)" stroke="rgba(14,23,38,0.20)" stroke-width="1" stroke-dasharray="4,3"/>
+<rect x="860" y="256" width="28" height="12" rx="2" fill="none" stroke="rgba(14,23,38,0.20)" stroke-opacity="0.4" stroke-width="0.8"/><text x="874" y="265" fill="rgba(14,23,38,0.20)" fill-opacity="0.85" font-size="7" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" text-anchor="middle" letter-spacing="0.08em">RUN</text>
+<text x="972" y="286" fill="#0E1726" font-size="12" font-weight="600" font-family="ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" text-anchor="middle">mcp run · canvas</text>
+<text x="972" y="302" fill="#4B5563" font-size="9" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" text-anchor="middle">flows · chaining · asserts</text>
+<text x="972" y="316" fill="#6B7280" font-size="9" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" text-anchor="middle">reads .apiview, not .apimap</text>
+<line x1="848" y1="378" x2="848" y2="410" stroke="#2982FB" stroke-opacity="0.5" stroke-width="1.2"/>
+<text x="860" y="392" fill="#4B5563" font-size="12" font-style="italic" font-family="Georgia,'Times New Roman',serif">Enforced by dependency-cruiser:</text>
+<text x="860" y="408" fill="#4B5563" font-size="12" font-style="italic" font-family="Georgia,'Times New Roman',serif">the two halves never import</text>
+<text x="860" y="424" fill="#4B5563" font-size="12" font-style="italic" font-family="Georgia,'Times New Roman',serif">each other.</text>
+<line x1="32" y1="536" x2="1128" y2="536" stroke="rgba(14,23,38,0.12)" stroke-width="0.8"/>
+<text x="32" y="556" fill="#4B5563" font-size="8" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace" letter-spacing="0.14em">LEGEND</text>
+<rect x="136" y="548" width="16" height="12" rx="3" fill="rgba(41,130,251,0.08)" stroke="#2982FB" stroke-width="1"/>
+<text x="158" y="557" fill="#4B5563" font-size="9" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace">focal</text>
+<rect x="203.0" y="548" width="16" height="12" rx="3" fill="#ffffff" stroke="#0E1726" stroke-width="1"/>
+<text x="225.0" y="557" fill="#4B5563" font-size="9" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace">step</text>
+<rect x="264.6" y="548" width="16" height="12" rx="3" fill="rgba(14,23,38,0.02)" stroke="rgba(14,23,38,0.20)" stroke-width="1" stroke-dasharray="4,3"/>
+<text x="286.6" y="557" fill="#4B5563" font-size="9" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace">deprioritized half</text>
+<line x1="401.8" y1="553" x2="417.8" y2="553" stroke="#4B5563" stroke-width="1.2"/>
+<text x="423.8" y="557" fill="#4B5563" font-size="9" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace">main flow</text>
+<line x1="490.4" y1="553" x2="506.4" y2="553" stroke="#4B5563" stroke-width="1.2" stroke-dasharray="4,3"/>
+<text x="512.4" y="557" fill="#4B5563" font-size="9" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace">enriches</text>
+</svg>

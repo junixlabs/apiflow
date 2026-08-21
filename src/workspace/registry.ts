@@ -76,7 +76,7 @@ export function localRootFor(origin: string): string | undefined {
 export function checkRoot(label: string, value: string): string {
   const abs = isAbsolute(value) ? value : resolve(value);
   if (!existsSync(abs) || !statSync(abs).isDirectory()) {
-    throw new Error(`${label} không phải một thư mục đang tồn tại: ${abs}`);
+    throw new Error(`${label} is not an existing directory: ${abs}`);
   }
   return abs;
 }
@@ -91,18 +91,18 @@ export interface AddOptions {
 
 export function addProject(options: AddOptions): ProjectEntry {
   const id = options.id !== undefined && options.id !== '' ? options.id : slug(options.name);
-  if (!ID.test(id)) throw new Error(`id không hợp lệ (chỉ a-z, 0-9, dấu gạch): ${id}`);
+  if (!ID.test(id)) throw new Error(`invalid id (a-z, 0-9 and dashes only): ${id}`);
   if (options.fe === undefined && options.be === undefined) {
-    throw new Error('cần ít nhất một thư mục FE hoặc BE');
+    throw new Error('needs at least an FE or a BE directory');
   }
   const workspace = readWorkspace();
-  if (workspace.projects.some((p) => p.id === id)) throw new Error(`project đã tồn tại: ${id}`);
+  if (workspace.projects.some((p) => p.id === id)) throw new Error(`project already exists: ${id}`);
 
   const entry: ProjectEntry = { id, name: options.name };
-  // cm:why Labels read as prose, not as CLI flags: the same message is shown in the Thêm project
-  // form in the browser, where "--fe không phải một thư mục" names a flag that has no field there.
-  if (options.fe !== undefined) entry.fe = checkRoot('thư mục FE', options.fe);
-  if (options.be !== undefined) entry.be = checkRoot('thư mục BE', options.be);
+  // cm:why Labels read as prose, not as CLI flags: the same message is shown in the Add project
+  // form in the browser, where "--fe is not a directory" names a flag that has no field there.
+  if (options.fe !== undefined) entry.fe = checkRoot('FE directory', options.fe);
+  if (options.be !== undefined) entry.be = checkRoot('BE directory', options.be);
   if (options.hints !== undefined) entry.hints = resolve(options.hints);
 
   writeWorkspace({ version: 1, projects: [...workspace.projects, entry] });
@@ -123,25 +123,25 @@ export interface UpdateOptions {
 export function updateProject(id: string, changes: UpdateOptions): ProjectEntry {
   const workspace = readWorkspace();
   const current = workspace.projects.find((p) => p.id === id);
-  if (current === undefined) throw new Error(`không có project nào tên ${id}`);
+  if (current === undefined) throw new Error(`no project named ${id}`);
 
   const next: ProjectEntry = { ...current };
   if (changes.name !== undefined) {
-    if (changes.name.trim() === '') throw new Error('tên không được để trống');
+    if (changes.name.trim() === '') throw new Error('name must not be blank');
     next.name = changes.name.trim();
   }
   for (const side of ['fe', 'be'] as const) {
     const value = changes[side];
     if (value === undefined) continue;
     if (value === null) delete next[side];
-    else next[side] = checkRoot(`thư mục ${side.toUpperCase()}`, value);
+    else next[side] = checkRoot(`${side.toUpperCase()} directory`, value);
   }
   if (changes.hints !== undefined) {
     if (changes.hints === null) delete next.hints;
     else next.hints = resolve(changes.hints);
   }
   if (next.fe === undefined && next.be === undefined) {
-    throw new Error('cần ít nhất một thư mục FE hoặc BE');
+    throw new Error('needs at least an FE or a BE directory');
   }
 
   writeWorkspace({ version: 1, projects: workspace.projects.map((p) => (p.id === id ? next : p)) });

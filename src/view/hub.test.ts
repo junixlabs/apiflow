@@ -71,7 +71,7 @@ describe('hub shell', () => {
   it('marks a map scanned from a root the project no longer points at', () => {
     const stale = hub([{ id: 'beta', name: 'Beta', fe: '/repo/new-ui', maps: [map({ scannedFrom: '/repo/old-ui' })] }]);
     expect(stale).toContain('data-stale="1"');
-    expect(stale).toContain('lệch gốc');
+    expect(stale).toContain('root drifted');
     expect(hub(TWO)).not.toContain('data-stale="1"');
   });
 
@@ -85,7 +85,7 @@ describe('hub shell', () => {
     const html = hub([]);
     expect(html).not.toContain('id="hb-q"');
     expect(html).not.toContain('class="shell"');
-    expect(html).toContain('Chưa có project nào');
+    expect(html).toContain('No project yet');
   });
 });
 
@@ -96,15 +96,15 @@ describe('hub numbers', () => {
     const html = hub([{ id: 'beta', name: 'Beta', fe: '/r', maps: [map({ both: 8, uncalled: 2, feOnly: 1, unpaired: 1 })] }]);
     expect(html).toContain('class="recon"');
     expect(html).toContain('class="legend4"');
-    expect(html).toContain('khớp cả hai phía');
+    expect(html).toContain('seen from both sides');
     expect(html).toContain('<b>8</b>');
-    expect(html).not.toContain('Thanh màu trong mỗi thẻ');
+    expect(html).not.toContain('The coloured bar in each card');
   });
 
   it('keeps all four buckets in the legend so the grid does not move between projects', () => {
     const html = hub([{ id: 'b', name: 'B', fe: '/r', maps: [map({ both: 8, uncalled: 0, feOnly: 0, unpaired: 0 })] }]);
-    for (const label of ['khớp cả hai phía', 'API khai, không màn nào gọi', 'FE gọi, API không khai',
-      'chưa đối chiếu được']) {
+    for (const label of ['seen from both sides', 'declared, no screen calls it',
+      'FE calls it, API does not declare it', 'not reconciled yet']) {
       expect(html, label).toContain(label);
     }
   });
@@ -119,7 +119,7 @@ describe('hub numbers', () => {
     const html = hub([{ id: 'b', name: 'B', fe: '/r', maps: [map({ unresolved: 5 })] }], { linkTo: () => null });
     expect(html).toContain('<div class="warn"><span class="num">5</span>');
     expect(html).not.toContain('href="null');
-    expect(html).not.toContain('Mở bản đồ');
+    expect(html).not.toContain('Open the map');
   });
 
   // cm:guard A stale map outranks every real finding: those numbers were measured on a repo the
@@ -130,7 +130,7 @@ describe('hub numbers', () => {
       { id: 'moved', name: 'Moved', fe: '/r', maps: [map({ scannedFrom: '/old' })] },
     ]);
     const todo = html.slice(html.indexOf('class="watch"'));
-    expect(todo.indexOf('gốc cũ')).toBeLessThan(todo.indexOf('không thấy cổng auth nào'));
+    expect(todo.indexOf('an older root')).toBeLessThan(todo.indexOf('no auth gate found'));
   });
 
   it('says how many findings it did not print', () => {
@@ -139,12 +139,12 @@ describe('hub numbers', () => {
       maps: [map({ hasBe: true, open: 2, feOnly: 2, uncalled: 2, unresolved: 2 })],
     }));
     const html = hub(many);
-    expect(html).toMatch(/… và \d+ việc nữa/);
+    expect(html).toMatch(/… and \d+ more/);
   });
 
   it('says so when there is nothing to look at rather than printing an empty box', () => {
     const clean = hub([{ id: 'ok', name: 'Ok', fe: '/r', be: '/r2',
       maps: [map({ hasBe: true, open: 0, feOnly: 0, uncalled: 0, unresolved: 0, unpaired: 0 })] }]);
-    expect(clean).toContain('Không có gì');
+    expect(clean).toContain('Nothing.');
   });
 });

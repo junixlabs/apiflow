@@ -6,15 +6,15 @@ Status legend: DONE = implemented, PARTIAL = partially done, PLANNED = not yet s
 
 ## F1: Visual Flow Canvas — DONE
 
-### Mô tả
-Canvas kéo thả cho phép developer tạo, sắp xếp, và kết nối các API node để hình thành flow.
+### Description
+A drag-and-drop canvas where a developer creates, arranges and connects API nodes into a flow.
 
-### Yêu cầu chi tiết
+### Requirements
 
 **Canvas:**
-- Infinite canvas với zoom và pan — DONE
+- An infinite canvas with zoom and pan — DONE
 - Grid background (dots) — DONE
-- Mini-map cho flow lớn — PLANNED (Phase 3)
+- A mini-map for large flows — PLANNED (Phase 3)
 - Multi-select nodes — PARTIAL (Delete key works, no Shift+Click group select)
 
 **Node types:**
@@ -23,30 +23,30 @@ Canvas kéo thả cho phép developer tạo, sắp xếp, và kết nối các A
 - Group frame node: resizable dashed rectangle with title — DONE (Phase 2)
 
 **Node display:**
-- Method badge (GET=xanh lá, POST=vàng, PUT=cam, DELETE=đỏ, PATCH=tím) — DONE
-- URL (truncated nếu dài) — DONE
-- Tên tùy chỉnh (label) — DONE
-- Status indicator sau khi chạy (success/error/running/idle) — DONE
-- Description icon nếu có notes — DONE (Phase 2)
-- Input port (trái) + Output port (phải) — DONE
+- Method badge (GET=green, POST=yellow, PUT=orange, DELETE=red, PATCH=purple) — DONE
+- URL (truncated when long) — DONE
+- A custom name (label) — DONE
+- A status indicator after a run (success/error/running/idle) — DONE
+- A description icon when there are notes — DONE (Phase 2)
+- Input port (left) + output port (right) — DONE
 
 **Connection:**
-- Đường nối giữa output port → input port — DONE
-- Animated dash khi đang thực thi — DONE
-- Màu: xám (idle), xanh (success), đỏ (error), xanh dương animated (running) — DONE
+- A line from an output port → an input port — DONE
+- An animated dash while it executes — DONE
+- Colours: grey (idle), green (success), red (error), animated blue (running) — DONE
 
 ---
 
 ## F2: Node Configuration Panel — DONE
 
-### Mô tả
-Side panel bên phải (resizable) hiển thị khi click vào node, cho phép cấu hình chi tiết API call.
+### Description
+A resizable side panel on the right, shown when a node is clicked, where the API call is configured in detail.
 
-### Yêu cầu chi tiết
+### Requirements
 
 **Tabs:**
 
-| Tab | Nội dung | Status |
+| Tab | Contents | Status |
 |-----|----------|--------|
 | Config | Label, Description, Method, URL, Headers, Params, Body | DONE |
 | Request | Resolved request (URL, headers, body after variable resolution) | DONE |
@@ -70,7 +70,7 @@ Note: Config tab is a single view with all fields (not separate sub-tabs). Authe
 **Variable resolution:**
 - Syntax: `{{variable_name}}` cho environment variables — DONE
 - Syntax: `{{nodes["Node Name"].response.body.path}}` cho dynamic variables — DONE (Phase 2)
-- Autocomplete popup khi gõ `{{` — DONE (Phase 2)
+- An autocomplete popup when you type `{{` — DONE (Phase 2)
 
 **Inspector panel:**
 - Resizable (320-800px), width persisted to localStorage — DONE
@@ -79,43 +79,43 @@ Note: Config tab is a single view with all fields (not separate sub-tabs). Authe
 
 ## F3: Flow Execution Engine — DONE
 
-### Mô tả
-Engine thực thi flow theo thứ tự topological, hỗ trợ sequential và parallel execution.
+### Description
+An engine that executes the flow in topological order, with both sequential and parallel execution.
 
-### Yêu cầu chi tiết
+### Requirements
 
 **Execution logic:**
 1. Parse flow graph → topological sort (Kahn's algorithm) — DONE
-2. Node không có incoming connection → bắt đầu — DONE
-3. Nodes cùng level → chạy parallel (Promise.allSettled) — DONE
+2. A node with no incoming connection → starts — DONE
+3. Nodes on the same level → run in parallel (Promise.allSettled) — DONE
 4. Stop on first error (mark remaining as idle) — DONE
 
 **Execution modes:**
-- **Run All** — Chạy toàn bộ flow — DONE
-- **Run This Node** — Chạy 1 node riêng lẻ — DONE
-- **Step-by-Step** — Chạy từng level, dừng giữa mỗi bước — DONE (Phase 2)
+- **Run All** — runs the whole flow — DONE
+- **Run This Node** — runs a single node on its own — DONE
+- **Step-by-Step** — runs one level at a time, pausing between steps — DONE (Phase 2)
 - **Run From Here** — PLANNED
 
 **Error handling:**
-- Node lỗi → đánh dấu đỏ — DONE
-- Stop on Error (mặc định) — DONE
+- A failed node → marked red — DONE
+- Stop on Error (the default) — DONE
 - Continue on Error option — PLANNED
 
 **Execution results:**
-- Lưu kết quả lần chạy gần nhất cho mỗi node (in-memory) — DONE
+- Keeps the latest run result for each node (in memory) — DONE
 - Request history per node (multiple runs stored) — PLANNED (Phase 3)
 
 ---
 
 ## F4: Response Inspector — DONE
 
-### Mô tả
-Panel hiển thị chi tiết request đã gửi và response nhận được cho mỗi node.
+### Description
+A panel that shows, per node, the request that was sent and the response that came back.
 
-### Yêu cầu chi tiết
+### Requirements
 
 **Request view:**
-- Full URL (đã resolve variables) — DONE
+- The full URL (with variables resolved) — DONE
 - Method badge — DONE
 - Headers (collapsible) — DONE
 - Body (parsed JSON via JsonTreeView, fallback to raw text) — DONE
@@ -146,16 +146,16 @@ Panel hiển thị chi tiết request đã gửi và response nhận được ch
 
 ## F5: Environment Management — DONE
 
-### Mô tả
-Quản lý biến môi trường cho phép switch context giữa local, staging, production.
+### Description
+Environment-variable management, so the context can be switched between local, staging and production.
 
-### Yêu cầu chi tiết
+### Requirements
 
 **Environment:**
-- Tạo nhiều environment (add/delete/switch) — DONE
-- Mỗi environment là tập key-value pairs with enable/disable — DONE
-- Switch bằng dropdown ở toolbar — DONE
-- Active environment apply cho tất cả node trong flow — DONE
+- Several environments (add/delete/switch) — DONE
+- Each environment is a set of key-value pairs with enable/disable — DONE
+- Switched from a dropdown in the toolbar — DONE
+- The active environment applies to every node in the flow — DONE
 
 **Variables:**
 - Environment-specific variables — DONE
@@ -169,10 +169,10 @@ Quản lý biến môi trường cho phép switch context giữa local, staging,
 
 ## F6: Flow Persistence & Sharing — DONE
 
-### Mô tả
-Lưu trữ và quản lý flow files.
+### Description
+Storing and managing flow files.
 
-### Yêu cầu chi tiết
+### Requirements
 
 **File format:**
 - `.apiview` extension (JSON) — DONE
@@ -180,12 +180,12 @@ Lưu trữ và quản lý flow files.
 
 **Storage:**
 - Save/Load via File System Access API with fallback — DONE
-- Auto-save draft to localStorage mỗi 30 giây — DONE (Phase 2)
+- Auto-saves a draft to localStorage every 30 seconds — DONE (Phase 2)
 - Restore banner on reload if draft found — DONE (Phase 2)
 
 **Flow Library:**
-- Grid view hiển thị danh sách flow (localStorage) — DONE (Phase 2)
-- Search theo tên — DONE (Phase 2)
+- A grid view listing the flows (localStorage) — DONE (Phase 2)
+- Search by name — DONE (Phase 2)
 - Sort theo date — DONE (Phase 2)
 - Quick actions: Open, Duplicate, Delete — DONE (Phase 2)
 
@@ -193,11 +193,11 @@ Lưu trữ và quản lý flow files.
 
 ## F7: Import Capabilities — PARTIAL
 
-### Yêu cầu chi tiết
+### Requirements
 
 **cURL import:**
-- Paste cURL command → parse thành node config — DONE (Phase 2)
-- Hỗ trợ flags: `-X`, `-H`, `-d`, `--data-raw`, `-u` — DONE
+- Paste a cURL command → parsed into a node config — DONE (Phase 2)
+- Supported flags: `-X`, `-H`, `-d`, `--data-raw`, `-u` — DONE
 - Auto-format JSON body on import — DONE
 - Handle unknown flags gracefully — DONE
 
@@ -209,7 +209,7 @@ Lưu trữ và quản lý flow files.
 
 ## F8: Export & Documentation — PARTIAL
 
-### Yêu cầu chi tiết
+### Requirements
 
 **Image export:**
 - PNG export — DONE (Phase 2)
@@ -225,9 +225,9 @@ Lưu trữ và quản lý flow files.
 
 | Requirement | Target | Status |
 |-------------|--------|--------|
-| Startup time | < 2 giây | DONE |
-| Node render (100 nodes) | < 1 giây, no lag | Not benchmarked |
-| API call execution | Không block UI | DONE (async) |
+| Startup time | < 2 seconds | DONE |
+| Node render (100 nodes) | < 1 second, no lag | Not benchmarked |
+| API call execution | Never blocks the UI | DONE (async) |
 | File size (built JS) | < 500KB gzipped | DONE (~138KB gzipped) |
 | Supported platforms | macOS, Linux, Windows | DONE (web-based) |
 | Offline capability | 100% (except API calls) | DONE |

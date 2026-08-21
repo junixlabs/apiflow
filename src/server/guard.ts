@@ -18,14 +18,14 @@ export function localWritesOnly(req: Request, res: Response, next: NextFunction)
   if (!LOOPBACK.has(host)) {
     res.status(403).json({
       error: 'HOST_NOT_LOOPBACK',
-      message: `apiflow chỉ nhận lệnh ghi qua 127.0.0.1, không qua tên ${host || '(trống)'}`,
+      message: `apiflow accepts writes over 127.0.0.1 only, not via the name ${host || '(empty)'}`,
     });
     return;
   }
 
   const site = req.headers['sec-fetch-site'];
   if (typeof site === 'string' && site !== 'same-origin' && site !== 'none') {
-    res.status(403).json({ error: 'CROSS_SITE', message: `lệnh ghi đến từ ${site}, bị chặn` });
+    res.status(403).json({ error: 'CROSS_SITE', message: `write came from ${site}, blocked` });
     return;
   }
 
@@ -38,7 +38,7 @@ export function localWritesOnly(req: Request, res: Response, next: NextFunction)
       sameHost = false;
     }
     if (!sameHost) {
-      res.status(403).json({ error: 'BAD_ORIGIN', message: `lệnh ghi đến từ ${origin}, bị chặn` });
+      res.status(403).json({ error: 'BAD_ORIGIN', message: `write came from ${origin}, blocked` });
       return;
     }
   }

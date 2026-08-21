@@ -2,23 +2,23 @@
 
 ## Problem Statement
 
-Backend developers khi phát triển tính năng liên quan đến nhiều API nội bộ và third-party (ví dụ: deploy sản phẩm lên WooCommerce, sync dữ liệu giữa các platform) gặp khó khăn trong việc:
+Backend developers building a feature that spans several internal and third-party APIs (for example: pushing a product to WooCommerce, syncing data between platforms) run into four problems:
 
-1. **Không nhìn thấy toàn cảnh flow** — Không biết API nào gọi trước, API nào phụ thuộc API nào
-2. **Không thấy rõ data shape** — Không biết API trả về field gì, format gì, để quyết định cách collect và transform
-3. **Debug khó khăn** — Khi flow lỗi ở bước giữa, phải chạy lại từ đầu hoặc đọc log để trace
-4. **Không có tài liệu sống** — Swagger/Postman collection không thể hiện được thứ tự và mối quan hệ giữa các API
+1. **No view of the whole flow** — which API is called first, which API depends on which
+2. **No clear view of the data shape** — which fields an API returns, in what format, so you can decide how to collect and transform them
+3. **Debugging is hard** — when a flow fails midway, you re-run it from the start or read logs to trace it
+4. **No living documentation** — a Swagger/Postman collection cannot express the order of the calls or the relationships between them
 
 ## Solution
 
-**API View** — Lightweight, local-first web tool cho phép developer:
+**API View** — a lightweight, local-first web tool that lets a developer:
 
-- Tạo visual flow bằng cách kéo thả các API node trên canvas
-- Nối các node để định nghĩa thứ tự thực thi
-- Chạy toàn bộ flow hoặc từng node / step-by-step
-- Inspect chi tiết request/response với JSON tree/raw viewer
-- Import cURL từ DevTools, chain responses qua dynamic variables
-- Lưu flow thành file, quản lý trong Flow Library
+- Build a visual flow by dragging API nodes onto a canvas
+- Connect nodes to define the execution order
+- Run the whole flow, a single node, or step by step
+- Inspect request/response in detail with a JSON tree/raw viewer
+- Import cURL from DevTools, chain responses through dynamic variables
+- Save a flow to a file and manage it in the Flow Library
 - Undo/redo, keyboard shortcuts, auto-save, export PNG/SVG
 
 ## Current Status
@@ -32,18 +32,18 @@ Backend developers khi phát triển tính năng liên quan đến nhiều API n
 
 ## Target User
 
-**Backend Developer** đang:
-- Phát triển tính năng tích hợp nhiều API nội bộ với nhau
-- Tích hợp với third-party API (WooCommerce, Shopify, Lazada, payment gateway, v.v.)
-- Cần kiểm tra và hiểu rõ input/output của từng bước trong API chain trước khi code logic xử lý
+**A backend developer** who is:
+- Building a feature that wires several internal APIs together
+- Integrating with third-party APIs (WooCommerce, Shopify, Lazada, payment gateways, and so on)
+- Needs to check and understand the input/output of each step in an API chain before writing the handling logic
 
 ## Product Principles
 
-1. **Lightweight** — Không cần Docker, không cần database, chạy bằng 1 lệnh
-2. **Local-first** — Mọi data ở local, không gửi ra ngoài
-3. **Visualization, not automation** — Tool để nhìn và hiểu, không phải để build business logic
-4. **Developer-centric** — UI phục vụ developer, không cần đẹp, cần rõ ràng và nhanh
-5. **Flow as documentation** — Mỗi flow đã lưu là 1 tài liệu sống mô tả cách các API liên kết
+1. **Lightweight** — no Docker, no database, one command to run
+2. **Local-first** — all data stays local, nothing is sent out
+3. **Visualization, not automation** — a tool for seeing and understanding, not for building business logic
+4. **Developer-centric** — the UI serves a developer: it does not need to be pretty, it needs to be clear and fast
+5. **Flow as documentation** — every saved flow is living documentation of how the APIs connect
 
 ## Document Index
 

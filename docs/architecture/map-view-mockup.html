@@ -133,14 +133,14 @@
 <div class="page">
 
 <div class="banner">
-  <b>MOCKUP — chưa phải phần mềm chạy được.</b> Bố cục và cách đọc thôi; số liệu là <b>thật</b>,
-  lấy từ bản đồ sid-desk đã nối (99 màn · 448 endpoint · 2 826 field · 373 cạnh).
-  Bấm vào endpoint ở cột trái để đổi trạng thái.
+  <b>MOCKUP — not working software.</b> Layout and reading order only; the numbers are <b>real</b>,
+  taken from the linked sid-desk map (99 screens · 448 endpoints · 2,826 fields · 373 edges).
+  Click an endpoint in the left column to switch state.
 </div>
 
-<h1>Map view — đọc bản đồ phụ thuộc</h1>
+<h1>Map view — reading the dependency map</h1>
 <p class="sub">
-  Không vẽ cả bản đồ. Chọn một node, bung theo bậc. Mọi khẳng định đều kèm mức tin cậy và <code>file:line</code>.
+  Never draw the whole map. Pick a node, expand by degree. Every claim carries a confidence level and a <code>file:line</code>.
 </p>
 
 <div class="app">
@@ -151,8 +151,8 @@
     <span class="chip c-inferred on">inferred 335</span>
     <span class="chip c-guess on">guess 15</span>
     <span class="spacer"></span>
-    <span class="search mono">⌕ &nbsp;lọc endpoint / màn / field…</span>
-    <span class="chip">⚠ 33 call dừng ở module</span>
+    <span class="search mono">⌕ &nbsp;filter endpoint / screen / field…</span>
+    <span class="chip">⚠ 33 calls stop at the module</span>
   </div>
 
   <aside>
@@ -163,17 +163,17 @@
     <div class="row" data-k="departments"><span class="verb v-get">GET</span><span>/departments</span><span class="lock">🔒</span><span class="n">7</span></div>
     <div class="row" data-k="deptcreate"><span class="verb v-post">POST</span><span>/departments</span><span class="lock">🔒</span><span class="n">0</span></div>
     <div class="row" data-k="broken"><span class="verb v-get">GET</span><span>/${params</span><span class="n">24</span></div>
-    <h3>Màn hình · 99</h3>
+    <h3>Screens · 99</h3>
     <div class="row"><span>/admin/agents</span><span class="n">14</span></div>
     <div class="row"><span>/chat/{param}</span><span class="n">31</span></div>
     <div class="row"><span>/tickets</span><span class="n">27</span></div>
-    <h3>Cảnh báo</h3>
-    <div class="row"><span style="color:var(--dead)">252 endpoint không màn nào gọi</span></div>
-    <div class="row"><span style="color:var(--guess)">0 field đã đo thật</span></div>
+    <h3>Alerts</h3>
+    <div class="row"><span style="color:var(--dead)">252 endpoints no screen calls</span></div>
+    <div class="row"><span style="color:var(--guess)">0 fields measured for real</span></div>
   </aside>
 
   <main>
-    <svg viewBox="0 0 700 560" role="img" aria-label="đồ thị: endpoint ở giữa, màn hình bung ra hai bên">
+    <svg viewBox="0 0 700 560" role="img" aria-label="graph: the endpoint in the middle, screens fanning out on both sides">
       <defs>
         <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
           <path d="M0,0 L10,5 L0,10 z" fill="currentColor"/>
@@ -229,7 +229,7 @@
         <rect x="524" y="246" width="160" height="64" rx="10" fill="var(--surface-2)" stroke="var(--line)" stroke-dasharray="4 3"/>
         <text x="538" y="268" font-size="11" fill="var(--muted)">agent.find</text>
         <text x="538" y="286" font-size="10.5" fill="var(--muted)">src/api/agent/routes/</text>
-        <text x="538" y="301" font-size="10.5" fill="var(--guess)">0 field đã đo</text>
+        <text x="538" y="301" font-size="10.5" fill="var(--guess)">0 fields measured</text>
       </g>
 
       <g id="g-departments" style="display:none">
@@ -268,32 +268,32 @@
         </g>
         <rect x="524" y="230" width="164" height="96" rx="10" fill="var(--surface-2)" stroke="var(--line)"/>
         <text x="538" y="252" font-size="11" fill="var(--muted)">department.find</text>
-        <text x="538" y="272" font-size="11" fill="var(--ink)">9 field khai báo</text>
-        <text x="538" y="290" font-size="10.5" fill="var(--guess)">0 đã đo bằng probe</text>
+        <text x="538" y="272" font-size="11" fill="var(--ink)">9 fields declared</text>
+        <text x="538" y="290" font-size="10.5" fill="var(--guess)">0 measured by probe</text>
         <text x="538" y="312" font-size="10.5" fill="var(--muted)">name · brand · tenant …</text>
       </g>
 
       <g id="g-broken" style="display:none">
         <rect x="180" y="200" width="360" height="150" rx="12" fill="var(--surface-2)" stroke="var(--dead)" stroke-width="1.6"/>
-        <text x="204" y="234" font-size="12" font-weight="700" fill="var(--dead)">ENDPOINT RÁC — 24 caller</text>
+        <text x="204" y="234" font-size="12" font-weight="700" fill="var(--dead)">JUNK ENDPOINT — 24 callers</text>
         <text x="204" y="262" font-size="12.5" fill="var(--ink)" class="mono">GET /${params</text>
-        <text x="204" y="288" font-size="11.5" fill="var(--muted)">normalizePath không gỡ được `${…}` lồng ngoặc,</text>
-        <text x="204" y="306" font-size="11.5" fill="var(--muted)">nên một template url vỡ thành endpoint riêng.</text>
-        <text x="204" y="332" font-size="11.5" fill="var(--inferred)">→ view làm lộ ra thứ báo cáo text giấu mất.</text>
+        <text x="204" y="288" font-size="11.5" fill="var(--muted)">normalizePath cannot unwrap a nested `${…}`,</text>
+        <text x="204" y="306" font-size="11.5" fill="var(--muted)">so one url template splits into its own endpoint.</text>
+        <text x="204" y="332" font-size="11.5" fill="var(--inferred)">→ the view surfaces what a text report hides.</text>
       </g>
     </svg>
-    <div class="hint">Chỉ vẽ node được chọn + 1 bậc. Bấm một màn để lấy nó làm tâm.</div>
+    <div class="hint">Only the selected node + 1 degree is drawn. Click a screen to make it the centre.</div>
   </main>
 
   <section class="detail">
     <div id="d-agents">
       <h2>GET /agents</h2>
-      <div class="meta">🔒 cần auth · <span class="mono">agent.find</span> · src/api/agent/routes/agent.ts</div>
+      <div class="meta">🔒 auth required · <span class="mono">agent.find</span> · src/api/agent/routes/agent.ts</div>
 
-      <h4>Màn hình vỡ nếu đổi <span>8</span></h4>
+      <h4>Screens that break if this changes <span>8</span></h4>
       <div class="item">
         <div class="top"><b>usersApi.list</b><span class="badge b-exact">exact</span></div>
-        <div class="src mono">src/lib/api/users.ts:5 — chưa truy ngược được tới màn</div>
+        <div class="src mono">src/lib/api/users.ts:5 — not traced back to a screen yet</div>
       </div>
       <div class="item">
         <div class="top"><b>/admin/agents</b><span class="badge b-inferred">inferred</span><span class="hops">2 hop</span></div>
@@ -308,18 +308,18 @@
         <div class="src mono">…/chat/[id]/page.tsx:9</div>
       </div>
 
-      <h4>Field response <span>0</span></h4>
+      <h4>Response fields <span>0</span></h4>
       <div class="warn">
-        Không có field nào. Route <code>/agents</code> là route tuỳ biến nên không thừa hưởng content type,
-        và <b>probe chưa chạy</b>. Chưa biết API thật sự trả gì.
+        No fields at all. <code>/agents</code> is a custom route, so it inherits no content type, and
+        <b>probe has not been run</b>. What the API actually returns is unknown.
       </div>
     </div>
 
     <div id="d-departments" style="display:none">
       <h2>GET /departments</h2>
-      <div class="meta">🔒 cần auth · <span class="mono">department.find</span> · content type <span class="mono">department</span></div>
+      <div class="meta">🔒 auth required · <span class="mono">department.find</span> · content type <span class="mono">department</span></div>
 
-      <h4>Màn hình vỡ nếu đổi <span>7</span></h4>
+      <h4>Screens that break if this changes <span>7</span></h4>
       <div class="item">
         <div class="top"><b>/tickets</b><span class="badge b-inferred">inferred</span><span class="hops">2 hop</span></div>
         <div class="src mono">…/tickets/page.tsx:8</div>
@@ -329,7 +329,7 @@
         <div class="src mono">…/admin/settings/page.tsx:6</div>
       </div>
 
-      <h4>Field response <span>9</span></h4>
+      <h4>Response fields <span>9</span></h4>
       <div class="field"><span class="mono">name</span><span class="ty">string</span><span class="flags"><span class="badge b-inferred">declared</span></span></div>
       <div class="field"><span class="mono">description</span><span class="ty">string?</span><span class="flags"><span class="badge b-inferred">declared</span></span></div>
       <div class="field"><span class="mono">isActive</span><span class="ty">boolean?</span><span class="flags"><span class="badge b-inferred">declared</span></span></div>
@@ -339,40 +339,40 @@
       <div class="field"><span class="mono">brand</span><span class="ty">object?</span><span class="flags"><span class="badge b-inferred">declared</span></span></div>
       <div class="field"><span class="mono">tenant</span><span class="ty">object?</span><span class="flags"><span class="badge b-inferred">declared</span></span></div>
       <div class="warn">
-        Cả 9 field mới là <b>declared</b> — đọc từ <code>content-types/department/schema.json</code>.
-        Chạy <code>probe</code> thì mỗi field sẽ có thêm cờ <b>observed</b>, và field nào khai mà không gửi sẽ đỏ lên.
+        All 9 fields are only <b>declared</b> — read from <code>content-types/department/schema.json</code>.
+        Run <code>probe</code> and each field also gets an <b>observed</b> flag; a field declared but never sent turns red.
       </div>
     </div>
 
     <div id="d-broken" style="display:none">
       <h2 style="color:var(--dead)">GET /${params</h2>
-      <div class="meta">24 caller · không có handler backend nào khớp</div>
+      <div class="meta">24 callers · no backend handler matches</div>
       <div class="warn">
-        Đây là <b>lỗi của scanner</b>, không phải endpoint thật: <code>normalizePath</code> chưa gỡ được
-        <code>${…}</code> có ngoặc lồng. Một url template vỡ thành endpoint riêng và gom 24 caller.
+        This is a <b>scanner bug</b>, not a real endpoint: <code>normalizePath</code> cannot yet unwrap a
+        <code>${…}</code> with nested braces. One url template split into an endpoint of its own and collected 24 callers.
       </div>
-      <h4>Vì sao đáng để nó hiện ra</h4>
-      <div class="item">Báo cáo text xếp nó lẫn giữa 448 dòng. Trên view, một node 24 caller mà không nối được sang phía backend thì đập vào mắt ngay.</div>
+      <h4>Why it is worth surfacing</h4>
+      <div class="item">A text report buries it among 448 lines. In the view, a 24-caller node with no edge to the backend side is immediately obvious.</div>
     </div>
   </section>
 </div>
 
 <div class="notes">
   <div class="note">
-    <h3>Bốn quyết định trong bố cục này</h3>
+    <h3>Four decisions in this layout</h3>
     <ul>
-      <li><b>Không vẽ cả bản đồ.</b> 448 endpoint × 99 màn là chỗ graph DOM chết — đúng lý do jsoncrack phải để <code>NODE_LIMIT</code>. Chọn một node, bung 1 bậc, muốn sâu hơn thì lấy node khác làm tâm.</li>
-      <li><b>Mức tin cậy là công dân hạng nhất</b>, không phải chú thích. Ở thanh trên lọc được, ở từng cạnh hiện badge. Nếu không thì <code>inferred</code> bị đọc như sự thật.</li>
-      <li><b>Luôn có <code>file:line</code> và số hop.</b> Câu trả lời phải kiểm chứng được bằng tay trong 30 giây, nếu không nó chỉ là lời khẳng định.</li>
-      <li><b>Chỗ chưa biết phải hiện ra</b>, không được ẩn: “0 field đã đo”, “33 call dừng ở module”, “252 endpoint không ai gọi”.</li>
+      <li><b>Never draw the whole map.</b> 448 endpoints × 99 screens is where a DOM graph dies — exactly why jsoncrack needs a <code>NODE_LIMIT</code>. Pick a node, expand one degree; to go deeper, make another node the centre.</li>
+      <li><b>Confidence is a first-class citizen</b>, not a footnote. Filterable in the top bar, badged on every edge. Otherwise <code>inferred</code> gets read as fact.</li>
+      <li><b>Always a <code>file:line</code> and a hop count.</b> An answer has to be verifiable by hand in 30 seconds, otherwise it is just an assertion.</li>
+      <li><b>What is unknown has to show</b>, never hide: “0 fields measured”, “33 calls stop at the module”, “252 endpoints nobody calls”.</li>
     </ul>
   </div>
   <div class="note">
-    <h3>Ba câu hỏi cần anh chốt</h3>
+    <h3>Three questions that need a decision</h3>
     <ul>
-      <li><span class="q">1.</span> Tâm của đồ thị nên là <b>endpoint</b> (như mockup) hay <b>màn hình</b>? Endpoint hợp với “tôi sắp sửa API”; màn hình hợp với “màn này ăn những gì”. Làm cả hai được, nhưng nên có một cái mặc định.</li>
-      <li><span class="q">2.</span> <b>Field</b> nên là node trên đồ thị, hay chỉ nằm ở panel phải như hiện tại? Thành node thì thấy được đường màn → field, nhưng 2 826 field sẽ làm ngập đồ thị.</li>
-      <li><span class="q">3.</span> Ba cảnh báo (endpoint không ai gọi · field khai mà không gửi · call dừng ở module) nên là <b>một tab riêng</b>, hay chỉ tô màu trong danh sách? Chúng là thứ người ta mở tool để tìm, nhưng cũng dễ gây nhiễu.</li>
+      <li><span class="q">1.</span> Should the graph centre on an <b>endpoint</b> (as in the mockup) or on a <b>screen</b>? An endpoint fits “I am about to change this API”; a screen fits “what does this screen consume”. Both are possible, but one has to be the default.</li>
+      <li><span class="q">2.</span> Should a <b>field</b> be a node in the graph, or stay in the right panel as it is now? As nodes, the screen → field path becomes visible, but 2,826 fields would flood the graph.</li>
+      <li><span class="q">3.</span> Should the three alerts (endpoints nobody calls · fields declared but never sent · calls that stop at the module) be <b>a tab of their own</b>, or just colouring in the list? They are what people open the tool to find, but they also make noise easily.</li>
     </ul>
   </div>
 </div>

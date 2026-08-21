@@ -9,7 +9,7 @@ import { summarize } from '../workspace/summary';
 import { tolerateClosedPipe } from './stdio';
 
 const USAGE = `Usage:
-  apiflow project add <tên> --fe=<thư mục> [--be=<thư mục>] [--id=<slug>] [--hints=<file>]
+  apiflow project add <name> --fe=<dir> [--be=<dir>] [--id=<slug>] [--hints=<file>]
   apiflow project ls [--json]
   apiflow project rm <id>
   apiflow project scan <id> [--fe] [--be]
@@ -17,12 +17,12 @@ const USAGE = `Usage:
 Workspace: ${workspaceRoot()}`;
 
 function fmtAge(iso: string | undefined): string {
-  if (iso === undefined) return 'chưa scan';
+  if (iso === undefined) return 'never scanned';
   const ms = Date.now() - new Date(iso).getTime();
   const m = Math.round(ms / 60000);
-  if (m < 60) return `${m} phút trước`;
+  if (m < 60) return `${m}m ago`;
   const h = Math.round(m / 60);
-  return h < 48 ? `${h} giờ trước` : `${Math.round(h / 24)} ngày trước`;
+  return h < 48 ? `${h}h ago` : `${Math.round(h / 24)}d ago`;
 }
 
 export interface ProjectRow {
@@ -52,7 +52,7 @@ export function collectRows(): ProjectRow[] {
 
 export function renderList(rows: ProjectRow[]): string {
   if (rows.length === 0) {
-    return `Chưa có project nào trong ${workspaceRoot()}.\n\nThêm bằng:\n  apiflow project add adminhub --fe=/đường/dẫn/ui --be=/đường/dẫn/api`;
+    return `No project in ${workspaceRoot()} yet.\n\nAdd one:\n  apiflow project add web --fe=/path/to/frontend --be=/path/to/api`;
   }
   const lines: string[] = [`## ${rows.length} project · ${workspaceRoot()}`, ''];
   for (const { entry, maps } of rows) {
@@ -60,11 +60,11 @@ export function renderList(rows: ProjectRow[]): string {
     lines.push(`### ${entry.id}  (${sides})`);
     if (entry.fe !== undefined) lines.push(`- FE  ${entry.fe}`);
     if (entry.be !== undefined) lines.push(`- BE  ${entry.be}`);
-    if (maps.length === 0) lines.push('- chưa có map nào — chạy `apiflow scan-fe` / `scan-be` rồi `link`');
+    if (maps.length === 0) lines.push('- no map yet — run `apiflow project scan <id>`');
     for (const m of maps) {
       const warn = m.unresolved > 0 ? ` · ${m.unresolved} unresolved` : '';
-      const open = m.open > 0 ? ` · ${m.open} không auth` : '';
-      lines.push(`- ${m.kind.padEnd(6)} ${m.endpoints} endpoint · ${m.screens} màn${open}${warn} · ${fmtAge(m.scannedAt)}`);
+      const open = m.open > 0 ? ` · ${m.open} without auth` : '';
+      lines.push(`- ${m.kind.padEnd(6)} ${m.endpoints} endpoints · ${m.screens} screens${open}${warn} · ${fmtAge(m.scannedAt)}`);
     }
     lines.push('');
   }
@@ -82,7 +82,7 @@ function runSides(id: string, sides: Array<'fe' | 'be'>): void {
       } else if (event.kind === 'done') {
         console.log(`${id}/${sides[i]} — ${event.text}`);
         next(i + 1);
-      } else if (event.text.startsWith('đã ')) {
+      } else if (event.text.startsWith('wrote ') || event.text.startsWith('re-linked')) {
         console.log(event.text);
       }
     });
@@ -105,9 +105,9 @@ function main(): void {
   try {
     if (verb === 'add') {
       const name = positional[0];
-      if (name === undefined) throw new Error('thiếu tên project');
+      if (name === undefined) throw new Error('missing project name');
       const entry = addProject({ name, fe: flag('fe'), be: flag('be'), id: flag('id'), hints: flag('hints') });
-      console.log(`Đã thêm **${entry.id}** — ${entry.name}`);
+      console.log(`Added **${entry.id}** — ${entry.name}`);
       if (entry.fe !== undefined) console.log(`- FE ${entry.fe}`);
       if (entry.be !== undefined) console.log(`- BE ${entry.be}`);
       console.log(`\nWorkspace: ${workspaceRoot()}`);
@@ -123,21 +123,21 @@ function main(): void {
     // to scan-fe with a hand-built --out path, which is how the two would drift apart.
     if (verb === 'scan') {
       const id = positional[0];
-      if (id === undefined) throw new Error('thiếu id');
+      if (id === undefined) throw new Error('missing id');
       const entry = findProject(id);
-      if (entry === undefined) throw new Error(`không có project nào tên ${id}`);
+      if (entry === undefined) throw new Error(`no project named ${id}`);
       const sides: Array<'fe' | 'be'> = [];
       const asked = args.includes('--fe') || args.includes('--be');
       if ((!asked || args.includes('--fe')) && entry.fe !== undefined) sides.push('fe');
       if ((!asked || args.includes('--be')) && entry.be !== undefined) sides.push('be');
-      if (sides.length === 0) throw new Error(`${id} chưa khai thư mục nào để scan`);
+      if (sides.length === 0) throw new Error(`${id} has no directory to scan`);
       runSides(id, sides);
       return;
     }
     if (verb === 'rm') {
       const id = positional[0];
-      if (id === undefined) throw new Error('thiếu id');
-      console.log(removeProject(id) ? `Đã xoá ${id} khỏi workspace (map vẫn còn trên đĩa).` : `Không có project nào tên ${id}.`);
+      if (id === undefined) throw new Error('missing id');
+      console.log(removeProject(id) ? `Removed ${id} from the workspace (its maps stay on disk).` : `No project named ${id}.`);
       return;
     }
     console.error(USAGE);

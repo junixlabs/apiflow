@@ -36,17 +36,17 @@ export const ADD_STYLE = `
 // overlay div would need all three written again, and the third one always gets skipped.
 export const ADD_DIALOG = `<dialog id="add-dlg" class="dlg">
   <form id="add-form" method="dialog">
-    <h3 id="add-title">Thêm project</h3>
-    <p class="dsub" id="add-sub">apiflow chỉ ghi vào <code>~/.apiflow</code> — không bao giờ viết gì vào repo được đọc.</p>
-    <label>Tên<input name="name" autocomplete="off" required placeholder="Adminhub"></label>
-    <label>Thư mục FE<input name="fe" autocomplete="off" placeholder="/home/ban/services/adminhub-ui"></label>
-    <label>Thư mục BE<input name="be" autocomplete="off" placeholder="/home/ban/services/adminhub-api"></label>
-    <label id="add-idrow">id <span class="opt">(bỏ trống thì rút từ tên)</span><input name="id" autocomplete="off" placeholder="adminhub"></label>
-    <label>file hints <span class="opt">(không bắt buộc)</span><input name="hints" autocomplete="off"></label>
+    <h3 id="add-title">Add project</h3>
+    <p class="dsub" id="add-sub">apiflow only writes to <code>~/.apiflow</code> — never a single byte into the repo it reads.</p>
+    <label>Name<input name="name" autocomplete="off" required placeholder="Adminhub"></label>
+    <label>FE directory<input name="fe" autocomplete="off" placeholder="/home/you/services/adminhub-ui"></label>
+    <label>BE directory<input name="be" autocomplete="off" placeholder="/home/you/services/adminhub-api"></label>
+    <label id="add-idrow">id <span class="opt">(left blank, derived from the name)</span><input name="id" autocomplete="off" placeholder="adminhub"></label>
+    <label>file hints <span class="opt">(optional)</span><input name="hints" autocomplete="off"></label>
     <p class="dmsg" id="add-msg"></p>
     <div class="drow">
-      <button class="btn" type="button" id="add-cancel">Đóng</button>
-      <button class="btn primary" type="submit" id="add-save">Thêm</button>
+      <button class="btn" type="button" id="add-cancel">Close</button>
+      <button class="btn primary" type="submit" id="add-save">Add</button>
     </div>
   </form>
 </dialog>`;
@@ -66,7 +66,7 @@ function streamScan(kind, id) {
   const target = id || HERE;
   const box = $id('scanlog');
   box.classList.add('on');
-  box.textContent = 'đang scan ' + kind.toUpperCase() + ' cho ' + target + '…\n';
+  box.textContent = 'scanning ' + kind.toUpperCase() + ' for ' + target + '…\n';
   for (const b of document.querySelectorAll('.btn')) b.disabled = true;
   const add = (text, cls) => {
     const span = document.createElement('span');
@@ -96,13 +96,13 @@ function streamScan(kind, id) {
           if (event.kind === 'done') {
             // cm:why Links instead of telling you to reload when the scan was for ANOTHER project:
             // this page still shows a map the scan did not touch, so a reload would look like a no-op.
-            if (target === HERE) add('Tải lại trang để xem bản đồ mới.\n', 'ok');
+            if (target === HERE) add('Reload the page to see the new map.\n', 'ok');
             else {
-              add('Xong. ', 'ok');
+              add('Done. ', 'ok');
               const link = document.createElement('a');
               link.href = '/p/' + target;
               link.className = 'ok';
-              link.textContent = 'mở ' + target + ' →';
+              link.textContent = 'open ' + target + ' →';
               box.appendChild(link);
               // cm:why Offers the reload as a LINK instead of doing it: the list on this page is now
               // stale, but reloading by itself would wipe the log that just explained what happened.
@@ -111,7 +111,7 @@ function streamScan(kind, id) {
                 const again = document.createElement('a');
                 again.href = location.pathname;
                 again.className = 'ok';
-                again.textContent = 'tải lại danh sách →';
+                again.textContent = 'reload the list →';
                 box.appendChild(again);
               }
               add('\n');
@@ -124,7 +124,7 @@ function streamScan(kind, id) {
       });
       return pump();
     })
-    .catch((err) => { add('không gọi được scan: ' + err.message + '\n', 'err'); release(); });
+    .catch((err) => { add('could not reach the scan endpoint: ' + err.message + '\n', 'err'); release(); });
 }
 
 if ($id('scan-fe')) $id('scan-fe').onclick = () => streamScan('fe');
@@ -150,9 +150,9 @@ document.addEventListener('click', (ev) => {
   const id = rm.dataset.rm;
   // cm:guard Says what is NOT deleted before asking: the maps stay on disk, so this is undoable by
   // adding the project again — a confirm that implies data loss would be a lie in the other direction.
-  const sure = window.confirm('Bỏ ' + (rm.dataset.name || id) + ' khỏi workspace?\n\n'
-    + 'Chỉ xoá khai báo trong ~/.apiflow/workspace.json. Map đã scan vẫn còn trên đĩa, '
-    + 'và repo được đọc không bị chạm tới.');
+  const sure = window.confirm('Drop ' + (rm.dataset.name || id) + ' from the workspace?\n\n'
+    + 'This only removes the entry in ~/.apiflow/workspace.json. Maps already scanned stay on disk, '
+    + 'and the repo that was read is not touched.');
   if (!sure) return;
   rm.disabled = true;
   fetch('/api/projects/' + id, { method: 'DELETE' })
@@ -160,14 +160,14 @@ document.addEventListener('click', (ev) => {
     .then((result) => {
       if (!result.ok) {
         rm.disabled = false;
-        window.alert(result.data.message || 'không bỏ được');
+        window.alert(result.data.message || 'could not drop it');
         return;
       }
       // cm:edge contract -> src/view/hub.ts HUB_SCRIPT — the hub keeps the rail row and the detail
       // pane as two separate elements, so it does the removing; this file must not know that layout.
       document.dispatchEvent(new CustomEvent('apiflow:project-removed', { detail: { id: id } }));
     })
-    .catch((err) => { rm.disabled = false; window.alert('không gọi được server: ' + err.message); });
+    .catch((err) => { rm.disabled = false; window.alert('could not reach the server: ' + err.message); });
 });
 
 const addDlg = $id('add-dlg');
@@ -183,14 +183,14 @@ if (addDlg) {
   const open = (entry) => {
     editing = entry || null;
     for (const field of ['name', 'fe', 'be', 'id', 'hints']) form.elements[field].value = '';
-    $id('add-title').textContent = editing ? 'Sửa gốc — ' + editing.id : 'Thêm project';
+    $id('add-title').textContent = editing ? 'Edit roots — ' + editing.id : 'Add project';
     $id('add-idrow').style.display = editing ? 'none' : '';
     // cm:guard Says the id cannot change and WHY: the id is the directory the maps live in, so
     // renaming it here would leave every scanned map behind under a name nothing points at.
     $id('add-sub').textContent = editing
-      ? 'id giữ nguyên (' + editing.id + ') vì map đã scan nằm trong thư mục mang tên đó. Bỏ trống một ô thư mục là xoá phía đó.'
-      : 'apiflow chỉ ghi vào ~/.apiflow — không bao giờ viết gì vào repo được đọc.';
-    $id('add-save').textContent = editing ? 'Lưu' : 'Thêm';
+      ? 'The id stays (' + editing.id + ') because the maps already scanned live in a directory of that name. Clearing a directory field drops that side.'
+      : 'apiflow only writes to ~/.apiflow — never a single byte into the repo it reads.';
+    $id('add-save').textContent = editing ? 'Save' : 'Add';
     if (editing) {
       form.elements.name.value = editing.name || '';
       form.elements.fe.value = editing.fe || '';
@@ -206,8 +206,8 @@ if (addDlg) {
   $id('add-cancel').onclick = () => addDlg.close();
 
   // cm:guard Shows the server's own message verbatim and never invents one: the refusals that matter
-  // are "không phải một thư mục đang tồn tại" and "project đã tồn tại", and a generic
-  // "thêm thất bại" would send the reader looking in the wrong place.
+  // are "is not an existing directory" and "project already exists", and a generic
+  // "add failed" would send the reader looking in the wrong place.
   form.onsubmit = (ev) => {
     ev.preventDefault();
     const body = {};
@@ -219,7 +219,7 @@ if (addDlg) {
     // "clear this side", and omitting it would make clearing a BE root impossible from this form.
     if (editing) for (const field of ['fe', 'be', 'hints']) body[field] = form.elements[field].value.trim();
 
-    say(editing ? 'đang lưu…' : 'đang thêm…');
+    say(editing ? 'saving…' : 'adding…');
     $id('add-save').disabled = true;
     fetch(editing ? '/api/projects/' + editing.id : '/api/projects', {
       method: editing ? 'PATCH' : 'POST',
@@ -229,18 +229,18 @@ if (addDlg) {
       .then((res) => res.json().then((data) => ({ ok: res.ok, data })))
       .then((result) => {
         $id('add-save').disabled = false;
-        if (!result.ok) { say(result.data.message || 'không lưu được', 'bad'); return; }
+        if (!result.ok) { say(result.data.message || 'could not save', 'bad'); return; }
         const entry = result.data.project;
         addDlg.close();
         say('');
         // cm:why Scans right away instead of linking to the new project: /p/<id> has no map yet and
-        // would answer with a bare "chưa có map nào", which reads as a failed add. On an edit the map
+        // would answer with a bare "no map yet", which reads as a failed add. On an edit the map
         // that exists was scanned from the OLD directory, so the same scan is what makes it true again.
         streamScan(entry.fe ? 'fe' : 'be', entry.id);
       })
       .catch((err) => {
         $id('add-save').disabled = false;
-        say('không gọi được server: ' + err.message, 'bad');
+        say('could not reach the server: ' + err.message, 'bad');
       });
   };
 }

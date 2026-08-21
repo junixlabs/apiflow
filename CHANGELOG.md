@@ -6,8 +6,33 @@ All notable changes to API View are documented here.
 
 ## [Unreleased]
 
+### Changed — the repo speaks English
+
+- **Every string, comment, doc and test assertion in the repo is now English.** The CLI output, the
+  browser UI (all nine panes, the inspector tabs, the add/edit dialog, the hub), the seven MCP tool
+  descriptions, `NORTH-STAR.md`, `AGENTS.md`, the architecture and proposal docs. `lang="vi"` on both
+  rendered pages became `lang="en"`, and the two `toLocaleString('vi-VN')` call sites became
+  `en-US`, so thousands separators match the surrounding prose. Verified by rendering every pane in
+  a browser and grepping the served HTML for Vietnamese letters: 0 hits, 0 console errors. The only
+  Vietnamese left in the repo is three test fixtures that exist to prove diacritics fold into an id
+  (`Đơn hàng nội bộ` → `don-hang-noi-bo`).
+- **`README.md` is 146 lines with a diagram at the top** (`docs/img/workflow.svg`, system fonts, no
+  external resources), plus three new docs: `docs/getting-started.md` — the whole path with the real
+  output, `docs/formats.md`, `docs/request-runner.md`.
+- **The hub's project count reads as English.** `1 project` / `3 projects` instead of `3 project`.
+
 ### Fixed — the first ten minutes for someone who just installed it
 
+- **`apiflow hub --out=<dir>` writes where it is told.** The directory was read only as a positional
+  argument, so the form the README and getting-started guide both name fell through to the default
+  `./apiflow-maps` — inside whatever repo happened to be the working directory. It is the one thing
+  the tool promises never to do. Now covered by a test that runs the real CLI from a repo-shaped cwd
+  and asserts nothing was written there.
+- **A relative path on the command line resolves from where you typed it.** Every subcommand was
+  spawned with `cwd` forced to the apiflow install directory, so `apiflow impact rel.apimap` from
+  another repo died with ENOENT while looking inside apiflow, and `apiflow hub` with no argument
+  wrote its page tree there. tsx finds its tsconfig and node_modules from the script path, not from
+  cwd, so the child now simply inherits the caller's.
 - **An ssh alias no longer leaks into the repo id.** `git@github.com-junixlabs:org/repo` — an alias
   that exists only in one machine's `~/.ssh/config` — produced `github.com-junixlabs/org/repo`, so
   the same repo got one id from an aliased clone and another from CI's https checkout, defeating the
@@ -46,11 +71,11 @@ All notable changes to API View are documented here.
   boundary). Tools: `impact_endpoint` · `impact_field` · `screen_deps` · `find` · `map_health` ·
   `map_check` · `map_list`. Answers are compact, carry the `file:line` that proves each screen, and
   every one of them ends with the map it came from and the count of call sites the scanner could not
-  resolve — so `0 màn` cannot be read as "nothing calls this". Errors come back as tool text, never
+  resolve — so `0 screens` cannot be read as "nothing calls this". Errors come back as tool text, never
   thrown, so a typo in a route cannot kill the session. Target resolution: `project` (workspace id) →
   `map` (a file path, e.g. one committed in the repo) → `APIFLOW_PROJECT` → the only project there is.
 - `skills/apiflow-impact/` — the companion skill: when to ask (before editing a route, handler, api
-  client or response field), how to read confidence, and what `0 màn` does and does not mean.
+  client or response field), how to read confidence, and what `0 screens` does and does not mean.
 - `apiflow --help` (and `-h`, and `help`) prints the whole command surface and exits. It is answered
   before dispatch on purpose: `apiflow scan-fe --help` used to fall through with no positional
   argument, which means "scan the current directory", and it wrote a map into the repo it was run in.
@@ -152,7 +177,7 @@ All notable changes to API View are documented here.
   tool understood and finds dangerous, an unresolved is something it could not understand.
 - `src/workspace/diff.ts` — compares the last two scans of a map and leads with a sentence, not a
   number: a scan that saw more call sites while resolving fewer of them exactly says
-  *"phủ rộng hơn, nhưng chắc chắn kém đi"* before it shows the counts.
+  *"wider coverage, but less certain"* before it shows the counts.
 - A scan button in the project view, streaming the scanner's own output over SSE, then re-linking
   the two halves. The scan writes to a staging file and only replaces the live map once the child
   exits cleanly, so a scan that dies halfway cannot leave a truncated map in place.
@@ -180,15 +205,15 @@ All notable changes to API View are documented here.
   real chain edge coloured by the confidence of the call it came from, dashed where the chain lost
   precision. Hovering a node lights its whole branch in both directions, because the question at a
   component is "which screen breaks" and that answer is two hops away.
-- The endpoint inspector says when apiflow first saw that endpoint (`xuất hiện ở bản scan thứ 2/3`),
+- The endpoint inspector says when apiflow first saw that endpoint (`first seen in scan 2/3`),
   derived from the stored history. Dates come from file mtime — a `.apimap` deliberately carries no
   timestamp inside it.
 
 ### Added — adding a project from the UI
 
-- `+ Thêm project` on the hub and in a project header, backed by `POST /api/projects`. It registers
+- `+ Add project` on the hub and in a project header, backed by `POST /api/projects`. It registers
   the project and immediately runs the first scan into the same streamed log, because `/p/<id>` with
-  no map yet answers "chưa có map nào", and that reads as a failed add.
+  no map yet answers "no map yet", and that reads as a failed add.
 - `src/server/guard.ts` — this is the only route that takes a filesystem path from a request, so it
   is fenced: the `Host` header must be loopback (a hostname that resolves to 127.0.0.1 is what DNS
   rebinding produces, and Origin agrees with the attacker in that case), `Sec-Fetch-Site` must not
@@ -196,7 +221,7 @@ All notable changes to API View are documented here.
   Without it, any page open in the same browser could register the user's home directory as a
   project and have it scanned.
 - Refusals are shown verbatim from the server: a directory that does not exist, an id already taken,
-  a name no id can be derived from. The registry's messages now read as prose ("thư mục FE") instead
+  a name no id can be derived from. The registry's messages now read as prose ("FE directory") instead
   of naming CLI flags, because the same text appears in a form that has no `--fe`.
 - The dialog, the SSE reader and the scan buttons live in one module shared by the hub and the
   project view — a hub with no projects is exactly where someone needs the button most.
@@ -207,7 +232,7 @@ All notable changes to API View are documented here.
   unresolved kept out of the other counts the way every other page keeps it out.
 - Each card names the project's own name, its id, both roots clipped to one line each, and the branch
   and short sha each side sits on — the same revision line a project header carries.
-- Per-card actions: `Scan FE` / `Scan BE` streaming into the page, and `Bỏ khỏi workspace`. A project
+- Per-card actions: `Scan FE` / `Scan BE` streaming into the page, and `Drop from workspace`. A project
   with no map gets a scan button instead of an instruction to go and type the CLI — the page can run
   the scan itself, so the state it describes is the state it can fix.
 - `DELETE /api/projects/:id` removes the workspace entry only; the scanned maps stay on disk, which
@@ -221,7 +246,7 @@ All notable changes to API View are documented here.
 
 ### Added — editing a project's roots
 
-- `Sửa gốc` on each hub card and in the project header, and `PATCH /api/projects/:id` behind the same
+- `Edit roots` on each hub card and in the project header, and `PATCH /api/projects/:id` behind the same
   write fence as the other two. The dialog is the add dialog reopened with the values filled in; the
   id field disappears and says why, because the id is the directory the scanned maps live under.
 - Absent field and empty field mean different things: absent leaves a root alone, empty clears it.
@@ -248,7 +273,7 @@ lives in one file — `appStyle.ts` — so the next change lands on both.
 - One rail width (248px) and one brand position for both pages. The brand is now the way back to the
   workspace: a link on a project page, the same element unlinked on the hub, and unlinked in the file
   `apiflow view` writes — a dead link in an offline file is worse than none.
-- `+ Thêm project` moved from the project header to the foot of the rail on both pages. It is a
+- `+ Add project` moved from the project header to the foot of the rail on both pages. It is a
   workspace action; in the header row it read as one of the things you can do to the project you opened.
 - A project page is now titled by the project (`adminhub`), not by the map (`adminhub-ui+adminhub-api`).
   The rail on the hub calls it `adminhub`, so landing on a differently-named page read as another thing.
@@ -270,14 +295,14 @@ lives in one file — `appStyle.ts` — so the next change lands on both.
 - Selecting a project writes the hash, so `/#adminhub` is a link, a reload comes back to the same
   project, and Back walks the selection. Every switch goes through the hash, so the address bar can
   never name one project while the pane shows another.
-- `Toàn workspace` sits at the top of the rail: the six workspace totals, and under them one ranked
+- `Whole workspace` sits at the top of the rail: the six workspace totals, and under them one ranked
   list of what is worth looking at across every project — a stale root first, then endpoints with no
   auth gate, then FE paths the API does not declare, down to the unresolved calls. Each line links
   into the pane of the project that carries it. The old strip of big red numbers pointed nowhere: it
   said 40 endpoints had no auth gate without saying which project to open.
 - The coverage bar carries its own numbers underneath it, so the two paragraphs of legend and caveat
   that used to explain the page are gone. Segments that are zero are left out instead of printed as 0.
-- One primary action per pane (`Mở bản đồ →`), the rest beside it, and `Bỏ khỏi workspace` kept in the
+- One primary action per pane (`Open the map →`), the rest beside it, and `Drop from workspace` kept in the
   muted style it had — a project with no map still gets `Scan FE` where the map link would be.
 - The rail keeps the search, the side/state filter and the six orderings; the filter is now two small
   selects instead of six chips, because a 300px rail cannot hold a chip row. Only the ordering is
@@ -285,17 +310,17 @@ lives in one file — `appStyle.ts` — so the next change lands on both.
 - A marker set before first paint decides whether the unselected panes are hidden, so the page shows
   every project stacked when the script does not run rather than an empty column.
 - The totals no longer recompute themselves from the visible cards: the workspace pane says
-  `Toàn workspace` and means it, and the rail count is what reports how many rows a filter hid.
+  `Whole workspace` and means it, and the rail count is what reports how many rows a filter hid.
 
 ### Added — sorting and filtering the project list
 
-- A toolbar over the cards: free-text search across name, id and both roots; chips for `cả hai phía`
-  / `chỉ FE` / `chỉ BE` / `chưa scan` / `map lệch gốc`; and six orders — name, newest scan, oldest
-  scan, most endpoints, most unresolved, and `đáng để mắt`, whose option label spells out its own
+- A toolbar over the cards: free-text search across name, id and both roots; chips for `both sides`
+  / `FE only` / `BE only` / `not scanned` / `map root drifted`; and six orders — name, newest scan, oldest
+  scan, most endpoints, most unresolved, and `worth a look first`, whose option label spells out its own
   ranking (a map scanned from a root the project no longer points at outranks every real finding,
   because those findings were measured on a different repo).
 - The count says how many are hidden, not just how many are left, and the totals strip is recomputed
-  from the visible cards with its subtitle switching to `trên N project đang hiện` — a row of big
+  from the visible cards with its subtitle switching to `across the N visible projects` — a row of big
   numbers over a filtered list is read as the total of what is on screen whatever the label says.
 - Filtering and sorting happen in the browser over the cards already rendered, so the static hub
   written by `apiflow hub` filters too, and a keystroke does not wipe a running scan log. Only the
@@ -334,7 +359,7 @@ pointed at four mechanisms that were already broken.
 - `[hidden]` was losing to the cards' own `display:flex`, so the first cut of the filter counted
   correctly and hid nothing. The shared sheet now carries one `[hidden] { display:none !important }`
   rule, and `hub.test.ts` fails if it goes.
-- `headlineFor` called a scan "chắc chắn hơn" when coverage grew and every confidence share moved
+- `headlineFor` called a scan "more certain" when coverage grew and every confidence share moved
   0.0pp. It now says coverage grew and certainty held, which is what the panel underneath shows.
 - A literal newline inside a quoted string in an embedded script broke the whole script in the
   browser, and the only symptom was one console error on a page that still rendered. `scripts.test.ts`

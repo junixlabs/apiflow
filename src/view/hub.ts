@@ -87,7 +87,7 @@ export const HUB_SCRIPT = String.raw`
   try {
     const saved = localStorage.getItem('apiflow-hub-sort');
     if (saved) { state.sort = saved; sortSel.value = saved; }
-  } catch (err) { /* file:// vẫn phải sắp được */ }
+  } catch (err) { /* a file:// page must still be able to sort */ }
 
   const num = (el, key) => Number(el.dataset[key] || 0);
   // cm:why A stale map outranks every real finding, because those findings were measured on a repo
@@ -133,8 +133,8 @@ export const HUB_SCRIPT = String.raw`
     // cm:guard Says how many are hidden, never just how many are left: a count of 3 with no mention
     // of the other 9 reads as "this workspace has three projects".
     count.textContent = shown.length === projects.length
-      ? projects.length + ' project'
-      : shown.length + '/' + projects.length + ' project · ' + (projects.length - shown.length) + ' bị lọc đi';
+      ? projects.length + (projects.length === 1 ? ' project' : ' projects')
+      : shown.length + '/' + projects.length + ' projects · ' + (projects.length - shown.length) + ' filtered out';
     // cm:guard Never leaves the selection on a project the filter just hid — a detail pane whose rail
     // row is gone reads as a page that lost track of itself.
     const gone = state.sel !== null && state.sel !== 'all'
@@ -148,7 +148,7 @@ export const HUB_SCRIPT = String.raw`
   stateSel.addEventListener('change', () => { state.pick = stateSel.value; apply(); });
   sortSel.addEventListener('change', () => {
     state.sort = sortSel.value;
-    try { localStorage.setItem('apiflow-hub-sort', state.sort); } catch (err) { /* không lưu được thì thôi */ }
+    try { localStorage.setItem('apiflow-hub-sort', state.sort); } catch (err) { /* if it cannot be stored, let it go */ }
     apply();
   });
   for (const el of items) el.addEventListener('click', () => pick(el.dataset.pick));
@@ -201,13 +201,15 @@ function escapeHtml(value: string): string {
 // cm:why Ages are rendered on the SERVER for the live hub and baked in for the static one, so the
 // caller decides `now` — a page that computes it in the browser would drift against the map it names.
 export function relativeAge(iso: string | undefined, now: number): string {
-  if (iso === undefined) return 'chưa scan';
+  if (iso === undefined) return 'not scanned';
   const minutes = Math.round((now - new Date(iso).getTime()) / 60000);
-  if (minutes < 1) return 'vừa xong';
-  if (minutes < 60) return `${minutes} phút trước`;
+  if (minutes < 1) return 'just now';
+  if (minutes < 60) return `${minutes}m ago`;
   const hours = Math.round(minutes / 60);
-  return hours < 48 ? `${hours} giờ trước` : `${Math.round(hours / 24)} ngày trước`;
+  return hours < 48 ? `${hours}h ago` : `${Math.round(hours / 24)}d ago`;
 }
+
+const plural = (n: number, word: string): string => `${n} ${word}${n === 1 ? '' : 's'}`;
 
 const bestOf = (project: HubProject): HubMap | undefined =>
   project.maps.find((m) => m.kind === 'linked') ?? project.maps[0];
@@ -230,16 +232,16 @@ const newestScan = (project: HubProject): number => project.maps
 // entry is whichever kind was written first, so reading it would age the row by a whole scan.
 const newestAge = (project: HubProject, now: number): string => {
   const newest = newestScan(project);
-  return newest === 0 ? 'chưa scan' : relativeAge(new Date(newest).toISOString(), now);
+  return newest === 0 ? 'not scanned' : relativeAge(new Date(newest).toISOString(), now);
 };
 
 // cm:edge lockstep -> src/view/app.ts overview() — the same four buckets, the same class names, so the
 // bar on a project card and the bar on that project's own page cannot end up telling different stories.
 const SEGMENTS = [
-  { key: 'both' as const, css: 'd-both', label: 'khớp cả hai phía' },
-  { key: 'uncalled' as const, css: 'd-uncalled', label: 'API khai, không màn nào gọi' },
-  { key: 'feOnly' as const, css: 'd-feonly', label: 'FE gọi, API không khai' },
-  { key: 'unpaired' as const, css: 'd-unpaired', label: 'chưa đối chiếu được' },
+  { key: 'both' as const, css: 'd-both', label: 'seen from both sides' },
+  { key: 'uncalled' as const, css: 'd-uncalled', label: 'declared, no screen calls it' },
+  { key: 'feOnly' as const, css: 'd-feonly', label: 'FE calls it, API does not declare it' },
+  { key: 'unpaired' as const, css: 'd-unpaired', label: 'not reconciled yet' },
 ];
 
 const total4 = (map: HubMap): number => SEGMENTS.reduce((n, s) => n + map[s.key], 0);
@@ -255,37 +257,37 @@ function micro(map: HubMap): string {
 
 function recon(map: HubMap): string {
   const total = total4(map);
-  if (total === 0) return '<p class="none">Chưa đối chiếu được gì — chưa có map.</p>';
+  if (total === 0) return '<p class="none">Nothing reconciled yet — no map.</p>';
   const bars = SEGMENTS
     .map((s) => `<i class="${s.css}" style="width:${((map[s.key] / total) * 100).toFixed(2)}%"></i>`)
     .join('');
   const legend = SEGMENTS
-    .map((s) => `<div class="li"><b>${map[s.key].toLocaleString('vi-VN')}</b>`
+    .map((s) => `<div class="li"><b>${map[s.key].toLocaleString('en-US')}</b>`
       + `<span class="dot ${s.css}"></span> ${s.label}</div>`)
     .join('');
   return `<div class="recon">${bars}</div><div class="legend4">${legend}</div>`;
 }
 
 // cm:guard Says what is MISSING before it says what is wrong: on a one-sided scan the honest label
-// is "chưa scan BE", and printing a comparison finding there invents a defect out of a gap.
+// is "BE not scanned", and printing a comparison finding there invents a defect out of a gap.
 // cm:edge lockstep -> src/view/app.ts overview() — same `watch` rows, so a finding looks the same
 // here and on the project page it links into.
 function watch(map: HubMap, href: string | null): string {
   const rows: string[] = [];
   const row = (n: number, text: string, tone: string, hash: string) => {
-    const inner = `<span class="num">${n.toLocaleString('vi-VN')}</span><span class="txt">${text}</span>`;
+    const inner = `<span class="num">${n.toLocaleString('en-US')}</span><span class="txt">${text}</span>`;
     rows.push(href === null
       ? `<div class="${tone}">${inner}</div>`
       : `<a class="${tone}" href="${escapeHtml(href + hash)}">${inner}</a>`);
   };
-  if (map.open > 0) row(map.open, 'không thấy cổng auth nào', 'bad', '#alerts');
-  if (map.hasBe && map.feOnly > 0) row(map.feOnly, 'FE gọi, API không khai', 'bad', '#alerts');
-  if (map.hasFe && map.uncalled > 0) row(map.uncalled, 'API khai mà không màn nào gọi', '', '#alerts');
-  if (map.unresolved > 0) row(map.unresolved, 'lời gọi không giải được đường dẫn', 'warn', '#unresolved');
-  if (!map.hasBe) rows.push('<div class="none">Chưa scan BE — chưa đối chiếu được phía nào.</div>');
-  if (!map.hasFe) rows.push('<div class="none">Chưa scan FE — không biết màn nào gọi.</div>');
+  if (map.open > 0) row(map.open, 'no auth gate found', 'bad', '#alerts');
+  if (map.hasBe && map.feOnly > 0) row(map.feOnly, 'FE calls it, API does not declare it', 'bad', '#alerts');
+  if (map.hasFe && map.uncalled > 0) row(map.uncalled, 'declared by the API, called by no screen', '', '#alerts');
+  if (map.unresolved > 0) row(map.unresolved, 'calls whose path could not be resolved', 'warn', '#unresolved');
+  if (!map.hasBe) rows.push('<div class="none">BE not scanned — nothing to reconcile against.</div>');
+  if (!map.hasFe) rows.push('<div class="none">FE not scanned — no idea which screens call it.</div>');
   return rows.length === 0
-    ? '<p class="none">Không có gì đáng để mắt.</p>'
+    ? '<p class="none">Nothing worth a look.</p>'
     : `<div class="watch">${rows.join('')}</div>`;
 }
 
@@ -293,7 +295,7 @@ const revOf = (project: HubProject, kind: 'fe' | 'be'): string => {
   const found = (project.rev ?? []).find((r) => r.kind === kind);
   const label = [found?.branch, found?.sha].filter((x) => x !== undefined).join(' · ');
   return label === ''
-    ? '<span class="dim">không đọc được revision</span>'
+    ? '<span class="dim">revision unreadable</span>'
     : `<span class="rev">${escapeHtml(label)}</span>`;
 };
 
@@ -301,7 +303,7 @@ const revOf = (project: HubProject, kind: 'fe' | 'be'): string => {
 // strip on a project page and the strip here sit one click apart and must not be different heights.
 const kpi = (lab: string, value: number, sub: string, alarm = false): string =>
   `<div class="k1${alarm && value > 0 ? ' alarm' : ''}"><div class="lab">${lab}</div>`
-  + `<div class="val">${value.toLocaleString('vi-VN')}</div><div class="dlt">${sub}</div></div>`;
+  + `<div class="val">${value.toLocaleString('en-US')}</div><div class="dlt">${sub}</div></div>`;
 
 // cm:edge contract -> HUB_SCRIPT above — it filters, sorts and selects on these data-* attributes,
 // so a renamed attribute silently turns a filter into a no-op.
@@ -311,12 +313,12 @@ function railItem(project: HubProject, now: number): string {
   const alerts = best === undefined ? 0 : best.open + (best.hasBe ? best.feOnly : 0);
   const badges = [
     best === undefined ? '' : `<span>${escapeHtml(newestAge(project, now))}</span>`,
-    alerts > 0 ? `<span class="bad">${alerts.toLocaleString('vi-VN')} alert</span>` : '',
-    stale ? '<span class="warn">lệch gốc</span>' : '',
+    alerts > 0 ? `<span class="bad">${alerts.toLocaleString('en-US')} alert</span>` : '',
+    stale ? '<span class="warn">root drifted</span>' : '',
   ].filter((x) => x !== '');
   const counts = best === undefined
-    ? '<span class="num">chưa scan</span>'
-    : `<span class="num">${best.endpoints.toLocaleString('vi-VN')} ep · ${best.screens.toLocaleString('vi-VN')} màn</span>`;
+    ? '<span class="num">not scanned</span>'
+    : `<span class="num">${best.endpoints.toLocaleString('en-US')} ep · ${best.screens.toLocaleString('en-US')} screens</span>`;
   return `<button class="ri" type="button" data-pick="${escapeHtml(project.id)}"
   data-project="${escapeHtml(project.id)}"
   data-hay="${escapeHtml([project.name, project.id, project.fe ?? '', project.be ?? ''].join(' ').toLowerCase())}"
@@ -349,10 +351,10 @@ function detail(project: HubProject, options: HubOptions, now: number): string {
   // reader has to see that before reading them.
   const lines = project.maps
     .map((m) => `<div class="mapline${m.scannedFrom === undefined ? '' : ' stale'}"><span class="kind2">${m.kind}</span>`
-      + `<span>${m.endpoints.toLocaleString('vi-VN')} endpoint · ${m.screens.toLocaleString('vi-VN')} màn · ${m.calls.toLocaleString('vi-VN')} lời gọi</span>`
+      + `<span>${m.endpoints.toLocaleString('en-US')} endpoints · ${m.screens.toLocaleString('en-US')} screens · ${m.calls.toLocaleString('en-US')} calls</span>`
       + `<span class="when">${escapeHtml(relativeAge(m.scannedAt, now))}</span></div>`
       + (m.scannedFrom === undefined ? ''
-        : `<p class="stalenote">map này scan từ <code title="${escapeHtml(m.scannedFrom)}">${escapeHtml(m.scannedFrom)}</code> — không phải gốc hiện tại. Scan lại để khớp.</p>`))
+        : `<p class="stalenote">this map was scanned from <code title="${escapeHtml(m.scannedFrom)}">${escapeHtml(m.scannedFrom)}</code> — not the current root. Re-scan to make it true.</p>`))
     .join('');
 
   // cm:why A project with no map gets a scan button, not an instruction to go and type the CLI: this
@@ -364,20 +366,20 @@ function detail(project: HubProject, options: HubOptions, now: number): string {
          data-name="${escapeHtml(project.name)}"
          data-fe="${escapeHtml(project.fe ?? '')}"
          data-be="${escapeHtml(project.be ?? '')}"
-         data-hints="${escapeHtml(project.hints ?? '')}">Sửa gốc</button>
-       <button class="btn rm" data-rm="${escapeHtml(project.id)}" data-name="${escapeHtml(project.name)}">Bỏ khỏi workspace</button>`
+         data-hints="${escapeHtml(project.hints ?? '')}">Edit roots</button>
+       <button class="btn rm" data-rm="${escapeHtml(project.id)}" data-name="${escapeHtml(project.name)}">Drop from workspace</button>`
     : '';
 
   // cm:guard Every tile says which map it was measured on: a project can hold three, and a number
   // with no map behind it invites the reader to assume it came from the fullest one.
-  const from = best === undefined ? '' : `bản ${best.kind}`;
+  const from = best === undefined ? '' : `${best.kind} map`;
   const tiles = best === undefined ? '' : `<div class="kpistrip">
     ${kpi('endpoint', best.endpoints, from)}
-    ${kpi('màn hình', best.screens, from)}
-    ${kpi('lời gọi', best.calls, from)}
-    ${kpi('không auth', best.open, 'không thấy cổng chặn', true)}
-    ${kpi('FE gọi, API không khai', best.hasBe ? best.feOnly : 0, best.hasBe ? from : 'chưa scan BE', true)}
-    ${kpi('unresolved', best.unresolved, 'không nằm trong các số trên', true)}
+    ${kpi('screens', best.screens, from)}
+    ${kpi('calls', best.calls, from)}
+    ${kpi('no auth', best.open, 'no gate found', true)}
+    ${kpi('FE-only', best.hasBe ? best.feOnly : 0, best.hasBe ? from : 'BE not scanned', true)}
+    ${kpi('unresolved', best.unresolved, 'not part of the numbers above', true)}
   </div>`;
 
   return `<section class="detail" data-detail="${escapeHtml(project.id)}">
@@ -389,18 +391,18 @@ function detail(project: HubProject, options: HubOptions, now: number): string {
     </div>
     <div class="pmeta">${roots}</div>
     <div class="btnrow">
-      ${href !== null ? `<a class="btn primary" href="${escapeHtml(href)}">Mở bản đồ →</a>` : ''}
+      ${href !== null ? `<a class="btn primary" href="${escapeHtml(href)}">Open the map →</a>` : ''}
       ${actions}
     </div>
   </div>
   ${tiles}
   <div class="panels">
-    <div class="panel"><h3>Trạng thái đối chiếu${best === undefined ? '' : ` — ${best.endpoints.toLocaleString('vi-VN')} endpoint`}</h3>
-      ${best === undefined ? '<p class="none">Chưa có map nào — bấm Scan để dựng bản đồ đầu tiên.</p>' : recon(best)}</div>
-    <div class="panel"><h3>Bản đồ đã scan</h3>${project.maps.length > 0 ? lines
-      : '<p class="none">Chưa có map nào — bấm Scan để dựng bản đồ đầu tiên.</p>'}</div>
-    <div class="panel"><h3>Đáng để mắt</h3>${best === undefined
-      ? '<p class="none">Chưa scan nên chưa biết gì.</p>' : watch(best, href)}</div>
+    <div class="panel"><h3>Reconciliation${best === undefined ? '' : ` — ${best.endpoints.toLocaleString('en-US')} endpoints`}</h3>
+      ${best === undefined ? '<p class="none">No map yet — hit Scan to build the first one.</p>' : recon(best)}</div>
+    <div class="panel"><h3>Maps scanned</h3>${project.maps.length > 0 ? lines
+      : '<p class="none">No map yet — hit Scan to build the first one.</p>'}</div>
+    <div class="panel"><h3>Worth a look</h3>${best === undefined
+      ? '<p class="none">Not scanned, so nothing is known yet.</p>' : watch(best, href)}</div>
   </div>
 </section>`;
 }
@@ -425,17 +427,17 @@ function todos(projects: HubProject[], options: HubOptions): Todo[] {
       out.push({ weight, tone, num, text, who: project.id, href, hash });
     const best = bestOf(project);
     const staleMaps = project.maps.filter((m) => m.scannedFrom !== undefined).length;
-    if (staleMaps > 0) add(100, 'warn', staleMaps, 'map scan từ gốc cũ — số đo trên repo khác', '');
+    if (staleMaps > 0) add(100, 'warn', staleMaps, 'maps scanned from an older root — measured on a different repo', '');
     if (best === undefined) {
-      add(60, '', 0, 'chưa scan lần nào', '');
+      add(60, '', 0, 'never scanned', '');
       continue;
     }
-    if (best.open > 0) add(50, 'bad', best.open, 'endpoint không thấy cổng auth nào', '#alerts');
-    if (best.hasBe && best.feOnly > 0) add(45, 'bad', best.feOnly, 'FE gọi, API không khai', '#alerts');
-    if (!best.hasBe) add(30, '', 0, 'chưa scan BE — chưa đối chiếu được', '');
-    if (!best.hasFe) add(30, '', 0, 'chưa scan FE — không biết màn nào gọi', '');
-    if (best.hasFe && best.uncalled > 0) add(20, '', best.uncalled, 'API khai mà không màn nào gọi', '#alerts');
-    if (best.unresolved > 0) add(10, 'warn', best.unresolved, 'lời gọi không giải được đường dẫn', '#unresolved');
+    if (best.open > 0) add(50, 'bad', best.open, 'endpoints with no auth gate found', '#alerts');
+    if (best.hasBe && best.feOnly > 0) add(45, 'bad', best.feOnly, 'FE calls it, API does not declare it', '#alerts');
+    if (!best.hasBe) add(30, '', 0, 'BE not scanned — nothing to reconcile', '');
+    if (!best.hasFe) add(30, '', 0, 'FE not scanned — no idea which screens call it', '');
+    if (best.hasFe && best.uncalled > 0) add(20, '', best.uncalled, 'declared by the API, called by no screen', '#alerts');
+    if (best.unresolved > 0) add(10, 'warn', best.unresolved, 'calls whose path could not be resolved', '#unresolved');
   }
   return out.sort((a, b) => b.weight - a.weight);
 }
@@ -453,39 +455,39 @@ function overview(projects: HubProject[], options: HubOptions, live: boolean): s
   // cm:guard Says how many it did not print. A list that stops at ten with no word about the rest
   // reads as "that is everything", which is exactly the lie this page must not tell.
   const rows = list.slice(0, LIMIT).map((item) => {
-    const inner = `<span class="num">${item.num === 0 ? '—' : item.num.toLocaleString('vi-VN')}</span>`
+    const inner = `<span class="num">${item.num === 0 ? '—' : item.num.toLocaleString('en-US')}</span>`
       + `<span class="txt">${item.text}</span><span class="who2">${escapeHtml(item.who)}</span>`;
     return item.href === null
       ? `<div class="${item.tone}">${inner}</div>`
       : `<a class="${item.tone}" href="${escapeHtml(item.href + item.hash)}">${inner}</a>`;
   }).join('');
   const more = list.length > LIMIT
-    ? `<div class="more">… và ${list.length - LIMIT} việc nữa, mở từng project để xem</div>`
+    ? `<div class="more">… and ${list.length - LIMIT} more, open a project to see them</div>`
     : '';
 
   return `<section class="detail" data-detail="all">
   <div class="phead">
     <div class="pident">
-      <h1>Toàn workspace</h1>
-      <span class="kind">${projects.length} project</span>
-      ${live ? '<span class="kind live">bản sống</span>' : '<span class="kind">bản tĩnh</span>'}
+      <h1>Whole workspace</h1>
+      <span class="kind">${plural(projects.length, 'project')}</span>
+      ${live ? '<span class="kind live">live</span>' : '<span class="kind">static</span>'}
     </div>
     <div class="pmeta">
       <div class="side-row"><span class="tagk">WS</span><code>${escapeHtml(options.workspace)}</code>
-        <span class="dim">${scanned}/${projects.length} đã scan</span></div>
+        <span class="dim">${scanned}/${projects.length} scanned</span></div>
     </div>
   </div>
   <div class="kpistrip">
-    ${kpi('endpoint', sum((m) => m.endpoints), 'trên mọi project')}
-    ${kpi('màn hình', sum((m) => m.screens), 'trên mọi project')}
-    ${kpi('lời gọi', sum((m) => m.calls), 'FE → endpoint')}
-    ${kpi('không auth', sum((m) => m.open), 'không thấy cổng chặn', true)}
-    ${kpi('FE gọi, API không khai', sum((m) => (m.hasBe ? m.feOnly : 0)), 'chỉ project scan hai phía', true)}
-    ${kpi('unresolved', sum((m) => m.unresolved), 'không nằm trong các số trên', true)}
+    ${kpi('endpoints', sum((m) => m.endpoints), 'across every project')}
+    ${kpi('screens', sum((m) => m.screens), 'across every project')}
+    ${kpi('calls', sum((m) => m.calls), 'FE → endpoint')}
+    ${kpi('no auth', sum((m) => m.open), 'no gate found', true)}
+    ${kpi('FE-only', sum((m) => (m.hasBe ? m.feOnly : 0)), 'only projects scanned on both sides', true)}
+    ${kpi('unresolved', sum((m) => m.unresolved), 'not part of the numbers above', true)}
   </div>
-  <div class="panel"><h3>Đáng để mắt${list.length === 0 ? '' : ` (${list.length})`}</h3>
+  <div class="panel"><h3>Worth a look${list.length === 0 ? '' : ` (${list.length})`}</h3>
     ${list.length === 0
-      ? '<p class="none">Không có gì. Mọi project đã scan hai phía và không có alert nào.</p>'
+      ? '<p class="none">Nothing. Every project is scanned on both sides with no alerts.</p>'
       : `<div class="watch">${rows}${more}</div>`}</div>
 </section>`;
 }
@@ -494,41 +496,41 @@ export function renderHub(projects: HubProject[], options: HubOptions, now: numb
   // cm:guard The empty state points at the button when there IS one. Telling someone to go and type
   // a CLI command on a page that can do the thing is how a feature stays undiscovered.
   const empty = options.live
-    ? `<div class="empty-box"><h2>Chưa có project nào</h2>
-        <p>apiflow đọc một repo FE và một repo BE rồi dựng bản đồ màn ↔ endpoint ↔ field, để trả lời
-        “đổi endpoint này thì màn nào vỡ”. Nó chỉ ghi vào workspace ở dưới, không bao giờ viết gì vào
-        repo được đọc.</p>
-        <button class="btn primary" id="add-open-2">+ Thêm project đầu tiên</button></div>`
-    : `<div class="empty-box"><h2>Chưa có project nào</h2>
-        <p>Bản tĩnh này được sinh khi workspace <code>${escapeHtml(options.workspace)}</code> còn rỗng.</p>
-        <p><code>apiflow project add adminhub --fe=/đường/dẫn/ui --be=/đường/dẫn/api</code></p></div>`;
+    ? `<div class="empty-box"><h2>No project yet</h2>
+        <p>apiflow reads an FE repo and a BE repo and builds a screen ↔ endpoint ↔ field map, so it can
+        answer “if I change this endpoint, which screens break”. It only writes to the workspace below —
+        never a single byte into the repo it reads.</p>
+        <button class="btn primary" id="add-open-2">+ Add the first project</button></div>`
+    : `<div class="empty-box"><h2>No project yet</h2>
+        <p>This static page was generated while the workspace <code>${escapeHtml(options.workspace)}</code> was still empty.</p>
+        <p><code>apiflow project add adminhub --fe=/path/to/ui --be=/path/to/api</code></p></div>`;
 
   const railHead = `<div class="railhead">
-      <label class="search">🔎<input id="hb-q" placeholder="tìm tên, id, đường dẫn" autocomplete="off"></label>
+      <label class="search">🔎<input id="hb-q" placeholder="search name, id, path" autocomplete="off"></label>
       <div class="two">
-        <select id="hb-state" title="lọc theo phía đã scan">
-          <option value="">tất cả</option>
-          <option value="both">cả hai phía</option>
-          <option value="fe">chỉ FE</option>
-          <option value="be">chỉ BE</option>
-          <option value="unscanned">chưa scan</option>
-          <option value="stale">map lệch gốc</option>
+        <select id="hb-state" title="filter by the side scanned">
+          <option value="">all</option>
+          <option value="both">both sides</option>
+          <option value="fe">FE only</option>
+          <option value="be">BE only</option>
+          <option value="unscanned">not scanned</option>
+          <option value="stale">map root drifted</option>
         </select>
-        <select id="hb-sort" title="thứ tự sắp xếp">
-          <option value="name">tên A→Z</option>
-          <option value="recent">scan gần nhất</option>
-          <option value="oldest">scan lâu nhất</option>
-          <option value="endpoints">endpoint nhiều nhất</option>
-          <option value="unresolved">unresolved nhiều nhất</option>
-          <option value="risk">đáng để mắt trước</option>
+        <select id="hb-sort" title="sort order">
+          <option value="name">name A→Z</option>
+          <option value="recent">scanned most recently</option>
+          <option value="oldest">scanned longest ago</option>
+          <option value="endpoints">most endpoints</option>
+          <option value="unresolved">most unresolved</option>
+          <option value="risk">worth a look first</option>
         </select>
       </div>
       <span class="cnt" id="hb-count"></span>
     </div>
     <div class="railitems">
       <button class="ri allrow" type="button" data-pick="all">
-        <span class="l1"><span class="nm">Toàn workspace</span></span>
-        <span class="l2"><span class="num">${projects.length} project</span></span>
+        <span class="l1"><span class="nm">Whole workspace</span></span>
+        <span class="l2"><span class="num">${plural(projects.length, 'project')}</span></span>
       </button>
       ${projects.map((p) => railItem(p, now)).join('\n')}
     </div>`;
@@ -536,11 +538,11 @@ export function renderHub(projects: HubProject[], options: HubOptions, now: numb
   // cm:why The same shell as a project page, down to the rail width and the foot: opening a project
   // from here should look like walking into the next room, not into another application.
   return `<!doctype html>
-<html lang="vi">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>apiflow — ${projects.length} project</title>
+<title>apiflow — ${plural(projects.length, 'project')}</title>
 <link rel="icon" href="${FAVICON}">
 ${THEME_BOOT}
 <!-- cm:why Marks the document before first paint so CSS can hide the unselected panes. Without it
@@ -555,9 +557,9 @@ ${THEME_BOOT}
     <div class="brandbar"><span class="home"><span class="mark">${MARK}</span><h1 style="font-size:16px">apiflow</h1></span></div>
     ${projects.length === 0 ? '' : railHead}
     <div class="railfoot">
-      ${options.live ? '<button class="btn" id="add-open">+ Thêm project</button>' : ''}
-      <button class="thbtn" id="theme-btn" type="button" title="đổi nền sáng / tối" style="width:100%">
-        <span class="sw2"></span><span id="theme-label">theo hệ điều hành</span>
+      ${options.live ? '<button class="btn" id="add-open">+ Add project</button>' : ''}
+      <button class="thbtn" id="theme-btn" type="button" title="switch light / dark" style="width:100%">
+        <span class="sw2"></span><span id="theme-label">follow the OS</span>
       </button>
       <p class="foot">${escapeHtml(options.workspace)}</p>
     </div>
@@ -567,12 +569,12 @@ ${THEME_BOOT}
     ${projects.length === 0 ? empty : `${overview(projects, options, options.live)}
     ${projects.map((p) => detail(p, options, now)).join('\n')}
     <section class="detail" data-detail="none">
-      <div class="panel"><h3>Không khớp</h3>
-        <p class="none">Không project nào khớp ô tìm và bộ lọc đang đặt.</p>
-        <div class="btnrow" style="margin-top:10px"><button class="btn" id="hb-reset" type="button">Bỏ lọc</button></div>
+      <div class="panel"><h3>No match</h3>
+        <p class="none">No project matches the search box and the filters as set.</p>
+        <div class="btnrow" style="margin-top:10px"><button class="btn" id="hb-reset" type="button">Clear filters</button></div>
       </div>
     </section>`}
-    ${projects.length === 0 ? '' : '<p class="note">Mỗi con số là <b>ứng viên, không phải phán quyết</b>. “không auth” nghĩa là không thấy cổng chặn nào trong code. “unresolved” là những lời gọi apiflow thấy nhưng không giải được đường dẫn — chúng <b>không</b> nằm trong các con số còn lại.</p>'}
+    ${projects.length === 0 ? '' : '<p class="note">Every number here is a <b>candidate, not a verdict</b>. “no auth” means no gate was found in the code. “unresolved” are calls apiflow saw but could not resolve to a path — they are <b>not</b> part of any of the other numbers.</p>'}
   </div>
 </div>
 ${options.live ? ADD_DIALOG : ''}

@@ -66,7 +66,7 @@ describe('renderApp offline', () => {
   });
 
   it('says the counts are candidates rather than verdicts', () => {
-    expect(html).toContain('ứng viên, không phải phán quyết');
+    expect(html).toContain('candidate, not a verdict');
   });
 });
 
@@ -99,7 +99,7 @@ describe('panes', () => {
   });
 
   it('refuses to draw a graph too wide to read instead of cutting it', () => {
-    expect(html).toContain('quá rộng để vẽ');
+    expect(html).toContain('too wide to draw');
     expect(html).toContain('MAX_ROWS');
   });
 
@@ -118,7 +118,7 @@ describe('live extras', () => {
       sides: [{ kind: 'fe', root: '/repo/web', branch: 'release/stg', sha: '387da27', scannedAt: '2026-08-20T09:30:00Z' }],
     });
     expect(withSides).toContain('release/stg · 387da27');
-    expect(withSides).toContain('30 phút trước');
+    expect(withSides).toContain('30m ago');
   });
 
   it('says the revision is unreadable rather than leaving a blank where a sha goes', () => {
@@ -126,7 +126,7 @@ describe('live extras', () => {
       map: mapWith('demo-api'), sourcePath: '/tmp/demo.apimap', live: true, projectId: 'demo', now: 0,
       sides: [{ kind: 'be', root: '/repo/api' }],
     });
-    expect(noGit).toContain('không đọc được revision');
+    expect(noGit).toContain('revision unreadable');
   });
 
   it('only offers the scan buttons when a project backs the page', () => {
@@ -135,7 +135,7 @@ describe('live extras', () => {
     expect(live).toContain('id="project">"demo"<');
   });
 
-  it('offers Thêm project on a live page even when no project backs it', () => {
+  it('offers + Add project on a live page even when no project backs it', () => {
     const bare = renderApp({ map: mapWith('demo-api'), sourcePath: '/tmp/demo.apimap', live: true });
     expect(bare).toContain('id="add-open"');
     expect(bare).toContain('id="add-dlg"');
@@ -189,7 +189,7 @@ describe('one shell for both pages', () => {
     expect(file).toContain('<span class="home">');
   });
 
-  // cm:guard `+ Thêm project` is a workspace action: in the header button row it read as one of the
+  // cm:guard `+ Add project` is a workspace action: in the header button row it read as one of the
   // things you can do TO the project you opened.
   it('keeps the workspace action at the foot of the rail on both, not in the header row', () => {
     for (const page of [project, hub]) {

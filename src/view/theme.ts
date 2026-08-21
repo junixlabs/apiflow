@@ -137,14 +137,14 @@ export const THEME_STYLE = `
   background:linear-gradient(90deg,var(--ink) 50%,var(--surface-3) 50%); border:1px solid var(--line-2); }
 `;
 
-// cm:why Three states, not a boolean: "theo hệ điều hành" has to stay reachable, otherwise the first
+// cm:why Three states, not a boolean: "follow the OS" has to stay reachable, otherwise the first
 // click pins the page forever to whatever it happened to look like at that moment.
 // cm:edge contract -> THEME_BOOT below — same localStorage key, same two valid stored values.
 export const THEME_SCRIPT = String.raw`
 (function () {
   const btn = document.getElementById('theme-btn');
   if (!btn) return;
-  const LABEL = { system: 'theo hệ điều hành', light: 'nền sáng', dark: 'nền tối' };
+  const LABEL = { system: 'follow the OS', light: 'light', dark: 'dark' };
   const NEXT = { system: 'light', light: 'dark', dark: 'system' };
   const stored = () => {
     try {
@@ -162,7 +162,7 @@ export const THEME_SCRIPT = String.raw`
     try {
       if (next === 'system') localStorage.removeItem('apiflow-theme');
       else localStorage.setItem('apiflow-theme', next);
-    } catch (err) { /* trang mở bằng file:// vẫn phải đổi được nền */ }
+    } catch (err) { /* a page opened over file:// must still be able to switch theme */ }
     paint(next);
   };
   paint(stored());

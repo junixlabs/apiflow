@@ -45,10 +45,10 @@
 └──────────────────────────────────────────────────────────────┘
 ```
 
-**Phân vùng:**
-- Trái: Branding + flow name (editable inline)
-- Giữa: File operations + node creation
-- Phải: Execution controls + environment selector
+**Zones:**
+- Left: branding + flow name (editable inline)
+- Middle: file operations + node creation
+- Right: execution controls + environment selector
 
 ---
 
@@ -123,7 +123,7 @@ Method:  [GET ▼]
 URL:     [{{base_url}}/api/products/123    ]
 
 Description:
-[Lấy thông tin sản phẩm gốc từ database   ]
+[Fetch the source product from the database]
 
 ── Headers ──────────────────────────
   Content-Type    application/json
@@ -167,7 +167,7 @@ Description:
     }
 ```
 
-Click vào bất kỳ field → hiện button "Copy as variable":
+Click any field → a "Copy as variable" button appears:
 → `{{nodes["Get Product Info"].response.body.data.variants[0].sku}}`
 
 ---
@@ -181,7 +181,7 @@ Success:    ─────────────→   (green, solid)
 Error:      ─────────────→   (red, solid)
 ```
 
-Hover lên connection (Phase 2):
+Hover a connection (Phase 2):
 ```
          ┌──────────────────────┐
          │ Data passed:         │
@@ -215,31 +215,31 @@ Hover lên connection (Phase 2):
 
 ## Interaction Flows
 
-### Tạo node mới
-1. Double-click canvas HOẶC click "+ Node" trên toolbar
-2. Node mới xuất hiện tại vị trí click
-3. Inspector panel mở tab Config tự động
-4. User nhập Method + URL → node label update real-time
+### Creating a node
+1. Double-click the canvas OR click "+ Node" in the toolbar
+2. A new node appears where you clicked
+3. The inspector panel opens the Config tab automatically
+4. The user types Method + URL → the node label updates in real time
 
-### Kết nối 2 nodes
-1. Hover lên node → output port (bên phải) hiện rõ
-2. Click + drag từ output port
-3. Kéo đến input port của node đích
-4. Thả → connection được tạo
+### Connecting two nodes
+1. Hover a node → its output port (on the right) becomes visible
+2. Click and drag from the output port
+3. Drag to the input port of the target node
+4. Release → the connection is created
 
-### Chạy flow
-1. Click "▶ Run" trên toolbar
-2. Nodes highlight lần lượt theo thứ tự thực thi
-3. Mỗi node hiện spinner khi đang chạy
-4. Hoàn thành → status badge hiện trên node (✅/❌)
-5. Click vào bất kỳ node → xem response trong Inspector
+### Running a flow
+1. Click "▶ Run" in the toolbar
+2. The nodes highlight one by one in execution order
+3. Each node shows a spinner while it runs
+4. When it finishes → a status badge appears on the node (✅/❌)
+5. Click any node → see its response in the inspector
 
 ### Inspect response
-1. Click node đã chạy
-2. Inspector panel hiện tab Response
-3. JSON tree view — click expand/collapse
-4. Click vào field → "Copy as variable" button
-5. Paste variable vào node khác → data flow established
+1. Click a node that has run
+2. The inspector panel shows the Response tab
+3. A JSON tree view — click to expand/collapse
+4. Click a field → a "Copy as variable" button
+5. Paste the variable into another node → the data flow is established
 
 ---
 
@@ -249,7 +249,7 @@ Hover lên connection (Phase 2):
 |----------|--------|
 | >= 1440px | Sidebar + Canvas + Inspector (3 columns) |
 | 1024-1439px | Canvas + Inspector (2 columns, sidebar collapsible) |
-| < 1024px | Không hỗ trợ (hiển thị message yêu cầu dùng màn hình lớn hơn) |
+| < 1024px | Not supported (shows a message asking for a larger screen) |
 
 ---
 
@@ -267,5 +267,5 @@ Hover lên connection (Phase 2):
 | Connection line | #9CA3AF | #6B6B6B |
 | Selection highlight | #3B82F6 | #264F78 |
 
-Mặc định: Dark Mode (developer tool).
-Toggle ở Settings.
+Default: dark mode (it is a developer tool).
+Toggled in Settings.

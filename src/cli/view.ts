@@ -30,10 +30,10 @@ function main(): void {
 
   console.log('## Viewer');
   console.log('');
-  console.log(`**Mở bằng browser**: file://${outPath}`);
-  console.log(`**Nội dung**: ${map.endpoints.length} endpoint · ${map.screens.length} màn · ${map.calls.length} lời gọi · ${map.fields.length} field`);
+  console.log(`**Open in a browser**: file://${outPath}`);
+  console.log(`**Contents**: ${map.endpoints.length} endpoints · ${map.screens.length} screens · ${map.calls.length} calls · ${map.fields.length} fields`);
   console.log('');
-  console.log('Tự chứa hoàn toàn: không gọi mạng, không cần server. Dữ liệu nằm trong chính file HTML.');
+  console.log('Fully self-contained: no network, no server. The data lives inside the HTML.');
 }
 
 const invokedDirectly =
