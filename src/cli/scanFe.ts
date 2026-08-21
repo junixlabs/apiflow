@@ -12,10 +12,12 @@ import type { ChainStep } from '../core/callerGraph';
 import { findHttpWrappers } from '../core/wrappers';
 import { buildRouteTable } from '../core/routeTable';
 import { tolerateClosedPipe } from './stdio';
+import { isNestedCheckout } from './scanScope';
+import { isGeneratedSource } from '../core/generated';
 
 // cm:edge contract -> src/cli/check.ts readerChanged() — the READER's version, bumped in the same
 // commit as any change to what the FE reader produces for unchanged input.
-export const GENERATOR = 'apiflow scan-fe/3';
+export const GENERATOR = 'apiflow scan-fe/4';
 
 const SKIP_DIRS = new Set([
   'node_modules', 'dist', 'build', 'coverage', '.next', '.nuxt', '.git', '.svelte-kit',
@@ -26,7 +28,12 @@ function walk(root: string, dir: string, acc: string[] = []): string[] {
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
     if (entry.isDirectory()) {
       if (SKIP_DIRS.has(entry.name)) continue;
-      walk(root, join(dir, entry.name), acc);
+      const full = join(dir, entry.name);
+      if (isNestedCheckout(full)) {
+        lastScanStats.checkoutsSkipped.push(normalizePosix(relative(root, full)));
+        continue;
+      }
+      walk(root, full, acc);
       continue;
     }
     const rel = relative(root, join(dir, entry.name));
@@ -119,22 +126,53 @@ export function buildResolver(root: string, files: Set<string>): ResolveImport {
   };
 }
 
+// cm:why A skip has to be printed. Silently dropping fifteen worktrees reads exactly like a scan
+// that found nothing there, and the reader would go looking for a bug in the walk instead.
+export function skipReport(stats: { checkoutsSkipped: string[]; generatedSkipped: string[] }): string[] {
+  const out: string[] = [];
+  const show = (list: string[]): string =>
+    list.slice(0, 3).join(', ') + (list.length > 3 ? `, +${list.length - 3} more` : '');
+  if (stats.checkoutsSkipped.length > 0) {
+    out.push(`**Nested checkouts skipped**: ${stats.checkoutsSkipped.length} — ${show(stats.checkoutsSkipped)}`);
+  }
+  if (stats.generatedSkipped.length > 0) {
+    out.push(`**Generated files skipped**: ${stats.generatedSkipped.length} — ${show(stats.generatedSkipped)}`);
+  }
+  return out;
+}
+
 function normalizePosix(p: string): string {
   return p.split('\\').join('/').replace(/^\.\//, '');
 }
 
-export const lastScanStats = { serverFilesSkipped: 0, wrappers: 0, declaredRoutes: 0 };
+export const lastScanStats = {
+  serverFilesSkipped: 0,
+  wrappers: 0,
+  declaredRoutes: 0,
+  checkoutsSkipped: [] as string[],
+  generatedSkipped: [] as string[],
+};
 
 export function scanDirectory(root: string, name: string, hints?: ScanHints): ApiMapFile {
   const map = createApiMap(name, scanOrigin(root), GENERATOR);
   const sources = new Map<string, string>();
   lastScanStats.serverFilesSkipped = 0;
+  lastScanStats.checkoutsSkipped = [];
+  lastScanStats.generatedSkipped = [];
   for (const rel of walk(root, root)) {
+    let content: string;
     try {
-      sources.set(rel, readFileSync(join(root, rel), 'utf8'));
+      content = readFileSync(join(root, rel), 'utf8');
     } catch {
       continue;
     }
+    // cm:edge ordering -> src/core/generated.ts — dropped from `sources`, not inside scanFile(), so a
+    // bundle never reaches the caller graph either. Both passes read this one map.
+    if (isGeneratedSource(rel, content)) {
+      lastScanStats.generatedSkipped.push(rel);
+      continue;
+    }
+    sources.set(rel, content);
   }
 
   // cm:why Wrappers are a whole-project fact — `fetchPage` is declared in the transport base class
@@ -306,6 +344,7 @@ export function renderReport(map: ApiMapFile, outPath: string): string {
   if (lastScanStats.serverFilesSkipped > 0) {
     lines.push(`**Server files skipped**: ${lastScanStats.serverFilesSkipped} (route registrations, not calls)`);
   }
+  lines.push(...skipReport(lastScanStats));
   lines.push('');
   lines.push(`### Unresolved — ${map.unresolved.length === 0 ? 'none' : map.unresolved.length}`);
   for (const u of map.unresolved.slice(0, 50)) {

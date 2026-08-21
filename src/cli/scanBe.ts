@@ -8,24 +8,33 @@ import type { ClassIndex, SchemaDef, Stack } from '../core/beScanner';
 import { detectStack, indexClasses, isBackendFile, laravelRouteFilePrefixes, resolveHandlerSchemas, scanBackendFile } from '../core/beScanner';
 import { enclosingSymbols, symbolAt } from '../core/feScanner';
 import { buildMountGraph, joinPrefix, prefixesFor } from '../core/mountGraph';
-import { buildResolver } from './scanFe';
+import { buildResolver, skipReport } from './scanFe';
 import { tolerateClosedPipe } from './stdio';
+import { isNestedCheckout } from './scanScope';
+import { isGeneratedSource } from '../core/generated';
 
 // cm:edge contract -> src/cli/check.ts readerChanged() — this string is the READER's version, and
 // check reads it to tell "the code moved" apart from "the reader improved". Bump it in the same commit
 // as any change to what the BE reader produces for unchanged input.
-export const GENERATOR = 'apiflow scan-be/3';
+export const GENERATOR = 'apiflow scan-be/4';
 const MANIFESTS = ['artisan', 'composer.json', 'package.json', 'go.mod', 'pyproject.toml', 'requirements.txt'];
 const SKIP_DIRS = new Set([
   'node_modules', 'vendor', 'dist', 'build', 'coverage', '.git', '__pycache__', '.venv', 'venv',
   'storage', '.next', 'target', 'bin', 'obj',
 ]);
 
+export const lastBeScanStats = { checkoutsSkipped: [] as string[], generatedSkipped: [] as string[] };
+
 function walk(root: string, dir: string, acc: string[] = []): string[] {
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
     if (entry.isDirectory()) {
       if (SKIP_DIRS.has(entry.name)) continue;
-      walk(root, join(dir, entry.name), acc);
+      const full = join(dir, entry.name);
+      if (isNestedCheckout(full)) {
+        lastBeScanStats.checkoutsSkipped.push(relative(root, full).split('\\').join('/'));
+        continue;
+      }
+      walk(root, full, acc);
       continue;
     }
     const rel = relative(root, join(dir, entry.name));
@@ -93,7 +102,15 @@ export function scanBackend(root: string, name: string): BeScanResult {
   const stackAt = (file: string): Stack =>
     stacks.find(({ dir }) => dir === '' || file.startsWith(`${dir}/`))?.stack ?? 'generic';
   const stack = stacks[stacks.length - 1]?.stack ?? 'generic';
-  const files = walk(root, root).map((file) => ({ file, content: safeRead(join(root, file)) }));
+  lastBeScanStats.checkoutsSkipped = [];
+  lastBeScanStats.generatedSkipped = [];
+  const files = walk(root, root)
+    .map((file) => ({ file, content: safeRead(join(root, file)) }))
+    .filter(({ file, content }) => {
+      if (!isGeneratedSource(file, content)) return true;
+      lastBeScanStats.generatedSkipped.push(file);
+      return false;
+    });
   const classes: ClassIndex = indexClasses(files);
 
   const schemas = new Map<string, SchemaDef>();
@@ -223,6 +240,7 @@ export function renderBeReport(result: BeScanResult, outPath: string): string {
   lines.push(`**Endpoints**: ${map.endpoints.length} (${withAuth} behind auth)`);
   lines.push(`**Schemas**: ${result.schemasFound} — request on ${result.routesWithRequest}, response on ${result.routesWithResponse}`);
   lines.push(`**Fields**: ${declared} declared in code · ${observed} observed from a real response`);
+  lines.push(...skipReport(lastBeScanStats));
   lines.push('');
   lines.push(`### Shapes still unknown — ${map.unresolved.length === 0 ? 'none' : map.unresolved.length}`);
   for (const u of map.unresolved.slice(0, 50)) {

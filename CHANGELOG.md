@@ -4,6 +4,54 @@ All notable changes to API View are documented here.
 
 ---
 
+## [1.1.9] — 2026-08-21
+
+One app reported **11,340 calls across 719 screens**. It has 855 calls across 141 screens. The other
+10,485 were the same code counted sixteen times, plus a committed bundle read as source — and until
+the numbers were looked at rather than trusted, the map on that app was worse than no map: `impact`
+answered a one-file change with sixteen files.
+
+### Fixed — a subtree with its own `.git` is a different checkout
+
+- **Git worktrees were scanned as if they were part of the repo.** `.claude/worktrees/` held **15**
+  full copies of the app, so every screen was reported sixteen times and `impact` named sixteen files
+  for a one-file change. New `src/cli/scanScope.ts` skips any directory below the scan root that
+  carries its own `.git` — the rule is not "skip `.claude`": a worktree, a submodule and a nested
+  clone are all *different checkouts*, whoever put them there and whatever they are named. A worktree's
+  `.git` is a **file**, not a directory; both are recognised.
+- The scan **prints what it skipped** — `Nested checkouts skipped: 15 — …`. A silent skip reads
+  exactly like a walk that found nothing there.
+
+### Fixed — a committed bundle is not source
+
+- **`backend/public/widget/chat.js`: 342 KB of minified React on 65 lines.** It produced ~4,000
+  `unresolved` entries reading `!0` and `l` as urls — noise that can never be resolved, burying the
+  gaps that can. Name-based skipping cannot catch it: it sits in `public/`, not `dist/`.
+- New `src/core/generated.ts` decides on **shape**, measured across four real repos: the widest
+  *authored* file averages **152 bytes per line** (an inline SVG); the two generated ones average
+  **3,490** and **5,268**. The threshold is 400, in the gap and near neither edge. A 4 KB byte floor
+  comes first, so a short one-liner is not mistaken for a bundle.
+- Dropped when the sources are **read**, not inside `scanFile` — so a bundle never reaches the caller
+  graph either. Both passes read the one map.
+
+### Measured
+
+| sid-desk | `scan-fe/3` | `scan-fe/4` |
+|---|---|---|
+| calls | 11,340 | **855** |
+| screens | 719 | **141** |
+| endpoints | 300 | **254** |
+| unresolved | 13,163 | **192** |
+
+**adminhub 879/240/565 and kinetrak 21/17/21 are unchanged**, and getcontent's BE gives 108/169 with
+the rules on and 108/169 with them stashed off. The fix bites where the defect is and nowhere else.
+Re-scanning sid-desk twice is still byte-identical.
+
+Readers bumped to `scan-fe/4` / `scan-be/4`, so `check` says the reader improved rather than
+"the code moved".
+
+---
+
 ## [1.1.8] — 2026-08-21
 
 `probe` had never been run — and once it could be, it turned out three separate faults were standing
