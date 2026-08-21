@@ -4,6 +4,23 @@ All notable changes to API View are documented here.
 
 ---
 
+## [1.1.3] — 2026-08-21
+
+### Fixed — the screen count counts screens
+
+- **`impact` reported one row per call, so a screen that calls an endpoint twice was counted twice.**
+  The headline says "N screen(s) break if this changes", which made the blast radius read larger than
+  the number of screens involved — measured on a real app, `POST /api/v1/purchase-orders/{param}`
+  claimed **3 screens** where there was **1**, reached from three places inside it. The answer now
+  carries one entry per screen plus `callSites`, so the second call site stays visible instead of
+  being either dropped or double-counted. Across that map 13 duplicate rows collapse into 12 screens.
+  Applies to the CLI text, `--json` (new `callSites` field) and the `impact_endpoint` MCP tool.
+- **A deduplicated screen keeps the strongest confidence of its call sites, and that call site's
+  evidence.** One `exact` call site is proof the screen breaks; letting a `guess` sibling decide the
+  label would understate what is known.
+
+---
+
 ## [1.1.2] — 2026-08-21
 
 ### Fixed — asking the binary its version started a server

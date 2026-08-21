@@ -245,7 +245,7 @@ export function finalizeApiMap(map: ApiMapFile): ApiMapFile {
 
 export interface ImpactAnswer {
   endpoint: EndpointNode | null;
-  screens: Array<{ screen: ScreenNode; confidence: Confidence; source: SourceRef; chain?: ChainNode[] }>;
+  screens: Array<{ screen: ScreenNode; confidence: Confidence; source: SourceRef; chain?: ChainNode[]; callSites: number }>;
 }
 
 // cm:why One number decides whether the reconciliation is worth showing at all. Measured on a real
@@ -268,18 +268,33 @@ export function bePartial(map: ApiMapFile): boolean {
   return declared > 0 && undeclaredCalled > declared;
 }
 
+// cm:guard One entry per SCREEN, never per call: the answer's headline is "N screen(s) break", so a
+// screen that calls the endpoint from two places used to be counted twice and read as twice the blast
+// radius — measured on a real app, 10 reported screens were 3 distinct ones. `callSites` keeps the
+// second call site visible instead of dropping it.
+// cm:why Keeps the STRONGEST confidence of the group. The screen breaks by its best evidence: one
+// exact call site is proof, and letting a guess sibling downgrade it would understate what is known.
 export function screensAffectedByEndpoint(map: ApiMapFile, id: string): ImpactAnswer {
   const endpoint = map.endpoints.find((e) => e.id === id) ?? null;
-  const screens = map.calls
-    .filter((c) => c.endpointId === id)
-    .map((c) => ({
-      screen: map.screens.find((s) => s.id === c.screenId),
-      confidence: c.confidence,
-      source: c.source,
-      chain: c.chain,
-    }))
-    .flatMap((x) => (x.screen === undefined ? [] : [{ ...x, screen: x.screen }]));
-  return { endpoint, screens };
+  const rank: Record<Confidence, number> = { exact: 0, inferred: 1, guess: 2 };
+  const byScreen = new Map<string, ImpactAnswer['screens'][number]>();
+  for (const c of map.calls) {
+    if (c.endpointId !== id) continue;
+    const screen = map.screens.find((s) => s.id === c.screenId);
+    if (screen === undefined) continue;
+    const seen = byScreen.get(screen.id);
+    if (seen === undefined) {
+      byScreen.set(screen.id, { screen, confidence: c.confidence, source: c.source, chain: c.chain, callSites: 1 });
+      continue;
+    }
+    seen.callSites += 1;
+    if (rank[c.confidence] < rank[seen.confidence]) {
+      seen.confidence = c.confidence;
+      seen.source = c.source;
+      seen.chain = c.chain;
+    }
+  }
+  return { endpoint, screens: [...byScreen.values()] };
 }
 
 export function screensAffectedByField(map: ApiMapFile, id: string): ImpactAnswer {
@@ -291,15 +306,16 @@ export function screensAffectedByField(map: ApiMapFile, id: string): ImpactAnswe
       screen: map.screens.find((s) => s.id === r.screenId),
       confidence: r.confidence,
       source: r.source,
+      callSites: 1,
     }))
-    .filter((x): x is { screen: ScreenNode; confidence: Confidence; source: SourceRef } => !!x.screen);
+    .flatMap((x) => (x.screen === undefined ? [] : [{ ...x, screen: x.screen }]));
   // cm:why A screen that calls the endpoint but has no traced read still breaks when the field
   // changes shape — reporting only traced reads would understate the blast radius.
   const viaEndpoint = screensAffectedByEndpoint(map, field.endpointId).screens.map((s) => ({
     ...s,
     confidence: 'guess' as Confidence,
   }));
-  const merged = new Map<string, { screen: ScreenNode; confidence: Confidence; source: SourceRef }>();
+  const merged = new Map<string, ImpactAnswer['screens'][number]>();
   for (const s of [...direct, ...viaEndpoint]) if (!merged.has(s.screen.id)) merged.set(s.screen.id, s);
   return {
     endpoint: map.endpoints.find((e) => e.id === field.endpointId) ?? null,

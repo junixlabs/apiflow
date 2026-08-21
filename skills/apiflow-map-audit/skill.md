@@ -39,9 +39,12 @@ The `--json` answer is the contract you audit:
 
 ```
 matches[].endpoint          { method, path }
-matches[].screens[]         { route, label, confidence, at, hops, chain[] }
+matches[].screens[]         { route, label, confidence, at, hops, callSites, chain[] }
 matches[].screens[].chain[] { role, symbol, at, precise }
 ```
+
+One entry per screen, not per call: `callSites` says how many places in that screen reach the
+endpoint, so the screen count is never inflated by a screen that calls it twice.
 
 Each `screens[]` entry with `confidence: "guess"` is one claim: *this screen breaks if this endpoint
 changes, and here is the call site*.

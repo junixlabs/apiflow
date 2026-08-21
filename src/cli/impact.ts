@@ -67,7 +67,10 @@ export function renderImpact(answer: ImpactAnswer, label: string): string {
     // cm:why A screen with no route never reached a route table — printing it like the others reads
     // as "this URL breaks", when all that is known is the module the call sits in.
     const label = s.screen.route ?? `${s.screen.label} (never reached a route)`;
-    lines.push(`- **${label}** [${s.confidence}] — ${s.source.file}:${s.source.line}${via}`);
+    // cm:why Prints the extra call sites as a count, not as extra screen rows: the headline counts
+    // screens, and a screen listed twice reads as twice the blast radius.
+    const sites = s.callSites > 1 ? ` · ${s.callSites} call sites` : '';
+    lines.push(`- **${label}** [${s.confidence}] — ${s.source.file}:${s.source.line}${sites}${via}`);
     // cm:why Prints the chain, not the hop COUNT: "3 hop" cannot be checked by hand, while every
     // step with its file:line can — and that is the difference between a claim and evidence.
     if (s.chain !== undefined && s.chain.length > 1) {
@@ -142,6 +145,7 @@ export function impactJson(map: ApiMapFile, kind: 'endpoint' | 'field', value: s
         confidence: s.confidence,
         at: at(s.source),
         hops: s.screen.viaHops ?? 0,
+        callSites: s.callSites,
         chain: (s.chain ?? []).map((c) => ({ role: c.role, symbol: c.symbol, at: at(c), precise: c.precise })),
       })),
   }));

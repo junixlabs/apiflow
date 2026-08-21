@@ -217,3 +217,33 @@ describe('chain interning', () => {
     expect(text).toBe(`${JSON.stringify(bare, null, 2)}\n`);
   });
 });
+
+// cm:why Two call sites in one screen used to be two rows, so the headline "N screen(s) break"
+// counted the same screen twice — on a real app 10 reported screens were 3 distinct ones.
+describe('a screen that calls an endpoint twice is one screen', () => {
+  const build = () => {
+    const map = createApiMap('dup', 'github.com/acme/app', 'test/1');
+    map.endpoints.push({ id: 'ep_policy', method: 'PATCH', path: '/policy' });
+    map.screens.push({ id: 'sc_pipeline', label: 'Pipeline', route: '/setup/pipeline', source: { file: 'a.tsx', line: 1 } });
+    map.screens.push({ id: 'sc_other', label: 'Other', route: '/other', source: { file: 'b.tsx', line: 1 } });
+    map.calls.push({ endpointId: 'ep_policy', screenId: 'sc_pipeline', confidence: 'guess', via: 'direct', source: { file: 'a.tsx', line: 10 } });
+    map.calls.push({ endpointId: 'ep_policy', screenId: 'sc_pipeline', confidence: 'inferred', via: 'direct', source: { file: 'a.tsx', line: 40 } });
+    map.calls.push({ endpointId: 'ep_policy', screenId: 'sc_other', confidence: 'guess', via: 'direct', source: { file: 'b.tsx', line: 7 } });
+    return finalizeApiMap(map);
+  };
+
+  it('collapses to one entry per screen and counts the call sites', () => {
+    const answer = screensAffectedByEndpoint(build(), 'ep_policy');
+    expect(answer.screens).toHaveLength(2);
+    const pipeline = answer.screens.find((s) => s.screen.route === '/setup/pipeline');
+    expect(pipeline?.callSites).toBe(2);
+    expect(answer.screens.find((s) => s.screen.route === '/other')?.callSites).toBe(1);
+  });
+
+  it('keeps the strongest confidence and its evidence', () => {
+    const pipeline = screensAffectedByEndpoint(build(), 'ep_policy').screens
+      .find((s) => s.screen.route === '/setup/pipeline');
+    expect(pipeline?.confidence).toBe('inferred');
+    expect(pipeline?.source.line).toBe(40);
+  });
+});
