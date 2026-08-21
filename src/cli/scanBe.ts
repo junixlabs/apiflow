@@ -14,7 +14,7 @@ import { tolerateClosedPipe } from './stdio';
 // cm:edge contract -> src/cli/check.ts readerChanged() — this string is the READER's version, and
 // check reads it to tell "the code moved" apart from "the reader improved". Bump it in the same commit
 // as any change to what the BE reader produces for unchanged input.
-export const GENERATOR = 'apiflow scan-be/2';
+export const GENERATOR = 'apiflow scan-be/3';
 const MANIFESTS = ['artisan', 'composer.json', 'package.json', 'go.mod', 'pyproject.toml', 'requirements.txt'];
 const SKIP_DIRS = new Set([
   'node_modules', 'vendor', 'dist', 'build', 'coverage', '.git', '__pycache__', '.venv', 'venv',

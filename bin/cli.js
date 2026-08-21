@@ -41,6 +41,10 @@ const HELP = `apiflow — a screen ↔ endpoint ↔ field map
   apiflow scan-fe <dir> [--name=] [--hints=] [--out=] [--json]
   apiflow scan-be <dir> [--name=] [--out=] [--json]
   apiflow probe <map> --emit[=<dir>] | --ingest=<results.json>
+  apiflow probe <map> --live=<baseUrl> [--fill=<v>…] [--header='K: V'] [--methods=GET]
+                                 walks the map against a RUNNING api and records what came back.
+                                 GET/HEAD only unless --methods and --unsafe say otherwise, and a
+                                 non-localhost host needs --yes-remote.
   apiflow link <fe.apimap> <be.apimap> --out=<full.apimap>
 
   apiflow impact <map> [--endpoint=… | --field=… | --screen=…] [--json]

@@ -4,6 +4,59 @@ All notable changes to API View are documented here.
 
 ---
 
+## [1.1.8] — 2026-08-21
+
+`probe` had never been run — and once it could be, it turned out three separate faults were standing
+between the map and its own `observed` fields. **observed: 0 → 65** on this repo's own server.
+
+### Added — `probe --live`, and two refusals
+
+- **`apiflow probe <map> --live=<baseUrl>`** walks the endpoints in the map against a *running* API,
+  records `{method, path, status, body}` for each, and `--ingest` merges what came back as `observed`
+  fields beside the `declared` ones. `--fill=<value>` supplies a `{param}` positionally; an endpoint
+  with an unfilled placeholder is skipped **and named**. `--header='K: V'` for auth.
+- **GET and HEAD only.** A write method needs `--methods` *and* `--unsafe`. The map lists every
+  endpoint it found and that list contains `DELETE`: without this, a diagnostic is a scripted walk over
+  someone's write endpoints.
+- **A non-localhost base url needs `--yes-remote`.**
+- A non-2xx or non-JSON response is still recorded. `--ingest` is what decides a sample is unusable and
+  says so per endpoint — dropping them at collection time would turn a 500 into silence.
+- New: `docs/probe.md`.
+
+### Fixed — why the runnable harness was never emitted
+
+- **Every Node repo detected as `generic`.** `detectStack` tested the manifest content for
+  truthiness, and `probe` records "this manifest exists" as an empty string — so `package.json`
+  never matched and the emitted harness was the manual checklist instead of the vitest file. Presence
+  is what it tests now; the content only ever decided strapi-vs-node.
+- **The stack was read from the output directory, not the repo.** `--emit=<dir>` outside the repo made
+  it `generic` again for the same reason.
+
+### Fixed — one masker for every reader
+
+- **The rule "a comment is not code" was implemented twice, and the second copy was broken.** A regex
+  character class containing a quote — `/['"\`]/` — put `blankComments` into a string state with no
+  newline guard, so it swallowed the **rest of the file** and stopped masking comments entirely. Three
+  phantom endpoints reached a published map that way, read out of this scanner's own comments
+  (`app.get('/x', h)` in a cm:guard). Both readers now mask through `src/core/mask.ts`.
+- **The FE reader was reporting the wrong line for real calls.** Same cause. Verified against source:
+  `site-data.ts:76` pointed at `mutationFn:` and now points at `apiSend<…>(` on line 77;
+  `api.ts:34` pointed at the `export function` signature and now at the `apiFetch` call on 35. Four
+  calls that were being missed entirely are now found — `published-url`, `reconcile/backfill`,
+  `reconcile/backfill/reset` and a `policy` patch. **124 → 128 calls**, with `unresolved` unchanged.
+- **Route-shaped JSON inside a template literal is not a route.** The probe harness's own example,
+  `{ "method": "GET", "path": "/api/users" }`, was published as an endpoint of this repo. The BE
+  readers mask template text as well as comments — **JS/TS only**, because a backtick in Go is a raw
+  string and struct tags live in one.
+
+### Changed
+
+- Reader versions are `apiflow scan-fe/3` and `apiflow scan-be/3`. Both readers changed what they
+  produce for unchanged input, which is exactly when the rule added in 1.1.7 says to bump — so `check`
+  will say so once per map.
+
+---
+
 ## [1.1.7] — 2026-08-21
 
 The artefact and the readers, finished. **BE fields: 0 → 166** on a real API, and three ways the file

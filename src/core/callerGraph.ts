@@ -1,3 +1,4 @@
+import { maskComments } from './mask';
 export interface ImportBinding {
   local: string;
   imported: string;
@@ -35,56 +36,6 @@ const LAZY_IMPORT =
   /(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*(?:React\s*\.\s*)?lazy\s*\(\s*(?:async\s*)?\(\s*\)\s*=>\s*import\s*\(\s*(['"])([^'"]+)\2/g;
 const DYNAMIC_IMPORT = /(?<!\.)\bimport\s*\(\s*(['"])([^'"]+)\1/g;
 
-// cm:guard Masks comments IN PLACE — same length, newlines kept — because every line number and
-// every lookbehind below is an index into this string, and a shorter copy silently moves them.
-// cm:why A `\bname\b` scan over raw source counts prose as code: a barrel whose comment lists the
-// components it adapts produced a usage with no enclosing declaration, which widened the chain to
-// ANY and sent one call to every route importing that barrel — measured at 10 of 11 wrong screens on
-// a real app. Codebases that document well were penalised the hardest.
-// cm:why Bare `//` in JSX text (an unquoted url) is masked to end of line — accepted, because a
-// quoted url is protected by the string states and unquoted prose holds no identifiers worth an edge.
-export function maskComments(src: string): string {
-  const out = src.split('');
-  let state: 'code' | 'line' | 'block' | 'sq' | 'dq' | 'tpl' = 'code';
-  let i = 0;
-  while (i < src.length) {
-    const c = src[i];
-    const d = src[i + 1];
-    if (state === 'code') {
-      // cm:guard `/\/\//g` is a regex, not a comment: the escape before the slash is the only thing
-      // that separates them without parsing, so a preceding backslash vetoes the comment.
-      if (c === '/' && d === '/' && src[i - 1] !== '\\') { state = 'line'; out[i] = ' '; out[i + 1] = ' '; i += 2; continue; }
-      if (c === '/' && d === '*') { state = 'block'; out[i] = ' '; out[i + 1] = ' '; i += 2; continue; }
-      if (c === "'") state = 'sq';
-      else if (c === '"') state = 'dq';
-      else if (c === '`') state = 'tpl';
-      i++;
-      continue;
-    }
-    if (state === 'line') {
-      if (c === '\n') { state = 'code'; i++; continue; }
-      out[i] = ' ';
-      i++;
-      continue;
-    }
-    if (state === 'block') {
-      if (c === '*' && d === '/') { out[i] = ' '; out[i + 1] = ' '; state = 'code'; i += 2; continue; }
-      if (c !== '\n') out[i] = ' ';
-      i++;
-      continue;
-    }
-    if (c === '\\') { i += 2; continue; }
-    if ((state === 'sq' && c === "'") || (state === 'dq' && c === '"') || (state === 'tpl' && c === '`')) state = 'code';
-    // cm:guard An unterminated quote ends at the newline instead of swallowing the rest of the file —
-    // an apostrophe in JSX text ("don't") would otherwise mask every comment marker after it.
-    else if ((state === 'sq' || state === 'dq') && c === '\n') state = 'code';
-    i++;
-  }
-  return out.join('');
-}
-
-// cm:why Type-only imports are dropped here: a screen that imports only a type from an api module
-// does not call it, and counting those turns every shared type into a fake dependency edge.
 // cm:guard Same in-place contract as maskComments: replaces each match with spaces of equal length
 // and keeps every newline, so `lineOf` still resolves to the line the text was on.
 function maskSpans(src: string, patterns: RegExp[]): string {

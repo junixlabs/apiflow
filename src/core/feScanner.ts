@@ -1,3 +1,4 @@
+import { maskComments } from './mask';
 import type { CallEdge, Confidence, FieldNode, MapMethod, ReadEdge, ScreenNode, UnresolvedCall } from './apimap';
 import { endpointId, fieldId, normalizePath, screenId, stripInterpolations, toMapMethod } from './apimap';
 import type { EndpointNode } from './apimap';
@@ -236,36 +237,9 @@ export function resolveUrl(expr: string): ResolvedUrl | { unresolved: string } {
 
 // cm:guard Blanks comment bodies in place, preserving every offset and newline — findCallSites
 // reports byte offsets and line numbers that must still point at the original source.
-export function blankComments(content: string): string {
-  const out = content.split('');
-  let i = 0;
-  let quote: string | null = null;
-  while (i < content.length) {
-    const ch = content[i];
-    const next = content[i + 1];
-    if (quote) {
-      if (ch === '\\') { i += 2; continue; }
-      if (ch === quote) quote = null;
-      i++;
-      continue;
-    }
-    if (ch === '"' || ch === "'" || ch === '`') { quote = ch; i++; continue; }
-    if (ch === '/' && next === '/') {
-      while (i < content.length && content[i] !== '\n') { out[i] = ' '; i++; }
-      continue;
-    }
-    if (ch === '/' && next === '*') {
-      while (i < content.length && !(content[i] === '*' && content[i + 1] === '/')) {
-        if (content[i] !== '\n') out[i] = ' ';
-        i++;
-      }
-      if (i < content.length) { out[i] = ' '; out[i + 1] = ' '; i += 2; }
-      continue;
-    }
-    i++;
-  }
-  return out.join('');
-}
+// cm:edge lockstep -> src/core/mask.ts — kept as a name the BE scanner already imports; the rule
+// itself lives in one place now.
+export { maskComments as blankComments };
 
 interface CallSite {
   line: number;
@@ -553,7 +527,7 @@ export function indexHints(hints: ScanHints | undefined): {
 
 export function scanFile(file: string, rawContent: string, hints?: ScanHints): FileScan {
   const out: FileScan = { screens: [], endpoints: [], fields: [], calls: [], reads: [], unresolved: [] };
-  const content = blankComments(rawContent);
+  const content = maskComments(rawContent);
   if (isServerFile(content)) return { ...out, serverFile: true };
   const sites = findCallSites(content, hints?.wrappers ?? []);
   if (sites.length === 0) return out;

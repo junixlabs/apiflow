@@ -1,7 +1,7 @@
 import type { MapMethod, SourceRef, UnresolvedCall } from './apimap';
 import { normalizePath, toMapMethod } from './apimap';
 import type { ShapeType } from './shape';
-import { blankComments } from './feScanner';
+import { maskComments, maskTemplateText } from './mask';
 
 export type Stack = 'laravel' | 'strapi' | 'node' | 'go' | 'python' | 'generic';
 
@@ -52,8 +52,12 @@ export interface BeFileScan {
 export function detectStack(manifests: Record<string, string>): Stack {
   if ('artisan' in manifests || 'composer.json' in manifests) return 'laravel';
   if ('go.mod' in manifests) return 'go';
-  const pkg = manifests['package.json'];
-  if (pkg) return /@strapi\/strapi/.test(pkg) ? 'strapi' : 'node';
+  // cm:guard Tests PRESENCE, not truthiness. A caller that records "this manifest exists" as an empty
+  // string — which `probe` does — fell through to generic, so every Node repo got the manual checklist
+  // instead of the runnable harness. The content only ever decides strapi-vs-node.
+  if ('package.json' in manifests) {
+    return /@strapi\/strapi/.test(manifests['package.json'] ?? '') ? 'strapi' : 'node';
+  }
   if ('pyproject.toml' in manifests || 'requirements.txt' in manifests) return 'python';
   return 'generic';
 }
@@ -199,7 +203,7 @@ export function laravelRouteFilePrefixes(files: Array<{ file: string; content: s
 
   for (const { file, content } of files) {
     if (!/RouteServiceProvider\.php$/.test(file)) continue;
-    for (const statement of blankComments(content).split(';')) {
+    for (const statement of maskComments(content).split(';')) {
       const group = /->\s*group\s*\(\s*base_path\s*\(\s*(['"])([^'"]+)\1/.exec(statement);
       if (!group) continue;
       const prefix = /Route::\s*prefix\s*\(\s*(['"])([^'"]*)\1|->\s*prefix\s*\(\s*(['"])([^'"]*)\3/.exec(statement);
@@ -211,7 +215,7 @@ export function laravelRouteFilePrefixes(files: Array<{ file: string; content: s
   // unless `apiPrefix` says otherwise — reading only the provider misses every app on that version.
   for (const { file, content } of files) {
     if (!/bootstrap\/app\.php$/.test(file)) continue;
-    const routing = /withRouting\s*\(([\s\S]*?)\)\s*(?:->|;)/.exec(blankComments(content));
+    const routing = /withRouting\s*\(([\s\S]*?)\)\s*(?:->|;)/.exec(maskComments(content));
     if (!routing) continue;
     const apiPrefix = /apiPrefix\s*:\s*(['"])([^'"]*)\1/.exec(routing[1]);
     for (const m of routing[1].matchAll(/(\w+)\s*:\s*[^,]*?(['"])([^'"]*routes\/[\w.-]+\.php)\2/g)) {
@@ -248,7 +252,7 @@ function scanLaravel(file: string, raw: string): BeFileScan {
   const isRouteFile = /(^|\/)routes\//.test(file);
   // cm:guard A commented-out route is not a route: `// Route::post('/x', …)` was landing in the map
   // as a live endpoint, and `#` is a PHP line comment that the shared blanker does not know.
-  const content = isRouteFile ? blankComments(raw).replace(/#[^\n]*/g, (m) => ' '.repeat(m.length)) : raw;
+  const content = isRouteFile ? maskComments(raw).replace(/#[^\n]*/g, (m) => ' '.repeat(m.length)) : raw;
 
   if (isRouteFile) {
     for (const m of content.matchAll(LARAVEL_VERB)) {
@@ -818,7 +822,13 @@ function scanGeneric(file: string, content: string): BeFileScan {
 }
 
 export function scanBackendFile(file: string, rawContent: string, stack: Stack): BeFileScan {
-  const content = blankComments(rawContent);
+  // cm:edge lockstep -> src/core/mask.ts — the JS/TS readers mask template TEXT as well as comments,
+  // because a route declaration never lives inside a template literal while route-shaped JSON in a
+  // doc string does: the probe harness's own example was published as an endpoint of this repo.
+  // cm:guard JS/TS ONLY. A backtick in Go is a RAW STRING, and struct tags live in one — masking it
+  // erased every `json:"id"` and the Go schema reader stopped finding fields at all.
+  const masked = maskComments(rawContent);
+  const content = /\.[cm]?[jt]sx?$/.test(file) ? maskTemplateText(masked) : masked;
   const byStack: Record<Stack, (f: string, c: string) => BeFileScan> = {
     laravel: scanLaravel,
     strapi: scanStrapi,

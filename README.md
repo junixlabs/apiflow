@@ -173,6 +173,7 @@ npm run dev                       # from a clone
 
 - [Getting started](docs/getting-started.md) — the same path with real output, and what to do when a map looks thin
 - [FE here, BE elsewhere](docs/cross-machine.md) — two machines, one map, no server
+- [probe](docs/probe.md) — record real responses, so a field is `observed` and not only declared
 - [File formats](docs/formats.md) — `.apimap`, `.apiview`, and the `.apiflow` layout
 - [Request runner](docs/request-runner.md) — the canvas half, in full
 - [`CHANGELOG.md`](./CHANGELOG.md)

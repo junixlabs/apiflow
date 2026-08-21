@@ -26,6 +26,100 @@ function stackOf(root: string, override?: string): Stack {
   return detectStack(manifests);
 }
 
+
+const SAFE_METHODS = new Set(['GET', 'HEAD']);
+const LOCAL_HOST = /^(localhost|127\.0\.0\.1|\[::1\]|0\.0\.0\.0)$/;
+
+// cm:guard GET and HEAD only unless `--methods` names more AND `--unsafe` is passed. A probe walks
+// every endpoint in the map, and that list contains DELETE — running it against a live API is how a
+// diagnostic tool deletes someone's data.
+// cm:guard A non-local base url needs `--yes-remote`. The same list pointed at a production host is a
+// scripted walk over every write endpoint the map knows about.
+export function liveTargets(
+  endpoints: Array<{ method: string; path: string }>,
+  fills: Record<string, string>,
+  methods: Set<string>
+): { ready: Array<{ method: string; path: string; url: string }>; unfilled: string[] } {
+  const ready: Array<{ method: string; path: string; url: string }> = [];
+  const unfilled: string[] = [];
+  for (const e of endpoints) {
+    if (e.method === 'UNKNOWN' || !methods.has(e.method)) continue;
+    let i = 0;
+    let missing = false;
+    // cm:why Positional: `{param}` carries no name in the map, so `--fill` is read in order —
+    // `--fill=1 --fill=fe` fills the first and second placeholder of a two-param path.
+    const url = e.path.replace(/\{param\}/g, () => {
+      const value = fills[String(i++)] ?? fills.param;
+      if (value === undefined) missing = true;
+      return value ?? '{param}';
+    });
+    if (missing) unfilled.push(`${e.method} ${e.path}`);
+    else ready.push({ method: e.method, path: e.path, url });
+  }
+  return { ready, unfilled };
+}
+
+async function runLive(map: ApiMapFile, base: string, args: string[], mapPath: string): Promise<void> {
+  const flag = (n: string): string | undefined => args.find((a) => a.startsWith(`--${n}=`))?.split('=').slice(1).join('=');
+  const all = args.filter((a) => a.startsWith('--fill=')).map((a) => a.slice('--fill='.length));
+  const fills: Record<string, string> = {};
+  all.forEach((v, i) => { fills[String(i)] = v.includes('=') ? v.split('=').slice(1).join('=') : v; });
+  for (const v of all) if (v.includes('=')) fills[v.split('=')[0]] = v.split('=').slice(1).join('=');
+
+  const url = new URL(base);
+  if (!LOCAL_HOST.test(url.hostname) && !args.includes('--yes-remote')) {
+    console.error(`${url.hostname} is not localhost. Probing a remote host sends every request in the`);
+    console.error('map to it — pass --yes-remote if that is really what you want.');
+    process.exit(2);
+  }
+  const asked = new Set((flag('methods') ?? 'GET').split(',').map((m) => m.trim().toUpperCase()).filter(Boolean));
+  const unsafe = [...asked].filter((m) => !SAFE_METHODS.has(m));
+  if (unsafe.length > 0 && !args.includes('--unsafe')) {
+    console.error(`${unsafe.join(', ')} can change data on the server. Pass --unsafe to send them.`);
+    process.exit(2);
+  }
+
+  const headers: Record<string, string> = { accept: 'application/json' };
+  for (const a of args.filter((x) => x.startsWith('--header='))) {
+    const raw = a.slice('--header='.length);
+    const at = raw.indexOf(':');
+    if (at > 0) headers[raw.slice(0, at).trim()] = raw.slice(at + 1).trim();
+  }
+
+  const { ready, unfilled } = liveTargets(map.endpoints, fills, asked);
+  const samples: ProbeSample[] = [];
+  let failed = 0;
+  for (const t of ready) {
+    try {
+      const res = await fetch(new URL(t.url, base), { method: t.method, headers, signal: AbortSignal.timeout(10_000) });
+      const text = await res.text();
+      // cm:why Records the sample even on a non-2xx and even when the body is not JSON: `ingest` is
+      // what decides a sample is unusable, and it says why per endpoint. Dropping them here would
+      // turn a 500 into silence.
+      let body: unknown = text;
+      try { body = JSON.parse(text); } catch { /* left as text */ }
+      samples.push({ method: t.method, path: t.path, status: res.status, body });
+    } catch (err) {
+      failed++;
+      console.error(`- ${t.method} ${t.url} — ${err instanceof Error ? err.message : String(err)}`);
+    }
+  }
+
+  const out = resolve(flag('out') ?? join(dirname(mapPath), RESULT_FILE));
+  writeFileSync(out, `${JSON.stringify(samples, null, 2)}\n`);
+  console.log('## Probe — live');
+  console.log('');
+  console.log(`**Base**: ${base} · **methods**: ${[...asked].join(', ')}`);
+  console.log(`**Sent**: ${ready.length} · **answered**: ${samples.length} · **unreachable**: ${failed}`);
+  console.log(`**Skipped for an unfilled \`{param}\`**: ${unfilled.length}${unfilled.length > 0 ? ` — pass --fill=<value>` : ''}`);
+  console.log(`**Samples**: ${out}`);
+  const codes = new Map<number, number>();
+  for (const s of samples) codes.set(s.status, (codes.get(s.status) ?? 0) + 1);
+  console.log(`**Status**: ${[...codes].sort((a, b) => a[0] - b[0]).map(([c, n]) => `${c}×${n}`).join(' · ')}`);
+  console.log('');
+  console.log(`Feed it back: \`apiflow probe ${mapPath} --ingest=${out}\``);
+}
+
 function main(): void {
   tolerateClosedPipe();
   const args = process.argv.slice(2);
@@ -34,6 +128,7 @@ function main(): void {
 
   if (positional.length === 0) {
     console.error('Usage: apiflow probe <file.apimap> --emit[=<dir>] | --ingest=<results.json>');
+    console.error('       apiflow probe <file.apimap> --live=<baseUrl> [--fill=<value>…] [--methods=GET]');
     process.exit(1);
   }
   const mapPath = resolve(positional[0]);
@@ -69,6 +164,12 @@ function main(): void {
     return;
   }
 
+  const live = flag('live');
+  if (live !== undefined) {
+    void runLive(map, live, args, mapPath);
+    return;
+  }
+
   const root = flag('root') ?? localRootFor(map.metadata.root);
   if (root === undefined) {
     console.error(`No idea where ${map.metadata.root} lives on this machine.`);
@@ -77,7 +178,10 @@ function main(): void {
     process.exit(1);
   }
   const emitDir = resolve(flag('emit') ?? root);
-  const stack = stackOf(emitDir, flag('stack'));
+  // cm:guard The stack belongs to the REPO being probed, not to the directory the harness is written
+  // to. Reading it from --emit meant any path outside the repo detected as `generic`, so every Node
+  // project got the manual checklist instead of the runnable test — which is why nobody ever ran it.
+  const stack = stackOf(root, flag('stack'));
   const harness = buildHarness(stack, map.endpoints, RESULT_FILE);
   const target = join(emitDir, harness.filename);
   mkdirSync(dirname(target), { recursive: true });

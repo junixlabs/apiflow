@@ -15,7 +15,7 @@ import { tolerateClosedPipe } from './stdio';
 
 // cm:edge contract -> src/cli/check.ts readerChanged() — the READER's version, bumped in the same
 // commit as any change to what the FE reader produces for unchanged input.
-export const GENERATOR = 'apiflow scan-fe/2';
+export const GENERATOR = 'apiflow scan-fe/3';
 
 const SKIP_DIRS = new Set([
   'node_modules', 'dist', 'build', 'coverage', '.next', '.nuxt', '.git', '.svelte-kit',
