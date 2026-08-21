@@ -41,6 +41,9 @@ export const ADD_DIALOG = `<dialog id="add-dlg" class="dlg">
     <label>Name<input name="name" autocomplete="off" required placeholder="Adminhub"></label>
     <label>FE directory<input name="fe" autocomplete="off" placeholder="/home/you/services/adminhub-ui"></label>
     <label>BE directory<input name="be" autocomplete="off" placeholder="/home/you/services/adminhub-api"></label>
+    <p class="dsub">A side that lives on another machine has no directory here. Scan it there, copy the <code>.apimap</code> over and name the file below — a map is content-derived and timestamp-free, so the file is the whole handover.</p>
+    <label>FE map file <span class="opt">(scanned elsewhere)</span><input name="feMap" autocomplete="off" placeholder="/home/you/handover/fe.apimap"></label>
+    <label>BE map file <span class="opt">(scanned elsewhere)</span><input name="beMap" autocomplete="off" placeholder="/home/you/handover/be.apimap"></label>
     <label id="add-idrow">id <span class="opt">(left blank, derived from the name)</span><input name="id" autocomplete="off" placeholder="adminhub"></label>
     <label>file hints <span class="opt">(optional)</span><input name="hints" autocomplete="off"></label>
     <p class="dmsg" id="add-msg"></p>
@@ -182,7 +185,7 @@ if (addDlg) {
   // is a second place for the FE/BE validation wording to drift.
   const open = (entry) => {
     editing = entry || null;
-    for (const field of ['name', 'fe', 'be', 'id', 'hints']) form.elements[field].value = '';
+    for (const field of ['name', 'fe', 'be', 'id', 'hints', 'feMap', 'beMap']) form.elements[field].value = '';
     $id('add-title').textContent = editing ? 'Edit roots — ' + editing.id : 'Add project';
     $id('add-idrow').style.display = editing ? 'none' : '';
     // cm:guard Says the id cannot change and WHY: the id is the directory the maps live in, so
@@ -211,13 +214,21 @@ if (addDlg) {
   form.onsubmit = (ev) => {
     ev.preventDefault();
     const body = {};
-    for (const field of ['name', 'fe', 'be', 'id', 'hints']) {
+    for (const field of ['name', 'fe', 'be', 'id', 'hints', 'feMap', 'beMap']) {
       const value = form.elements[field].value.trim();
       if (value !== '') body[field] = value;
     }
     // cm:guard On edit, sends every root field even when empty — the server reads an empty string as
     // "clear this side", and omitting it would make clearing a BE root impossible from this form.
     if (editing) for (const field of ['fe', 'be', 'hints']) body[field] = form.elements[field].value.trim();
+    // cm:why A map file is imported, never stored as a root: re-importing is the step people repeat
+    // every time the other machine re-scans, so the field is read on edit too.
+    const imports = [];
+    for (const side of ['fe', 'be']) {
+      const value = form.elements[side + 'Map'].value.trim();
+      if (value !== '') imports.push({ kind: side, file: value });
+    }
+    if (editing) for (const side of ['fe', 'be']) delete body[side + 'Map'];
 
     say(editing ? 'saving…' : 'adding…');
     $id('add-save').disabled = true;
@@ -230,9 +241,28 @@ if (addDlg) {
       .then((result) => {
         $id('add-save').disabled = false;
         if (!result.ok) { say(result.data.message || 'could not save', 'bad'); return; }
+        if (editing && imports.length > 0) {
+          say('importing…');
+          const next = (i) => {
+            if (i >= imports.length) { addDlg.close(); location.reload(); return; }
+            fetch('/api/projects/' + editing.id + '/import', {
+              method: 'POST',
+              headers: { 'content-type': 'application/json' },
+              body: JSON.stringify(imports[i]),
+            })
+              .then((res) => res.json().then((data) => ({ ok: res.ok, data })))
+              .then((r) => { if (!r.ok) { say(r.data.message || 'could not import', 'bad'); return; } next(i + 1); })
+              .catch((err) => say('could not reach the server: ' + err.message, 'bad'));
+          };
+          next(0);
+          return;
+        }
         const entry = result.data.project;
         addDlg.close();
         say('');
+        // cm:guard A project whose only side was imported has nothing to scan on this machine, and
+        // asking for one answers "no directory to scan" — which reads as a failed add.
+        if (!entry.fe && !entry.be) { location.href = '/p/' + entry.id; return; }
         // cm:why Scans right away instead of linking to the new project: /p/<id> has no map yet and
         // would answer with a bare "no map yet", which reads as a failed add. On an edit the map
         // that exists was scanned from the OLD directory, so the same scan is what makes it true again.

@@ -172,6 +172,7 @@ npm run dev                       # from a clone
 ## Docs
 
 - [Getting started](docs/getting-started.md) — the same path with real output, and what to do when a map looks thin
+- [FE here, BE elsewhere](docs/cross-machine.md) — two machines, one map, no server
 - [File formats](docs/formats.md) — `.apimap`, `.apiview`, and the `.apiflow` layout
 - [Request runner](docs/request-runner.md) — the canvas half, in full
 - [`CHANGELOG.md`](./CHANGELOG.md)

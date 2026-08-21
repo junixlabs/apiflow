@@ -11,7 +11,9 @@ import type { MapKind } from '../workspace/store';
 import { historyOf, mapPath, projectDir, readMap } from '../workspace/store';
 import type { MapDiff } from '../workspace/diff';
 import { diffMaps } from '../workspace/diff';
+import type { Side } from '../core/apimap';
 import { parseMap } from '../core/apimap';
+import { importMap, readImportable } from '../workspace/importMap';
 import { sidesOf } from '../workspace/sides';
 import { endpointHistory, mapSeries } from '../workspace/series';
 import { existsSync, readFileSync } from 'fs';
@@ -103,8 +105,14 @@ export function buildApp(): Express {
     }
     const fe = text('fe');
     const be = text('be');
-    if (fe === undefined && be === undefined) {
-      res.status(400).json({ error: 'NO_ROOT', message: 'needs at least an FE or a BE directory' });
+    const maps = (['fe', 'be'] as const)
+      .map((kind) => ({ kind, file: text(`${kind}Map`) }))
+      .filter((m): m is { kind: Side; file: string } => m.file !== undefined);
+    if (fe === undefined && be === undefined && maps.length === 0) {
+      res.status(400).json({
+        error: 'NO_ROOT',
+        message: 'needs at least an FE or a BE directory, or a map file scanned on another machine',
+      });
       return;
     }
     const id = text('id') ?? slug(name);
@@ -116,8 +124,34 @@ export function buildApp(): Express {
       return;
     }
     try {
-      const entry = addProject({ name, fe, be, hints: text('hints'), id });
+      // cm:guard Reads every map BEFORE registering the project, so a bad path cannot leave a
+      // half-created project behind — importMap needs the project directory to write into.
+      for (const m of maps) readImportable(m.kind, m.file);
+      const entry = addProject({ name, fe, be, hints: text('hints'), id, imported: maps.map((m) => m.kind) });
+      for (const m of maps) importMap(entry.id, m.kind, m.file);
       res.status(201).json({ project: entry });
+    } catch (err) {
+      res.status(400).json({ error: 'REFUSED', message: err instanceof Error ? err.message : String(err) });
+    }
+  });
+
+  // cm:why Import is its own route rather than part of PATCH: it is the step that repeats. Every
+  // re-scan on the other machine produces a new file, and each import writes a history entry and
+  // re-links, exactly as a local scan does.
+  app.post('/api/projects/:id/import', localWritesOnly, (req: Request<{ id: string }>, res) => {
+    const body = (req.body ?? {}) as Record<string, unknown>;
+    const kind = body.kind === 'be' ? 'be' : body.kind === 'fe' ? 'fe' : null;
+    const file = typeof body.file === 'string' && body.file.trim() !== '' ? body.file.trim() : null;
+    if (kind === null || file === null) {
+      res.status(400).json({ error: 'BAD_IMPORT', message: 'needs { kind: "fe" | "be", file: "<path>.apimap" }' });
+      return;
+    }
+    if (findProject(req.params.id) === undefined) {
+      res.status(404).json({ error: 'NO_PROJECT', message: `no project named ${req.params.id}` });
+      return;
+    }
+    try {
+      res.json({ imported: importMap(req.params.id, kind, file) });
     } catch (err) {
       res.status(400).json({ error: 'REFUSED', message: err instanceof Error ? err.message : String(err) });
     }

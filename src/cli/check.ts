@@ -2,7 +2,8 @@ import { readFileSync, realpathSync, writeFileSync } from 'fs';
 import { resolve } from 'path';
 import { fileURLToPath } from 'url';
 import type { ApiMapFile } from '../core/apimap';
-import { parseMap, serializeMap } from '../core/apimap';
+import type { Side } from '../core/apimap';
+import { parseMap, serializeMap, sideOf } from '../core/apimap';
 import type { MapDiff } from '../workspace/diff';
 import { diffMaps } from '../workspace/diff';
 import { localRootFor } from '../workspace/registry';
@@ -11,13 +12,6 @@ import { scanBackend } from './scanBe';
 import { scanDirectory } from './scanFe';
 import { tolerateClosedPipe } from './stdio';
 
-export type Side = 'fe' | 'be';
-
-export function sideOf(map: ApiMapFile): Side | null {
-  if (map.metadata.generator.includes('scan-fe')) return 'fe';
-  if (map.metadata.generator.includes('scan-be')) return 'be';
-  return null;
-}
 
 export function rescan(side: Side, root: string, name: string): ApiMapFile {
   return side === 'fe' ? scanDirectory(root, name) : scanBackend(root, name).map;

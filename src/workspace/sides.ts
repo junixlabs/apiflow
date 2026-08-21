@@ -1,10 +1,13 @@
 import { findProject } from './registry';
-import { statusOf } from './store';
+import { readMap, statusOf } from './store';
 import { gitHead } from './gitInfo';
 
 export interface SideInfo {
   kind: 'fe' | 'be';
   root: string;
+  // cm:why A side scanned on another machine has a map and no directory here. Without this flag the
+  // header offered a "Re-scan BE" button for a root that does not exist on this filesystem.
+  imported?: true;
   branch?: string;
   sha?: string;
   scannedAt?: string;
@@ -19,7 +22,11 @@ export function sidesOf(id: string): SideInfo[] {
   const out: SideInfo[] = [];
   for (const kind of ['fe', 'be'] as const) {
     const root = entry[kind];
-    if (root === undefined) continue;
+    if (root === undefined) {
+      const imported = readMap(id, kind);
+      if (imported !== null) out.push({ kind, root: imported.metadata.root, imported: true, scannedAt: when.get(kind) });
+      continue;
+    }
     const git = gitHead(root);
     out.push({ kind, root, branch: git?.branch, sha: git?.sha, scannedAt: when.get(kind) });
   }

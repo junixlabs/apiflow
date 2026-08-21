@@ -4,6 +4,40 @@ All notable changes to API View are documented here.
 
 ---
 
+## [1.1.5] — 2026-08-21
+
+### Added — a project side can live on another machine
+
+- **`apiflow project import <id> --fe=<file.apimap> | --be=<file.apimap>`**, plus `--fe-map=` /
+  `--be-map=` on `project add`, and the same two fields on **Add project** and **Edit roots** in the
+  browser. A frontend on one machine and an API on another no longer need two workspaces: scan each
+  side where its code lives, move the `.apimap`, import it.
+- **The value is the join, not the transfer.** Once both halves are in one workspace, the API side of
+  the map can be asked the frontend's question — `impact --endpoint="DELETE /api/v1/attributes/{param}"`
+  answers *which screens break*, from a handler name. Measured on a real pair: 240 screens, 1092
+  endpoints, 491 seen from both sides.
+- Nothing is hosted, and nothing needs to be. An `.apimap` is derived from content alone — no
+  timestamps, no coordinates — so it is a handover artefact by construction. `apiflow ui` still binds
+  `127.0.0.1` with no flag to widen it, because a map carries real production paths.
+- Import writes a history entry and re-links, exactly as a local scan does, so `check` and the Compare
+  pane show what moved between two scans that happened on a different device.
+- An imported side is labelled as one rather than pretending: the header shows `BE imported` with the
+  root it was scanned on instead of a Re-scan button, `project ls` prints
+  `imported — scanned on <root> (no directory on this machine)`, and `project scan` names the machine
+  it came from instead of answering "no directory to scan".
+- Refused, with the reason: a map of the wrong half (an fe map in the be slot would make the
+  reconciliation compare a side against itself and report perfect agreement), a linked map, a path
+  that is not a file, and a project with neither a directory nor an import.
+- New: `docs/cross-machine.md`.
+
+### Changed
+
+- `sideOf` moved from `src/cli/check.ts` to `src/core/apimap.ts` — the import path is the only change;
+  three call sites follow it. Which half a map is comes from its generator string, and that rule now
+  has one home.
+
+---
+
 ## [1.1.4] — 2026-08-21
 
 Both fixes come from Pass B of the map audit — walking whole user flows instead of sampling the rows

@@ -83,6 +83,7 @@ export function checkRoot(label: string, value: string): string {
 
 export interface AddOptions {
   name: string;
+  imported?: Array<'fe' | 'be'>;
   fe?: string;
   be?: string;
   hints?: string;
@@ -92,8 +93,11 @@ export interface AddOptions {
 export function addProject(options: AddOptions): ProjectEntry {
   const id = options.id !== undefined && options.id !== '' ? options.id : slug(options.name);
   if (!ID.test(id)) throw new Error(`invalid id (a-z, 0-9 and dashes only): ${id}`);
-  if (options.fe === undefined && options.be === undefined) {
-    throw new Error('needs at least an FE or a BE directory');
+  // cm:why An imported side counts as a side. A BE that runs on another machine has no directory
+  // here, and refusing the project would push the whole cross-machine case out of the workspace —
+  // where linking, reconciliation and the alert list all live.
+  if (options.fe === undefined && options.be === undefined && (options.imported ?? []).length === 0) {
+    throw new Error('needs at least an FE or a BE directory, or a map file to import');
   }
   const workspace = readWorkspace();
   if (workspace.projects.some((p) => p.id === id)) throw new Error(`project already exists: ${id}`);

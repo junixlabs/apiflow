@@ -120,10 +120,17 @@ function header(payload: AppPayload, name: string): string {
         data-hints="${escapeHtml(payload.hints ?? '')}">Edit roots</button>`;
   // cm:why `+ Add project` is a workspace action, so it lives at the foot of the rail on this page and
   // on the hub alike. In this row it read as one of the things you can do TO the project you opened.
+  // cm:guard A side with no directory on this machine gets no scan button: pressing it answers "no
+  // directory to scan", which reads as a broken project when the truth is the side arrives as a file.
+  const scannable = (kind: 'fe' | 'be') => sides.some((s) => s.kind === kind && s.imported !== true);
+  const scanBtn = (kind: 'fe' | 'be', cls: string) =>
+    scannable(kind) || sides.every((s) => s.kind !== kind)
+      ? `<button class="btn ${cls}" id="scan-${kind}">Re-scan ${kind.toUpperCase()}</button>`
+      : `<button class="btn" disabled title="${kind.toUpperCase()} was scanned on ${escapeHtml(root(kind))} and imported as a file — re-import it to update">${kind.toUpperCase()} imported</button>`;
   const scanBtns = payload.live
     ? `<div class="btnrow">
-        ${payload.projectId === undefined ? '' : `<button class="btn primary" id="scan-fe">Re-scan FE</button>
-        <button class="btn" id="scan-be">Re-scan BE</button>`}
+        ${payload.projectId === undefined ? '' : `${scanBtn('fe', 'primary')}
+        ${scanBtn('be', '')}`}
         ${editBtn}
       </div>`
     : '';

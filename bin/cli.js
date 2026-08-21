@@ -32,6 +32,8 @@ const HELP = `apiflow — a screen ↔ endpoint ↔ field map
   apiflow hub --out=<dir>        export the workspace as static HTML
 
   apiflow project add <name> --fe=<dir> [--be=<dir>] [--id=<slug>]
+                                 [--fe-map=<file>] [--be-map=<file>]  a side scanned elsewhere
+  apiflow project import <id> --fe=<file.apimap> | --be=<file.apimap>
   apiflow project ls [--json]
   apiflow project scan <id> [--fe] [--be]
   apiflow project rm <id>

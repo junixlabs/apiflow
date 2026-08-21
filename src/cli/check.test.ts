@@ -3,7 +3,8 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
 import { createApiMap } from '../core/apimap';
-import { checkAgainst, renderCheck, rescan, sideOf } from './check';
+import { checkAgainst, renderCheck, rescan } from './check';
+import { sideOf } from '../core/apimap';
 
 function repo(): string {
   const root = mkdtempSync(join(tmpdir(), 'apiflow-check-'));

@@ -243,6 +243,19 @@ export function finalizeApiMap(map: ApiMapFile): ApiMapFile {
   };
 }
 
+export type Side = 'fe' | 'be';
+
+// cm:why Which half a map is comes from the generator string, not from the file name: the same map
+// is read from ~/.apiflow, from a --out path and from a file copied off another machine, and only
+// one of those three carries a name anyone chose.
+// cm:edge contract -> src/cli/scanFe.ts · src/cli/scanBe.ts — they write `apiflow scan-fe/N` and
+// `apiflow scan-be/N`; a generator string that stops matching makes every map sideless.
+export function sideOf(map: ApiMapFile): Side | null {
+  if (map.metadata.generator.includes('scan-fe')) return 'fe';
+  if (map.metadata.generator.includes('scan-be')) return 'be';
+  return null;
+}
+
 export interface ImpactAnswer {
   endpoint: EndpointNode | null;
   screens: Array<{ screen: ScreenNode; confidence: Confidence; source: SourceRef; chain?: ChainNode[]; callSites: number; inheritedFrom?: string; hops?: number }>;

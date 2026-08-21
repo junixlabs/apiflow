@@ -1,8 +1,8 @@
 import { existsSync, readFileSync } from 'fs';
 import { resolve } from 'path';
 import type { ApiMapFile, Confidence, ImpactAnswer } from '../core/apimap';
-import { endpointsForScreen, parseMap, screenIdsForRoute, screensAffectedByEndpoint, screensAffectedByField } from '../core/apimap';
-import { checkAgainst, rescan, sideOf } from '../cli/check';
+import { endpointsForScreen, parseMap, screenIdsForRoute, screensAffectedByEndpoint, screensAffectedByField, sideOf } from '../core/apimap';
+import { checkAgainst, rescan } from '../cli/check';
 import { otherMethodsOn, resolveEndpointQuery, resolveFieldQuery } from '../cli/impact';
 import { alertCounts, alerts } from '../workspace/alerts';
 import { findProject, localRootFor, readWorkspace } from '../workspace/registry';
