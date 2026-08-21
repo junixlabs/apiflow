@@ -35,15 +35,66 @@ const LAZY_IMPORT =
   /(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*(?:React\s*\.\s*)?lazy\s*\(\s*(?:async\s*)?\(\s*\)\s*=>\s*import\s*\(\s*(['"])([^'"]+)\2/g;
 const DYNAMIC_IMPORT = /(?<!\.)\bimport\s*\(\s*(['"])([^'"]+)\1/g;
 
+// cm:guard Masks comments IN PLACE — same length, newlines kept — because every line number and
+// every lookbehind below is an index into this string, and a shorter copy silently moves them.
+// cm:why A `\bname\b` scan over raw source counts prose as code: a barrel whose comment lists the
+// components it adapts produced a usage with no enclosing declaration, which widened the chain to
+// ANY and sent one call to every route importing that barrel — measured at 10 of 11 wrong screens on
+// a real app. Codebases that document well were penalised the hardest.
+// cm:why Bare `//` in JSX text (an unquoted url) is masked to end of line — accepted, because a
+// quoted url is protected by the string states and unquoted prose holds no identifiers worth an edge.
+export function maskComments(src: string): string {
+  const out = src.split('');
+  let state: 'code' | 'line' | 'block' | 'sq' | 'dq' | 'tpl' = 'code';
+  let i = 0;
+  while (i < src.length) {
+    const c = src[i];
+    const d = src[i + 1];
+    if (state === 'code') {
+      // cm:guard `/\/\//g` is a regex, not a comment: the escape before the slash is the only thing
+      // that separates them without parsing, so a preceding backslash vetoes the comment.
+      if (c === '/' && d === '/' && src[i - 1] !== '\\') { state = 'line'; out[i] = ' '; out[i + 1] = ' '; i += 2; continue; }
+      if (c === '/' && d === '*') { state = 'block'; out[i] = ' '; out[i + 1] = ' '; i += 2; continue; }
+      if (c === "'") state = 'sq';
+      else if (c === '"') state = 'dq';
+      else if (c === '`') state = 'tpl';
+      i++;
+      continue;
+    }
+    if (state === 'line') {
+      if (c === '\n') { state = 'code'; i++; continue; }
+      out[i] = ' ';
+      i++;
+      continue;
+    }
+    if (state === 'block') {
+      if (c === '*' && d === '/') { out[i] = ' '; out[i + 1] = ' '; state = 'code'; i += 2; continue; }
+      if (c !== '\n') out[i] = ' ';
+      i++;
+      continue;
+    }
+    if (c === '\\') { i += 2; continue; }
+    if ((state === 'sq' && c === "'") || (state === 'dq' && c === '"') || (state === 'tpl' && c === '`')) state = 'code';
+    // cm:guard An unterminated quote ends at the newline instead of swallowing the rest of the file —
+    // an apostrophe in JSX text ("don't") would otherwise mask every comment marker after it.
+    else if ((state === 'sq' || state === 'dq') && c === '\n') state = 'code';
+    i++;
+  }
+  return out.join('');
+}
+
 // cm:why Type-only imports are dropped here: a screen that imports only a type from an api module
 // does not call it, and counting those turns every shared type into a fake dependency edge.
 export function parseModule(content: string): ParsedModule {
   const imports: ImportBinding[] = [];
   const exports = new Set<string>();
   const reexports: string[] = [];
-  const lineOf = (idx: number) => content.slice(0, idx).split('\n').length;
+  // cm:edge lockstep -> maskComments — every scan below reads `code`, never `content`: a commented-out
+  // import used to create a real dependency edge, and prose naming a symbol used to create a usage.
+  const code = maskComments(content);
+  const lineOf = (idx: number) => code.slice(0, idx).split('\n').length;
 
-  for (const m of content.matchAll(IMPORT)) {
+  for (const m of code.matchAll(IMPORT)) {
     if (m[1]) continue;
     const clause = m[2].trim();
     const from = m[4];
@@ -71,20 +122,20 @@ export function parseModule(content: string): ParsedModule {
   }
 
   const lazyLocals = new Set<string>();
-  for (const m of content.matchAll(LAZY_IMPORT)) {
+  for (const m of code.matchAll(LAZY_IMPORT)) {
     lazyLocals.add(m[1]);
     imports.push({ imported: 'default', local: m[1], from: m[3], line: lineOf(m.index) });
   }
   // cm:why A dynamic import with no name still couples the two files — recorded as `*` so a consumer
   // edge exists without claiming to know which symbol travelled across it.
-  for (const m of content.matchAll(DYNAMIC_IMPORT)) {
+  for (const m of code.matchAll(DYNAMIC_IMPORT)) {
     if (imports.some((i) => i.from === m[2])) continue;
     imports.push({ imported: '*', local: '*', from: m[2], line: lineOf(m.index) });
   }
 
-  for (const m of content.matchAll(REEXPORT)) reexports.push(m[2]);
-  for (const m of content.matchAll(EXPORT_NAMED)) exports.add(m[1]);
-  for (const m of content.matchAll(EXPORT_LIST)) {
+  for (const m of code.matchAll(REEXPORT)) reexports.push(m[2]);
+  for (const m of code.matchAll(EXPORT_NAMED)) exports.add(m[1]);
+  for (const m of code.matchAll(EXPORT_LIST)) {
     for (const part of m[1].split(',')) {
       const spec = part.trim().replace(/^type\s+/, '');
       const alias = /\s+as\s+([A-Za-z_$][\w$]*)$/.exec(spec);
@@ -92,11 +143,11 @@ export function parseModule(content: string): ParsedModule {
       else if (/^[A-Za-z_$][\w$]*$/.test(spec)) exports.add(spec);
     }
   }
-  if (/export\s+default\b/.test(content)) exports.add('default');
+  if (/export\s+default\b/.test(code)) exports.add('default');
   // cm:why `export default addUserBank` is the only export of most api modules; not recording the
   // NAME it exports forces every chain through that file to widen to ANY and lose its precision.
-  const defaultExport = (/export\s+default\s+(?:async\s+)?(?:function|class)\s+([A-Za-z_$][\w$]*)/.exec(content)
-    ?? /export\s+default\s+([A-Za-z_$][\w$]*)\s*;?[ \t]*(?:\/\/[^\n]*)?$/m.exec(content))?.[1];
+  const defaultExport = (/export\s+default\s+(?:async\s+)?(?:function|class)\s+([A-Za-z_$][\w$]*)/.exec(code)
+    ?? /export\s+default\s+([A-Za-z_$][\w$]*)\s*;?[ \t]*(?:\/\/[^\n]*)?$/m.exec(code))?.[1];
   if (defaultExport !== undefined) exports.add(defaultExport);
 
   const usages: Usage[] = [];
@@ -105,20 +156,20 @@ export function parseModule(content: string): ParsedModule {
   const locals = new Set(imports.map((i) => i.local).filter((l) => IDENTIFIER.test(l)));
   for (const local of locals) {
     const re = new RegExp(`\\b${local}\\b(?:\\s*\\.\\s*([A-Za-z_$][\\w$]*))?`, 'g');
-    for (const m of content.matchAll(re)) {
-      const before = content.slice(Math.max(0, m.index - 24), m.index);
+    for (const m of code.matchAll(re)) {
+      const before = code.slice(Math.max(0, m.index - 24), m.index);
       if (/(import|from)\s*[{,\s]*$/.test(before)) continue;
       usages.push({ symbol: local, member: m[1], line: lineOf(m.index) });
     }
   }
   const declarations = new Set<string>();
-  for (const m of content.matchAll(DECLARATION)) declarations.add(m[1]);
+  for (const m of code.matchAll(DECLARATION)) declarations.add(m[1]);
 
   const localUsages: Usage[] = [];
   for (const local of declarations) {
     const re = new RegExp(`\\b${local}\\b(?:\\s*\\.\\s*([A-Za-z_$][\\w$]*))?`, 'g');
-    for (const m of content.matchAll(re)) {
-      const before = content.slice(Math.max(0, m.index - 40), m.index);
+    for (const m of code.matchAll(re)) {
+      const before = code.slice(Math.max(0, m.index - 40), m.index);
       if (/(import|from|export)\s*[{,\s]*$/.test(before)) continue;
       if (/(?:const|let|var|function|class)\s+$/.test(before)) continue;
       localUsages.push({ symbol: local, member: m[1], line: lineOf(m.index) });

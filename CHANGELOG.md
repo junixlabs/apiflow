@@ -4,6 +4,32 @@ All notable changes to API View are documented here.
 
 ---
 
+## [Unreleased]
+
+### Fixed — a comment naming a symbol is no longer a call
+
+- **`parseModule` scanned comments as code, so documentation invented dependency edges.** The reader
+  looks for `\bname\b` to decide which imports a file actually uses; run over raw source, a comment
+  that names a symbol counts as a usage. A usage with no enclosing declaration widens the chain to
+  `ANY`, and `ANY` matches *every* importer of the file regardless of which export it took — so one
+  call fanned out to every route touching the barrel. Two real examples, both from comments this
+  project itself would encourage writing:
+  - `features/setup/sections.tsx:7` — a comment listing the four components the barrel adapts sent
+    `GET /projects/{param}/identity` to all four setup routes instead of `/setup/identity`.
+  - `lib/auth-api.ts:85` — a comment on `logout` mentioning `login` created a `login → logout` edge
+    and attributed `POST /auth/login` to the authenticated shell.
+
+  Comments are now masked **in place** — same length, newlines kept — because every line number and
+  every lookbehind in the parser is an index into that string. Measured on a real 128-call frontend:
+  calls 182 → 128 (54 were phantom), `guess` 76% → 64%, `PATCH …/policy` 10 screens → 3 (correct),
+  and a fresh 28-claim audit sample went from 17/28 right to **28/28**. Codebases that document well
+  were the ones penalised hardest.
+
+  Re-scanning an existing project will change its map. That is the correction landing, and `check`
+  will report it as drift.
+
+---
+
 ## [1.1.0] — 2026-08-21
 
 ### Changed — the repo speaks English

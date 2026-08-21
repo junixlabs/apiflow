@@ -226,3 +226,77 @@ describe('anonymous dynamic import', () => {
     expect(parsed.exports).toContain('addUserBank');
   });
 });
+
+// cm:why The shape is copied from a real app: a barrel whose own comment NAMES the components it
+// adapts, and an api module whose comment on one export mentions another. Both were producing usages
+// at the comment's line, and the widening that followed sent one call to every route in the barrel.
+describe('a comment that names a symbol is not a usage', () => {
+  const BARREL = `import { BrandVoice } from './brand-voice';
+import { PipelineTab } from './pipeline-tab';
+
+// cm:why thin adapters — BrandVoice/PipelineTab keep taking a plain projectId prop
+export function SetupBrandVoice() {
+  return <BrandVoice projectId={id} />;
+}
+
+export function SetupPipeline() {
+  return <PipelineTab projectId={id} />;
+}`;
+
+  it('reads the JSX line and not the comment line', () => {
+    const usages = parseModule(BARREL).usages.filter((u) => u.symbol === 'BrandVoice');
+    expect(usages.map((u) => u.line)).toEqual([6]);
+  });
+
+  it('does not invent a local usage from prose about another export', () => {
+    const parsed = parseModule(`export async function login() {}
+
+// cm:why the same bypass as login: a wrong password answers 401
+export async function changePassword() {}`);
+    expect(parsed.localUsages.filter((u) => u.symbol === 'login')).toEqual([]);
+  });
+
+  it('keeps a url that contains // and the code after a masked comment', () => {
+    const parsed = parseModule(`import { get } from './c';
+const base = 'https://api.example.com'; // the base
+export const load = () => get(base);`);
+    expect(parsed.usages.filter((u) => u.symbol === 'get').map((u) => u.line)).toEqual([3]);
+  });
+
+  it('attributes a barrel export only to the route that imports it', () => {
+    const files: Record<string, string> = {
+      'src/lib/data.ts': `import { api } from './client';
+export function useBrandProfile() { return api.get('/brand-profile'); }`,
+      'src/features/brand-voice.tsx': `import { useBrandProfile } from '@/lib/data';
+export function BrandVoice() { return useBrandProfile(); }`,
+      'src/features/pipeline-tab.tsx': 'export function PipelineTab() { return null; }',
+      'src/features/sections.tsx': BARREL,
+      'src/app/brand-voice/page.tsx': `import { SetupBrandVoice } from '@/features/sections';
+export default function Page() { return <SetupBrandVoice />; }`,
+      'src/app/pipeline/page.tsx': `import { SetupPipeline } from '@/features/sections';
+export default function Page() { return <SetupPipeline />; }`,
+    };
+    const resolveBarrel: ResolveImport = (_from, spec) => ({
+      '@/lib/data': 'src/lib/data.ts',
+      '@/features/sections': 'src/features/sections.tsx',
+      './brand-voice': 'src/features/brand-voice.tsx',
+      './pipeline-tab': 'src/features/pipeline-tab.tsx',
+    }[spec] ?? null);
+    const nodes: ModuleNode[] = Object.entries(files).map(([file, content]) => ({
+      file,
+      parsed: parseModule(content),
+      route: file.startsWith('src/app/') ? `/${file.split('/')[2]}` : undefined,
+    }));
+    const at = (file: string, line: number) => {
+      const content = files[file] ?? '';
+      const symbols = enclosingSymbols(content);
+      return { symbol: symbolAt(symbols, line, file), member: memberAt(objectMembers(content), symbols, line, content.split('\n')) };
+    };
+    const routes = attributeToScreens(
+      { file: 'src/features/brand-voice.tsx', symbol: 'BrandVoice' },
+      buildCallerGraph(nodes, resolveBarrel),
+      at
+    ).map((a) => a.route);
+    expect(routes).toEqual(['/brand-voice']);
+  });
+});
