@@ -1,6 +1,6 @@
 {
   "name": "@junixlabs/apiflow-scan",
-  "version": "1.1.13",
+  "version": "1.2.0",
   "private": true,
   "description": "Read a frontend or backend on disk and produce an .apimap: screens, endpoints, fields, and the call sites that join them.",
   "type": "module",
@@ -15,6 +15,6 @@
     "url": "https://github.com/junixlabs/apiflow"
   },
   "dependencies": {
-    "@junixlabs/apiflow-map": "1.1.13"
+    "@junixlabs/apiflow-map": "1.2.0"
   }
 }

@@ -1,6 +1,6 @@
 {
   "name": "@junixlabs/apiflow",
-  "version": "1.1.13",
+  "version": "1.2.0",
   "description": "A screen ↔ endpoint ↔ field dependency map: answers which screens break if you change an endpoint or a response field. Local-first, git-friendly, open source.",
   "type": "module",
   "license": "MIT",
@@ -40,8 +40,8 @@
     "postpack": "node ../../scripts/prepack-bundle.mjs --clean"
   },
   "dependencies": {
-    "@junixlabs/apiflow-map": "1.1.13",
-    "@junixlabs/apiflow-scan": "1.1.13",
+    "@junixlabs/apiflow-map": "1.2.0",
+    "@junixlabs/apiflow-scan": "1.2.0",
     "@modelcontextprotocol/sdk": "^1.27.1",
     "express": "^5.1.0",
     "tsx": "^4.19.3",

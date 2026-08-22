@@ -4,9 +4,14 @@ All notable changes to apiflow are documented here.
 
 ---
 
-## [Unreleased]
+## [1.2.0] — 2026-08-23
 
 The request runner is no longer part of this package.
+
+**A minor bump carrying a breaking removal, deliberately.** Strict semver says 2.0.0. The canvas was
+never the thing this package was installed for — the map was — so the number stays 1.x and the
+removal is made loud instead: both dropped spellings exit 1 with a pointer, and the section below
+leads with what is gone.
 
 ### Removed — the canvas, and the two commands that opened it
 

@@ -27,10 +27,16 @@ describe('one published artifact', () => {
     expect(cli.private).toBeUndefined();
   });
 
-  it('pins the bundled versions to what is on disk', () => {
-    for (const dep of WORKSPACE_DEPS) {
-      const dir = dep.replace('@junixlabs/apiflow-', '');
-      expect(cli.dependencies[dep]).toBe(read(`packages/${dir}/package.json`).version);
+  // cm:edge lockstep -> RELEASE.md — "version numbers across the workspace packages move together" is
+  // a ritual step, so it gets a gate: a partial bump fails here instead of at someone's `npm ci`.
+  it('pins every workspace dependency to the version on disk', () => {
+    for (const from of ['cli', 'map', 'scan']) {
+      const deps = read(`packages/${from}/package.json`).dependencies ?? {};
+      for (const [dep, pin] of Object.entries(deps)) {
+        if (!dep.startsWith('@junixlabs/')) continue;
+        const dir = dep.replace('@junixlabs/apiflow-', '');
+        expect(pin, `packages/${from} pins ${dep}`).toBe(read(`packages/${dir}/package.json`).version);
+      }
     }
   });
 

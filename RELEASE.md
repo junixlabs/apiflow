@@ -6,6 +6,8 @@ Not release notes. This is the checklist, and it is short so that it is actually
 
 1. `npm test` · `npx tsc -b` · `npm run lint` · `npm run boundary` · `npm run codemap` — all five,
    all green. CI runs them on every push, so a red one here means you already knew.
+   Then `npm run verify:pack`, which the five do not cover: it packs `packages/cli` and asserts the
+   tarball is self-contained and carries no `.forge/` or `CLAUDE.md`.
 2. `CHANGELOG.md` has an entry that says what changed **and what it cost**. The existing entries are
    the standard: measured numbers, the fault that was found, no varnish.
 3. **If this version contains a DECISION rather than a feature, it must also have a `NORTH-STAR.md` §9
@@ -15,7 +17,10 @@ Not release notes. This is the checklist, and it is short so that it is actually
    being re-litigated six weeks later, and it failed exactly once, in exactly one way: it ran three
    days behind the code, so twelve versions of probe work landed with no record of why. Attaching it
    to the release — a ritual that is never skipped — is cheaper than remembering.
-4. Version numbers across the workspace packages move together. They are one product.
+4. Version numbers across the workspace packages move together. They are one product — now literally
+   one, since `map` and `scan` are `private` and bundled into the CLI's tarball. Bump all three and
+   both pins in `packages/cli`; `tests/publish.test.ts` fails on a partial bump rather than trusting
+   you to remember.
 
 ## Tagging
 
@@ -23,7 +28,9 @@ Not release notes. This is the checklist, and it is short so that it is actually
 git tag vX.Y.Z && git push origin vX.Y.Z
 ```
 
-`.github/workflows/publish.yml` runs the four gates again and publishes on success. `ci.yml` is the
+`.github/workflows/publish.yml` runs the five gates again, then `verify:pack`, then publishes **that
+tarball by path** — never a bare `npm publish`, which at the repo root packs `.forge/` and `CLAUDE.md`
+into a public tarball. `ci.yml` is the
 one that runs on ordinary pushes; publishing is gated separately so a tag cannot skip the gates.
 
 ## After

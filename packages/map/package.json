@@ -1,6 +1,6 @@
 {
   "name": "@junixlabs/apiflow-map",
-  "version": "1.1.13",
+  "version": "1.2.0",
   "private": true,
   "description": "Read and query an .apimap: which screens break if an endpoint or a response field changes. Zero dependencies, zero I/O — runs in node, a browser or a server.",
   "type": "module",
