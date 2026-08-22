@@ -25,4 +25,7 @@ jobs:
       - run: npm test
       - run: npm run boundary
       - run: npm run codemap
-      - run: npm publish --access public
+      # cm:guard Publish the tarball verify:pack just checked, never a bare `npm publish`: at the repo
+      # root that packs 170 files including .forge/ and CLAUDE.md into a public tarball.
+      - run: npm run verify:pack -- "$RUNNER_TEMP"
+      - run: npm publish "$RUNNER_TEMP"/junixlabs-apiflow-*.tgz --access public

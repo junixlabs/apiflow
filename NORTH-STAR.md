@@ -207,6 +207,10 @@ left, under the §3 axis.
 8. ✅ **The runner's fate is decided: split out** to `junixlabs/apiflow-runner` on 2026-08-23, with
    history intact back to 2026-03-19. See the §9 entry. What stays open is whether `forge` takes the
    parsers per §6 — a question for `forge`, not for this repo.
+9. ✅ **One published artifact, and a release path that fails loudly.** `map` and `scan` are private and
+   bundled; `npm run verify:pack` asserts the tarball is self-contained and carries no internal
+   material. Publishing `map` on its own is not forbidden — it is waiting on the same condition as
+   everything else in §7: a second repo that reads a map.
 
 ## 9. Decision log
 
@@ -225,9 +229,24 @@ left, under the §3 axis.
   The cost, paid deliberately: a bare `apiflow` opened the canvas on every install since 1.0.0, and
   `apiflow mcp run` served 13 tools. Both now exit 1 with a pointer to the new package, because a
   published entry point that vanishes silently is worse than one that errors.
-  **Open, and a release blocker:** `@junixlabs/apiflow` declares exact-version deps on
-  `@junixlabs/apiflow-map` and `@junixlabs/apiflow-scan`, and neither exists on npm. Published 1.1.13
-  predates the restructure, so nothing is broken yet — the next `npm publish` is.
+  **The release blocker this opened is closed** by the entry below: the two engine packages are bundled
+  into the CLI's tarball rather than published.
+
+- **2026-08-23** — **Three packages, one published artifact — and the release path is now checked.**
+  The restructure the day before left `@junixlabs/apiflow` depending on two packages that do not exist
+  on npm. Publishing all three was the obvious fix and the wrong one: the enforced boundary lives in
+  `.dependency-cruiser.cjs` as **path** regexes (`^packages/map/`), so it costs nothing to keep and
+  gains nothing from being published. `map` and `scan` are now `private: true` and bundled. They stay
+  separate packages because that is what the rules hold against, and because `map` can then be
+  published unchanged the day a second repo reads a map — the same shape as every other §7 condition.
+  Two things were found while wiring it, and both **succeed silently** when wrong, which is why each
+  now has a gate rather than a note. npm bundles from the packing package's own `node_modules`, which
+  workspaces hoist to the root: without `scripts/prepack-bundle.mjs` materialising them, `npm pack`
+  prints `bundled files: 0` and exits 0, publishing a tarball that cannot install. And `npm publish` at
+  the repo root packs **170 files, `.forge/` and `CLAUDE.md` among them**, into a public tarball —
+  `private: true` on the root was the only thing refusing it, and `publish.yml` pointed straight at it.
+  The release now publishes the tarball `npm run verify:pack` checked, by path. Verified by installing
+  it into an empty directory and running both halves: `scan-fe` wrote a map, `impact` read it back.
 
 - **2026-08-22** — **Prose refuses no commit; the structure is now a package boundary.** The repo
   described "two halves" in a paragraph and enforced it with one lint rule over path regexes. It is now

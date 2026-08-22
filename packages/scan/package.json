@@ -1,12 +1,20 @@
 {
   "name": "@junixlabs/apiflow-scan",
   "version": "1.1.13",
+  "private": true,
   "description": "Read a frontend or backend on disk and produce an .apimap: screens, endpoints, fields, and the call sites that join them.",
   "type": "module",
   "license": "MIT",
   "main": "./src/index.ts",
   "types": "./src/index.ts",
-  "files": ["src/"],
-  "repository": { "type": "git", "url": "https://github.com/junixlabs/apiflow" },
-  "dependencies": { "@junixlabs/apiflow-map": "1.1.13" }
+  "files": [
+    "src/"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/junixlabs/apiflow"
+  },
+  "dependencies": {
+    "@junixlabs/apiflow-map": "1.1.13"
+  }
 }

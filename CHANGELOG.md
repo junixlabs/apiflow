@@ -39,7 +39,34 @@ dependency dropped.
 
 `apiflow ui`, `hub`, `view` and `mcp map` are untouched: those read the map and were never the runner.
 
-394 tests (417 − the 23 that moved with the runner).
+### Changed — one published package again, and a release path that is checked
+
+The 2026-08-22 restructure into three packages left `@junixlabs/apiflow` depending on
+`@junixlabs/apiflow-map` and `@junixlabs/apiflow-scan`, neither of which is on npm. Rather than
+publish three, the two are now `private: true` and **bundled into the CLI's tarball**: one install,
+nothing resolved against the registry.
+
+They stay separate packages — that is what `.dependency-cruiser.cjs` holds its rules against, and it
+is what lets `map` be published unchanged the day a second repo reads a map. What is dropped is
+publishing three artifacts for zero external consumers.
+
+```console
+$ npm run verify:pack
+68 entries
+ok — one self-contained tarball, no internal material
+```
+
+Two failure modes found while wiring it, both now gated by `tests/publish.test.ts` and
+`npm run verify:pack`:
+
+- npm bundles from the packing package's **own** `node_modules`, which workspaces hoist away. Without
+  `scripts/prepack-bundle.mjs`, `npm pack` reports `bundled files: 0` and **succeeds** — shipping a
+  tarball that cannot install.
+- `npm publish` at the repo root packs **170 files, including `.forge/` and `CLAUDE.md`**, into a
+  public tarball. `private: true` on the root was the only thing refusing it. The workflow now
+  publishes the verified tarball by path.
+
+398 tests (417 − the 23 that moved with the runner, + 4 for the release contract).
 
 ---
 

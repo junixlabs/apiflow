@@ -111,7 +111,7 @@ a weak proxy, not a data dependency.
 
 ## How it is put together
 
-Three packages, and the boundary between them is enforced rather than described.
+Three packages, one published artifact. The boundary between them is enforced rather than described.
 
 | Package | Role | Rule that holds it |
 |---|---|---|
@@ -124,6 +124,12 @@ cURL/OpenAPI/Postman import — is now
 [junixlabs/apiflow-runner](https://github.com/junixlabs/apiflow-runner). It answered a bare `apiflow`
 and `apiflow mcp run`; both now print where it went. That split is why installing this no longer
 pulls React into your dependency tree.
+
+`npm install @junixlabs/apiflow` gives you **one** package: `map` and `scan` are bundled into its
+tarball, not fetched. They are separate packages so the rules above have something to hold and so
+`map` can be published the day a second repo reads a map — not so you have three installs to keep in
+step. `npm run verify:pack` asserts the tarball is self-contained, and the release publishes exactly
+the tarball it verified.
 
 The accuracy gap between the CLI and MCP is not the query layer — both read the same kernel. It is
 that MCP adds an argument-selection step performed by a model. Hence: list first, then ask.

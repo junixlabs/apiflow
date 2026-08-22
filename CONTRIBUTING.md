@@ -16,14 +16,38 @@ All five run in CI on every push, and a green local run is the same run.
 ```bash
 npm test          # unit tests + the docs transcripts
 npm run lint
-npm run boundary  # the four structural rules in .dependency-cruiser.cjs
+npm run boundary  # the five structural rules in .dependency-cruiser.cjs
 npm run codemap   # the comment convention, at zero errors
 npm run build
 ```
 
 `npm run boundary` is not style. `packages/map` may import no node builtin, `map` may never import
-`scan`, the engine may never import the runner, and `mcp/mapTools.ts` must depend on `commands/` —
-the CLI is the reference implementation and MCP borrows its resolution rather than growing its own.
+`scan`, neither may reach back into `cli`, and `mcp/mapTools.ts` must depend on `commands/` — the CLI
+is the reference implementation and MCP borrows its resolution rather than growing its own.
+
+## Releasing — three packages, one artifact
+
+`packages/map` and `packages/scan` are `private: true` and are **never published**. They are bundled
+into `@junixlabs/apiflow`'s tarball by `bundleDependencies`, so a user installs one package and
+nothing resolves against the registry.
+
+```bash
+npm run verify:pack        # packs packages/cli and asserts the result
+```
+
+Two things that are easy to get wrong, both now gated:
+
+- **npm bundles from the packing package's own `node_modules`**, and workspaces hoist the symlinks to
+  the repo root instead. Without `scripts/prepack-bundle.mjs` materialising them, `npm pack` prints
+  `bundled files: 0` and succeeds — publishing a tarball whose dependencies 404. `prepack` does the
+  copy, `postpack` removes it.
+- **Never run a bare `npm publish`.** At the repo root it packs 170 files, `.forge/` and `CLAUDE.md`
+  among them, into a public tarball. `private: true` on the root is the only thing refusing it today.
+  The workflow publishes the tarball `verify:pack` checked, by path.
+
+They are separate packages so `.dependency-cruiser.cjs` has paths to hold and so `map` can be
+published unchanged the day a second repo reads a map. Until that repo exists, publishing three
+packages would be three release steps for one consumer count of zero.
 
 ## Writing a documentation page
 

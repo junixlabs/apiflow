@@ -1,12 +1,20 @@
 {
   "name": "@junixlabs/apiflow-map",
   "version": "1.1.13",
+  "private": true,
   "description": "Read and query an .apimap: which screens break if an endpoint or a response field changes. Zero dependencies, zero I/O — runs in node, a browser or a server.",
   "type": "module",
   "license": "MIT",
   "main": "./src/index.ts",
   "types": "./src/index.ts",
-  "files": ["src/", "SPEC.md", "schema/"],
-  "repository": { "type": "git", "url": "https://github.com/junixlabs/apiflow" },
+  "files": [
+    "src/",
+    "SPEC.md",
+    "schema/"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/junixlabs/apiflow"
+  },
   "dependencies": {}
 }
