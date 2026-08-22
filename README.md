@@ -171,9 +171,10 @@ npm run dev                       # from a clone
 
 ## Docs
 
-Every page in `docs/guide/` is a **transcript replayed by CI** — see
-[how that works](docs/guide/README.md). A page that stops matching what the tool prints fails the
-build, so none of this can go stale quietly.
+Every transcript published under `docs/` is **replayed by CI** — see
+[how that works](docs/guide/index.md). A page that stops matching what the tool prints fails the
+build, so none of this can go stale quietly. Read it as a site at
+[junixlabs.github.io/apiflow](https://junixlabs.github.io/apiflow/).
 
 - [Your first impact answer](docs/guide/01-first-answer.md) — the whole path against a fixture in this repo
 - [A wrapper definition is not a call](docs/guide/02-a-wrapper-definition-is-not-a-call.md) — `upcoming`: a real defect, written down before it is fixed
