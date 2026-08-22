@@ -615,7 +615,7 @@ type ChainKey = string;
 const chainKey = (n: ChainNode): ChainKey => `${n.file}|${n.symbol}|${String(n.line)}|${n.role}`;
 
 // cm:why Interned at WRITE time and expanded at READ time, so nothing between the two ever sees an
-// index. Node chains repeat their file paths 52% of the time on a real map (adminhub-ui) — inlining
+// index. Node chains repeat their file paths 52% of the time on a real map (webapp-ui) — inlining
 // them cost 159% file growth, interning brings it to 70%.
 // cm:edge lockstep -> packages/map/src/apimap.ts#expandChains — the pair must round-trip, and a test asserts it does.
 export function serializeMap(map: ApiMapFile): string {

@@ -24,7 +24,7 @@ afterEach(() => {
 });
 
 const write = (name: string, generator: string, root: string): string => {
-  const map = createApiMap('adminhub', root, generator);
+  const map = createApiMap('webapp', root, generator);
   map.endpoints.push({ id: endpointId('GET', '/orders'), method: 'GET', path: '/orders' });
   const file = join(handover, name);
   writeFileSync(file, serializeMap(finalizeApiMap(map)));
@@ -36,21 +36,21 @@ const write = (name: string, generator: string, root: string): string => {
 describe('importing a side scanned on another machine', () => {
   it('registers a project whose only side is an imported map', () => {
     const file = write('be.apimap', 'apiflow scan-be/1', 'gitlab.com/acme/api');
-    const entry = addProject({ name: 'Adminhub', imported: ['be'] });
+    const entry = addProject({ name: 'Webapp', imported: ['be'] });
     const done = importMap(entry.id, 'be', file);
 
-    expect(findProject('adminhub')?.be).toBeUndefined();
-    expect(readMap('adminhub', 'be')?.metadata.root).toBe('gitlab.com/acme/api');
+    expect(findProject('webapp')?.be).toBeUndefined();
+    expect(readMap('webapp', 'be')?.metadata.root).toBe('gitlab.com/acme/api');
     expect(done.root).toBe('gitlab.com/acme/api');
-    expect(historyOf('adminhub', 'be')).toHaveLength(1);
+    expect(historyOf('webapp', 'be')).toHaveLength(1);
   });
 
   it('marks the side imported so the header cannot offer a re-scan', () => {
     const file = write('be.apimap', 'apiflow scan-be/1', 'gitlab.com/acme/api');
-    addProject({ name: 'Adminhub', imported: ['be'] });
-    importMap('adminhub', 'be', file);
+    addProject({ name: 'Webapp', imported: ['be'] });
+    importMap('webapp', 'be', file);
 
-    const be = sidesOf('adminhub').find((s) => s.kind === 'be');
+    const be = sidesOf('webapp').find((s) => s.kind === 'be');
     expect(be?.imported).toBe(true);
     expect(be?.root).toBe('gitlab.com/acme/api');
   });

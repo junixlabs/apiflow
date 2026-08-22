@@ -507,7 +507,7 @@ export function renderHub(projects: HubProject[], options: HubOptions, now: numb
         <button class="btn primary" id="add-open-2">+ Add the first project</button></div>`
     : `<div class="empty-box"><h2>No project yet</h2>
         <p>This static page was generated while the workspace <code>${escapeHtml(options.workspace)}</code> was still empty.</p>
-        <p><code>apiflow project add adminhub --fe=/path/to/ui --be=/path/to/api</code></p></div>`;
+        <p><code>apiflow project add webapp --fe=/path/to/ui --be=/path/to/api</code></p></div>`;
 
   const railHead = `<div class="railhead">
       <label class="search">🔎<input id="hb-q" placeholder="search name, id, path" autocomplete="off"></label>

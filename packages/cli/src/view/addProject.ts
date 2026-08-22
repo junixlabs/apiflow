@@ -38,13 +38,13 @@ export const ADD_DIALOG = `<dialog id="add-dlg" class="dlg">
   <form id="add-form" method="dialog">
     <h3 id="add-title">Add project</h3>
     <p class="dsub" id="add-sub">apiflow only writes to <code>~/.apiflow</code> — never a single byte into the repo it reads.</p>
-    <label>Name<input name="name" autocomplete="off" required placeholder="Adminhub"></label>
-    <label>FE directory<input name="fe" autocomplete="off" placeholder="/home/you/services/adminhub-ui"></label>
-    <label>BE directory<input name="be" autocomplete="off" placeholder="/home/you/services/adminhub-api"></label>
+    <label>Name<input name="name" autocomplete="off" required placeholder="Webapp"></label>
+    <label>FE directory<input name="fe" autocomplete="off" placeholder="/home/you/services/webapp-ui"></label>
+    <label>BE directory<input name="be" autocomplete="off" placeholder="/home/you/services/webapp-api"></label>
     <p class="dsub">A side that lives on another machine has no directory here. Scan it there, copy the <code>.apimap</code> over and name the file below — a map is content-derived and timestamp-free, so the file is the whole handover.</p>
     <label>FE map file <span class="opt">(scanned elsewhere)</span><input name="feMap" autocomplete="off" placeholder="/home/you/handover/fe.apimap"></label>
     <label>BE map file <span class="opt">(scanned elsewhere)</span><input name="beMap" autocomplete="off" placeholder="/home/you/handover/be.apimap"></label>
-    <label id="add-idrow">id <span class="opt">(left blank, derived from the name)</span><input name="id" autocomplete="off" placeholder="adminhub"></label>
+    <label id="add-idrow">id <span class="opt">(left blank, derived from the name)</span><input name="id" autocomplete="off" placeholder="webapp"></label>
     <label>file hints <span class="opt">(optional)</span><input name="hints" autocomplete="off"></label>
     <p class="dmsg" id="add-msg"></p>
     <div class="drow">

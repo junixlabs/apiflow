@@ -18,39 +18,39 @@ function repo(url: string | null): string {
 
 describe('scanOrigin', () => {
   it('turns an ssh remote into host/path, dropping user and .git', () => {
-    expect(scanOrigin(repo('git@gitlab.com:sidcorp-it/canawan-api.git'))).toBe('gitlab.com/sidcorp-it/canawan-api');
+    expect(scanOrigin(repo('git@gitlab.com:acme-it/orders-api.git'))).toBe('gitlab.com/acme-it/orders-api');
   });
 
   it('gives the same id for the ssh clone and the https checkout of one repo', () => {
-    const ssh = scanOrigin(repo('git@github.com:SidCorp-co/getcontent.git'));
-    const https = scanOrigin(repo('https://github.com/sidcorp-co/getcontent'));
+    const ssh = scanOrigin(repo('git@github.com:acme-co/webapp.git'));
+    const https = scanOrigin(repo('https://github.com/acme-co/webapp'));
     expect(ssh).toBe(https);
   });
 
   // cm:guard This test is the reason normalizeRemote strips userinfo: a token that reaches the map
   // reaches every reviewer of the commit that carries it.
   it('never copies a credential out of the remote url', () => {
-    const id = scanOrigin(repo('https://oauth2:glpat-SECRETTOKEN@gitlab.com/sidcorp-it/canawan-api.git'));
-    expect(id).toBe('gitlab.com/sidcorp-it/canawan-api');
+    const id = scanOrigin(repo('https://oauth2:glpat-SECRETTOKEN@gitlab.com/acme-it/orders-api.git'));
+    expect(id).toBe('gitlab.com/acme-it/orders-api');
     expect(id).not.toContain('glpat');
     expect(id).not.toContain('oauth2');
   });
 
   it('marks the scanned subdirectory of a monorepo', () => {
-    const root = repo('git@github.com:sidcorp-co/getcontent.git');
+    const root = repo('git@github.com:acme-co/webapp.git');
     const sub = join(root, 'apps', 'web-next');
     mkdirSync(sub, { recursive: true });
-    expect(scanOrigin(sub)).toBe('github.com/sidcorp-co/getcontent//apps/web-next');
+    expect(scanOrigin(sub)).toBe('github.com/acme-co/webapp//apps/web-next');
   });
 
   it('reads the remote through a linked worktree, where .git is a file', () => {
-    const main = repo('git@github.com:sidcorp-co/getcontent.git');
+    const main = repo('git@github.com:acme-co/webapp.git');
     const wt = mkdtempSync(join(tmpdir(), 'apiflow-wt-'));
     const gitdir = join(main, '.git', 'worktrees', 'iss-1');
     mkdirSync(gitdir, { recursive: true });
     writeFileSync(join(gitdir, 'commondir'), '../..\n');
     writeFileSync(join(wt, '.git'), `gitdir: ${gitdir}\n`);
-    expect(scanOrigin(wt)).toBe('github.com/sidcorp-co/getcontent');
+    expect(scanOrigin(wt)).toBe('github.com/acme-co/webapp');
   });
 
   it('falls back to the checkout name when the repo has no remote', () => {
@@ -64,11 +64,11 @@ describe('scanOrigin', () => {
   });
 
   it('keeps a port out of the path', () => {
-    expect(normalizeRemote('ssh://git@gitlab.com:2222/sidcorp-it/canawan-api.git')).toBe('gitlab.com/sidcorp-it/canawan-api');
+    expect(normalizeRemote('ssh://git@gitlab.com:2222/acme-it/orders-api.git')).toBe('gitlab.com/acme-it/orders-api');
   });
 
   it('uses the last segment for a filesystem remote', () => {
-    expect(normalizeRemote('/srv/git/canawan-api.git')).toBe('canawan-api');
+    expect(normalizeRemote('/srv/git/orders-api.git')).toBe('orders-api');
   });
 });
 

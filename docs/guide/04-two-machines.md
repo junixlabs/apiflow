@@ -1,3 +1,8 @@
+---
+status: reference
+why-not-replayed: needs two machines; the whole point of the page is that the file travels between them
+---
+
 # FE here, BE on another machine
 
 There is nothing to host. An `.apimap` is derived from content alone — no timestamps, no
@@ -10,22 +15,22 @@ them.
 On the machine that has the API:
 
 ```bash
-apiflow scan-be /srv/adminhub-api --out=./adminhub-be.apimap
+apiflow scan-be /srv/webapp-api --out=./webapp-be.apimap
 ```
 
-Move `adminhub-be.apimap` however you already move files — `scp`, a shared drive, or a commit in a
+Move `webapp-be.apimap` however you already move files — `scp`, a shared drive, or a commit in a
 private maps repo. Then on the machine that has the frontend:
 
 ```bash
-apiflow project add Adminhub --fe=/home/you/adminhub-ui --be-map=./adminhub-be.apimap
-apiflow project scan adminhub --fe
+apiflow project add Webapp --fe=/home/you/webapp-ui --be-map=./webapp-be.apimap
+apiflow project scan webapp --fe
 ```
 
 The scan re-links automatically, and the project now reconciles both halves — the four buckets
 (`both`, `uncalled`, `feOnly`, `unpaired`), the alert list, and:
 
 ```bash
-apiflow impact ~/.apiflow/projects/adminhub/linked.apimap \
+apiflow impact ~/.apiflow/projects/webapp/linked.apimap \
   --endpoint="DELETE /api/v1/attributes/{param}"
 ```
 
@@ -37,7 +42,7 @@ is the question the two machines could not answer separately.
 Re-import each time the other machine re-scans:
 
 ```bash
-apiflow project import adminhub --be=./adminhub-be.apimap
+apiflow project import webapp --be=./webapp-be.apimap
 ```
 
 Import writes a history entry and re-links, exactly as a local scan does — so `apiflow check` and the

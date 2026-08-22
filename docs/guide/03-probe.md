@@ -1,3 +1,8 @@
+---
+status: reference
+why-not-replayed: needs an API process running and credentials; CI has neither, and pointing a probe at anything real from CI is exactly what --yes-remote exists to prevent
+---
+
 # probe — fields the code does not declare
 
 A scan reads **declarations**. Two things it cannot read: a response assembled at runtime, and a field
@@ -67,7 +72,7 @@ straight to the probe: the screen names the handful of endpoints it depends on, 
 
 ```bash
 # 7 endpoints this screen reads, not 1018 — GET ones sent, with a real token
-apiflow probe ~/.apiflow/projects/adminhub/linked.apimap --live=http://127.0.0.1:8000 \
+apiflow probe ~/.apiflow/projects/webapp/linked.apimap --live=http://127.0.0.1:8000 \
   --screen=/account --header="Authorization: Bearer $TOKEN" --fill=1
 # **Scoped by `--screen=/account`**: 7 of 1092 endpoints that screen reads · **Sent**: 2
 ```

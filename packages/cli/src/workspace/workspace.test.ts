@@ -51,8 +51,8 @@ describe('registry', () => {
   });
 
   it('stores roots absolute and reads them back', () => {
-    addProject({ name: 'Adminhub', fe: repo });
-    expect(findProject('adminhub')?.fe).toBe(repo);
+    addProject({ name: 'Webapp', fe: repo });
+    expect(findProject('webapp')?.fe).toBe(repo);
     expect(readWorkspace().projects).toHaveLength(1);
   });
 
@@ -65,8 +65,8 @@ describe('registry', () => {
   });
 
   it('refuses a duplicate id', () => {
-    addProject({ name: 'Adminhub', fe: repo });
-    expect(() => addProject({ name: 'Adminhub', fe: repo })).toThrow(/already exists/);
+    addProject({ name: 'Webapp', fe: repo });
+    expect(() => addProject({ name: 'Webapp', fe: repo })).toThrow(/already exists/);
   });
 
   it('removes only the named project', () => {
@@ -88,29 +88,29 @@ describe('registry', () => {
 describe('store', () => {
   it('keeps every id inside the workspace', () => {
     expect(() => projectDir('../../etc')).toThrow(/invalid id/);
-    expect(projectDir('adminhub').startsWith(home)).toBe(true);
+    expect(projectDir('webapp').startsWith(home)).toBe(true);
   });
 
   it('round-trips a map and records it in history', () => {
-    const written = writeMap('adminhub', 'fe', mapWith());
-    expect(written.file).toBe(mapPath('adminhub', 'fe'));
-    expect(readMap('adminhub', 'fe')?.metadata.name).toBe('demo');
-    expect(readMap('adminhub', 'be')).toBeNull();
+    const written = writeMap('webapp', 'fe', mapWith());
+    expect(written.file).toBe(mapPath('webapp', 'fe'));
+    expect(readMap('webapp', 'fe')?.metadata.name).toBe('demo');
+    expect(readMap('webapp', 'be')).toBeNull();
   });
 
   // cm:why An unchanged repo re-scans to a byte-identical map, so a second write must land on the
   // SAME history entry — otherwise the history says "changed" every time nothing changed.
   it('does not add a history entry for an identical re-scan', () => {
-    const first = writeMap('adminhub', 'fe', mapWith());
-    const second = writeMap('adminhub', 'fe', mapWith());
+    const first = writeMap('webapp', 'fe', mapWith());
+    const second = writeMap('webapp', 'fe', mapWith());
     expect(second.history).toBe(first.history);
-    const changed = writeMap('adminhub', 'fe', mapWith({ metadata: { name: 'other', root: '/x', generator: 'g' } }));
+    const changed = writeMap('webapp', 'fe', mapWith({ metadata: { name: 'other', root: '/x', generator: 'g' } }));
     expect(changed.history).not.toBe(first.history);
   });
 
   it('reports which maps exist', () => {
-    writeMap('adminhub', 'fe', mapWith());
-    const status = statusOf('adminhub');
+    writeMap('webapp', 'fe', mapWith());
+    const status = statusOf('webapp');
     expect(status.find((s) => s.kind === 'fe')?.exists).toBe(true);
     expect(status.find((s) => s.kind === 'linked')?.exists).toBe(false);
   });
@@ -437,7 +437,7 @@ describe('hub staleness', () => {
 });
 
 describe('a BE half too thin to compare', () => {
-  // cm:why This is the getcontent case measured on 2026-08-20: 2 routes read out of 103, because the
+  // cm:why This is the webapp case measured on 2026-08-20: 2 routes read out of 103, because the
   // mount sites carry no literal path. Without the guard the map reports 86 endpoints the API "does
   // not declare" — and an agent handed that list goes and edits an API that was never wrong.
   function thinBe(): ApiMapFile {

@@ -1,4 +1,13 @@
-# File formats
+# File formats — the contract of `@junixlabs/apiflow-map`
+
+This is the public contract. Anything that reads or writes an `.apimap` reads this file, so it lives
+with the package that owns the format rather than in `docs/`.
+
+**Known gap:** the TypeScript types in `src/apimap.ts` are hand-written, i.e. they are the source
+rather than a derivative of a schema. SCIP names exactly this as the first reason LSIF was slow to
+work with (`docs/research/product-shape.md` §2). `parseMap` validates `version` and nothing
+structural, which is enough for a file you produced yourself and not enough for a file you received.
+
 
 Two file types, one workspace layout.
 

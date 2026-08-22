@@ -254,7 +254,7 @@ export function renderApp(payload: AppPayload): string {
   const counts = alertCounts(list);
   const reliability = [...endpointReliability(payload.map)].map(([id, r]) => [id, r.exact, r.inferred, r.guess] as const);
   // cm:guard Titled by the PROJECT when one backs the page, not by the map: the rail on the hub calls
-  // it `adminhub`, and landing on a page headed `adminhub-ui+adminhub-api` reads as a different thing.
+  // it `webapp`, and landing on a page headed `webapp-ui+webapp-api` reads as a different thing.
   // The map's own name still shows up in the generator line under the roots.
   const name = payload.projectName ?? payload.map.metadata.name;
 

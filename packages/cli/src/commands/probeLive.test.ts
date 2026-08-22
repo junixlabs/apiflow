@@ -22,8 +22,8 @@ describe('choosing what a live probe may send', () => {
 
   // cm:why Positional: `{param}` carries no name in the map, so two placeholders take two fills.
   it('fills placeholders in order', () => {
-    const { ready } = liveTargets(endpoints, { 0: 'getcontent', 1: 'fe' }, new Set(['GET']));
-    expect(ready.find((t) => t.path.includes('map'))?.url).toBe('/api/map/getcontent/fe');
+    const { ready } = liveTargets(endpoints, { 0: 'webapp', 1: 'fe' }, new Set(['GET']));
+    expect(ready.find((t) => t.path.includes('map'))?.url).toBe('/api/map/webapp/fe');
   });
 
   it('skips an endpoint whose placeholder has no value, and names it', () => {
