@@ -53,7 +53,10 @@ this the expensive way: in 2024-08 it added a clause to its own Apache-2.0 licen
 core replacing its paid Confluence integration, and reverted it four months later
 (`docs/research/product-shape.md` §4).
 
-**The order still holds: the map first, running requests second.**
+**What this repo is, and is not.** This repo is 1a, 1b and the local hosts — nothing else. Running
+requests left on 2026-08-23 (`junixlabs/apiflow-runner`), and the hosted product, if it is ever
+started, gets its own private repo that consumes `@junixlabs/apiflow-map` from npm rather than forking
+it. The order still holds: the map first, anything that sends a request second.
 
 | What already exists | Why it cannot replace this |
 |---|---|
@@ -82,6 +85,10 @@ before.
 and the MCP server — `src/engine/*` and `src/utils/*` are re-export shims, not copies. The executor
 has retry/backoff, per-node auth, variable chaining, and branching with pruning. All four assertion
 kinds are fully implemented. The cURL / OpenAPI 3.x / Postman parsers are real.
+
+The paragraph above describes code that is no longer here: `src/core/` became `packages/runner/src/core/`
+and left for `junixlabs/apiflow-runner` on 2026-08-23. It is kept because this section is a dated
+snapshot, and an audit whose findings get edited later is not an audit.
 
 **The only piece that HAS ACTUALLY LIVED:** `skills/api-flow-analyzer/` — a byte-identical copy runs
 inside an internal project, turning Laravel routes into a flow. It is the **agent-only** version of
@@ -158,6 +165,10 @@ And these stay flatly forbidden, because each one has already cost this repo som
 - **Do not `git add -A` in this repo.** It is public and the working directory holds internal
   material. See the 2026-08-22 entry in §9: customer repo identifiers reached the public history once
   already.
+- **Do not put a product UI in this repo.** The hosted/SaaS side, whenever §7 opens it, is a separate
+  private repo that depends on `@junixlabs/apiflow-map` from npm. A shared `node_modules` holding
+  React or an ORM makes `map-stays-pure` meaningless the day it lands, and that rule is what keeps a
+  store out of the kernel (§3).
 - **Do not point `probe --live` at anything but a test environment.** GET/HEAD-only and
   `--yes-remote` are the guards; they exist because a full authenticated walk was once launched at
   three GET routes that shell out to `supervisorctl`, and was stopped at position 376 of 382.
@@ -169,8 +180,8 @@ left, under the §3 axis.
 
 1. ✅ **Builds from a clean clone** · **FE extraction** · **BE extraction + probe** · **the loop node
    decided (deleted)** · **tests for the core** · **one real frontend mapped** — all shipped between
-   2026-08-19 and 2026-08-21. 412 tests.
-2. ✅ **The structure is enforced, not described.** Four packages, four dependency-cruiser rules, CI on
+   2026-08-19 and 2026-08-21.
+2. ✅ **The structure is enforced, not described.** Three packages, five dependency-cruiser rules, CI on
    every push (it previously ran only on a version tag, so nothing was gated).
 3. ✅ **Documentation that cannot go stale.** `docs/guide/` is replayed by `tests/guide.test.ts`;
    `shipped` must pass, `upcoming` must fail, `reference` must say why it cannot be replayed.
@@ -181,8 +192,9 @@ left, under the §3 axis.
    `apiflow check` in its own CI.** This was previously filed as waiting on a hosting decision. It is
    not: two people scanning one commit get identical bytes, so sharing needs no server, and hosting is
    a separate and later question (§7).
-5. **Pay down the comment-grammar debt.** `cm verify` reports 182 pre-existing errors and is not yet a
-   gate. It can only become one after the number is zero; adding a red gate teaches people to ignore
+5. ✅ **The comment-grammar debt is paid and the gate is on.** `npm run codemap` runs in CI and reports
+   **0 errors**; 157 of 160 legacy prose comments are cleaned and the remaining 3 are frozen, not
+   invisible. The gate went on only after the number reached zero — a red gate teaches people to ignore
    gates.
 6. **Fix what the fixture found.** `docs/guide/02` is an `upcoming` page describing a real scanner
    defect: a client wrapper's own definition line is read as a call site, padding `unresolved` with
