@@ -320,6 +320,10 @@ const EXPRESSION_BEFORE = new Set(['?', ':', '=', '+', '-', '*', '/', '%', '&', 
 
 // cm:guard `<`/`>` are deliberately absent: they end JSX and an arrow, so blocking them would reject
 // the method after a `render = () => <div/>` class field and put its phantom back in Unresolved.
+// cm:why Known limit, measured and left: a field ending in a POSTFIX operator (`x = y!`, `i++`,
+// `i--`) or a flagless regex (`rx = /ab+c/`) refuses the next member — the grammar allows no fifth.
+// cm:why Reject-side, so it degrades to what main already does on every wrapper definition; the two
+// tightenings before this one each shipped a worse defect than they closed.
 const EXPRESSION_KEYWORD = new Set([
   'return', 'await', 'yield', 'typeof', 'void', 'delete', 'new', 'case', 'throw', 'in', 'of', 'else', 'do',
 ]);

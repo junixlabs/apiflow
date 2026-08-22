@@ -49,6 +49,15 @@ like a tree with nothing in it, which is the failure the `Nested checkouts skipp
 exists to prevent. The same helper serves both commands, deduped across the config walk and the
 source walk, so one unreadable tree is reported once.
 
+**Two limits, measured and left in.** A bare block after an expression statement
+(`fetch("/a")` then `{ … }`) still reads as a definition, and so does the member after a class field
+ending in a postfix operator (`x = y!`, `i++`) or a flagless regex (`rx = /ab+c/`). Both are
+reject-side, so each degrades to exactly what the scanner already did before this change rather than
+to something new; neither occurs once in the ~15k real files this was checked against; and the
+postfix set is closed by the grammar, which allows no fifth spelling. They are written down instead
+of chased because the two tightenings before the last one each shipped a worse defect than they
+closed.
+
 One ordering detail, so the next reader does not go looking for a fault that was never there:
 `scan-be` cleared its skip list *after* the stack-detection probe ran. That was harmless before —
 the probe recorded nothing — and only became wrong once this change gave the probe something to
