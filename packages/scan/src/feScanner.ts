@@ -310,23 +310,29 @@ const DEFINITION_HEAD =
 // admitted here would take a real call site's open paren away from findCallSites.
 const NOT_A_DEFINITION = new Set(['if', 'for', 'while', 'switch', 'catch', 'return', 'function', 'do', 'with']);
 
-// cm:guard A return type is a TYPE, so its parens close: `(a: string) => void` balances, while
-// `Promise.resolve(` does not — that one is a ternary alternate whose `{` opens an argument list.
-function parenBalanced(text: string): boolean {
-  let depth = 0;
-  for (const ch of text) {
-    if (ch === '(') depth++;
-    else if (ch === ')' && --depth < 0) return false;
-  }
-  return depth === 0;
-}
+// cm:guard Member position, not "anything before a brace": `{`/`,` open one, `}`/`;` end the member
+// before it, `)`/`]` are a decorator or a computed key.
+const MEMBER_POSITION = new Set(['{', '}', ',', ';', ')', ']']);
 
-// cm:guard `?` can never precede a declaration in valid JS, so a head sitting on the consequent of
-// a ternary is an expression — and mistaking one for a definition DELETES a real call site.
-function afterTernaryQuestion(content: string, at: number): boolean {
+// cm:guard `get`/`set` are not in DEFINITION_HEAD, so a getter's name reads as if `get` preceded it
+// in expression position — without this list every accessor stops being a definition.
+const MEMBER_KEYWORD = new Set([
+  'get', 'set', 'static', 'public', 'private', 'protected', 'readonly', 'abstract', 'override', 'async', 'default',
+]);
+
+// cm:why A bare `name(…) {` is a definition ONLY as a class member or an object-literal method —
+// everywhere else the `function` keyword is required, so in expression position it is a call.
+// cm:guard Without this, `cond ? await fetch(u) : { … }` reads as a definition with a return type
+// and the call is DELETED — absent from `endpoints` and from `unresolved`, a gap that shows as none.
+function declarationPosition(content: string, head: string, at: number): boolean {
+  if (/\bfunction\b/.test(head)) return true;
+  if (at === 0) return true;
   let i = at;
   while (i >= 0 && /\s/.test(content[i])) i--;
-  return content[i] === '?';
+  if (i < 0) return true;
+  if (MEMBER_POSITION.has(content[i])) return true;
+  const word = /([A-Za-z_$][\w$]*)$/.exec(content.slice(Math.max(0, i - 20), i + 1));
+  return word !== null && MEMBER_KEYWORD.has(word[1]);
 }
 
 export function matchingClose(content: string, open: number, openChar: string, closeChar: string): number {
@@ -354,14 +360,13 @@ export function definitionHeads(content: string): DefinitionHead[] {
   const out: DefinitionHead[] = [];
   for (const m of content.matchAll(DEFINITION_HEAD)) {
     if (NOT_A_DEFINITION.has(m[1])) continue;
-    if (afterTernaryQuestion(content, m.index)) continue;
+    if (!declarationPosition(content, m[0], m.index)) continue;
     const openParen = m.index + m[0].length - 1;
     const closeParen = matchingClose(content, openParen, '(', ')');
     if (closeParen === -1) continue;
-    const after = /^\s*(?::\s*([^{;=]+))?\{/.exec(content.slice(closeParen + 1, closeParen + 400));
-    // cm:guard The body brace is the discriminator: `fetchUser(id);` is a call and only a real `{`
-    // after the signature — past an optional, paren-balanced return type — makes it a definition.
-    const body = after && (after[1] === undefined || parenBalanced(after[1])) ? after : null;
+    // cm:guard The body brace is the second discriminator: `fetchUser(id);` is a call and only a
+    // real `{` after the signature — past an optional return type — makes the same text a definition.
+    const body = /^\s*(?::\s*[^{;=]+)?\{/.exec(content.slice(closeParen + 1, closeParen + 400));
     // cm:guard An overload signature carries no body, so the `function` keyword stands in for it.
     if (!body && !/\bfunction\b/.test(m[0])) continue;
     const openBrace = body ? closeParen + body[0].length : -1;

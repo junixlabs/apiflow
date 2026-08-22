@@ -15,11 +15,12 @@ real call sites, and no fix could ever have resolved them — permanent noise in
 `apiflow check` watches for drift.
 
 A definition and a call are spelled identically up to the open paren; what separates them is a real
-body `{` after the closing one, past an optional return type — and a return type is a *type*, so its
-parens close. `cond ? fetch(url) : Promise.resolve({ … })` does not balance, which is how a ternary
-alternate is kept from passing as one. Getting that wrong is worse than the bug being fixed: a call
-misread as a definition is dropped from `endpoints` **and** from `unresolved`, so the gap does not
-even show up as a gap. `findCallSites` now drops any site whose
+body `{` after the closing one — **and** a position where a definition can legally stand. A bare
+`name(…) {` is a definition only as a class member or an object-literal method; everywhere else the
+`function` keyword is required, so in expression position it is a call. Getting that second half
+wrong is worse than the bug being fixed: `cond ? await fetch(url) : { data: null }` reads as a
+signature with a return type, and the call is then dropped from `endpoints` **and** from
+`unresolved` — a gap that does not show up as a gap, and that `apiflow check` cannot see. `findCallSites` now drops any site whose
 paren belongs to such a head — on every path, not only the wrapper path, so `function request(url) {`
 cannot report itself either — and `findHttpWrappers` walks the same heads, so the two halves cannot
 drift into disagreeing about what a definition is.

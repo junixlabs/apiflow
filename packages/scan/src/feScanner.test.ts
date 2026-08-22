@@ -145,19 +145,21 @@ describe('definitionHeads', () => {
 
   // cm:why The inverse of the bug this file exists for: a call misread as a definition is DELETED,
   // leaving neither an endpoint nor an unresolved entry — a gap that does not even show as a gap.
-  it('does not read a ternary consequent as a definition with a return type', () => {
-    const src = "const p = id ? fetch(`/api/u/${id}`) : Promise.resolve({ data: null });";
-    expect(definitionHeads(src)).toEqual([]);
-    expect(findCallSites(src).map((s) => s.via)).toEqual(['fetch']);
+  // cm:guard Every alternate here is paren-BALANCED, so nothing but the position test can reject
+  // them: an object literal, an arrow, a bare identifier. Weaken the test and this row goes red.
+  it.each([
+    ['plain consequent', 'const p = id ? fetch("/api/u") : { data: null };'],
+    ['awaited consequent', 'const p = id ? await fetch("/api/u") : { data: null };'],
+    ['unbalanced alternate', 'const p = id ? await fetch("/api/u") : Promise.resolve({ d: 1 });'],
+    ['arrow alternate', 'const p = id ? fetch("/api/u") : (v) => { return v; };'],
+    ['switch case', 'function f() { switch (k) { case "z": fetch("/api/u"); } }'],
+    ['object value', 'const o = { key: fetch("/api/u") };'],
+  ])('does not read a call in expression position as a definition (%s)', (_label, src) => {
+    expect(definitionHeads(src).map((d) => d.name)).not.toContain('fetch');
+    expect(findCallSites(src).map((s) => s.via)).toContain('fetch');
   });
 
-  it('holds when the consequent is awaited, so the `?` no longer sits next to the name', () => {
-    const src = "const p = id ? await fetch(`/api/u/${id}`) : Promise.resolve({ data: null });";
-    expect(definitionHeads(src)).toEqual([]);
-    expect(findCallSites(src).map((s) => s.via)).toEqual(['fetch']);
-  });
-
-  it('still accepts a genuine return type whose parens balance', () => {
+  it('still accepts a definition whose return type is itself a function type', () => {
     const src = 'export function make(): (a: string) => void {\n  fetch("/x");\n  return () => {};\n}';
     expect(definitionHeads(src).map((d) => d.name)).toEqual(['make']);
     expect(findCallSites(src).map((s) => s.via)).toEqual(['fetch']);
@@ -166,6 +168,13 @@ describe('definitionHeads', () => {
   it('still sees an object-literal method that follows a comma', () => {
     const src = 'export const api = {\n  first(id) { return fetch(`/a/${id}`); },\n  second(id) { return fetch(`/b/${id}`); },\n};';
     expect(definitionHeads(src).map((d) => d.name)).toEqual(['first', 'second']);
+  });
+
+  // cm:guard A class member reaches declarationPosition through `{`/`}`/`;`, an accessor through the
+  // `get` keyword — the two spellings a project's api client is actually written in.
+  it('still sees a class method and an accessor', () => {
+    const src = 'export class Api {\n  private base = "x";\n  async listThings(q: string) { return fetch(`/t/${q}`); }\n  get current() { return fetch("/c"); }\n}';
+    expect(definitionHeads(src).map((d) => d.name)).toEqual(['listThings', 'current']);
   });
 
   it('never claims a control-flow keyword', () => {
