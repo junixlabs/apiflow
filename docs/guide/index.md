@@ -1,3 +1,8 @@
+---
+title: The guide is the test
+blurb: Why every page in this section is a transcript replayed by CI, and what shipped / upcoming / reference mean.
+---
+
 # The guide is the test
 
 Every page in this directory is executed by `tests/guide.test.ts` on every push. A page is not
@@ -56,9 +61,39 @@ difference between this directory and the `docs/proposals/` that was deleted.
 
 ## Transcript format
 
-Inside a ` ```console ` block, a line starting `$ ` is a command; the lines after it are expected
-output. `apiflow` resolves to this checkout's CLI, `$TMP` to a throwaway `APIFLOW_HOME`.
+Inside a ` ```console?prompt=%24+ ` block, a line starting `$ ` is a command; the lines after it are
+expected output. `apiflow` resolves to this checkout's CLI, `$TMP` to a throwaway `APIFLOW_HOME`.
+
+The `?prompt=%24+` is not decoration. It tells the highlighter that a prompt ends at *dollar-space*,
+because its default treats any line containing `$`, `#` or `>` as a command — which would print
+apiflow's own output styled as something you typed. On a page whose only claim is that it is a
+faithful recording, that is the one rendering error that matters.
 
 Matching is a **subsequence**: every expected line must appear, in order. Not byte equality — an
 exact-output assertion breaks on a counter nobody promised and teaches the next person to delete the
 test.
+
+## The pages
+
+<div class="cards">
+  <a class="card" href="01-first-answer.html">
+    <span class="pill shipped">shipped</span>
+    <h3>Your first impact answer</h3>
+    <p>Scan a frontend, ask which screens break, read the client → hook → screen chain.</p>
+  </a>
+  <a class="card" href="02-a-wrapper-definition-is-not-a-call.html">
+    <span class="pill upcoming">upcoming</span>
+    <h3>A wrapper definition is not a call</h3>
+    <p>A scanner defect the fixture found. CI asserts this transcript still fails.</p>
+  </a>
+  <a class="card" href="03-probe.html">
+    <span class="pill reference">reference</span>
+    <h3>probe — confirm by running</h3>
+    <p>Needs a live API, so CI cannot replay it.</p>
+  </a>
+  <a class="card" href="04-two-machines.html">
+    <span class="pill reference">reference</span>
+    <h3>FE here, BE elsewhere</h3>
+    <p>Needs two machines, which is the whole point of the page.</p>
+  </a>
+</div>

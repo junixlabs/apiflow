@@ -1,4 +1,6 @@
 ---
+title: A wrapper definition is not a call
+blurb: A real scanner defect, written down before it is fixed. CI asserts this page still fails.
 status: upcoming
 ---
 
@@ -29,7 +31,7 @@ makes a real new gap invisible inside noise that can never be resolved.
 
 ## The expected output after the fix
 
-```console
+```console?prompt=%24+
 $ apiflow scan-fe fixtures/demo-app/web --name=demo --out=$TMP/fe.apimap
 **Calls**: 3 (exact 0 · inferred 2 · guess 1)
 ### Unresolved — 2

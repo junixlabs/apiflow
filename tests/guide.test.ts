@@ -1,12 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { execFileSync } from 'child_process';
-import { mkdtempSync, readFileSync, readdirSync, rmSync } from 'fs';
+import { mkdtempSync, readFileSync, readdirSync, rmSync, statSync } from 'fs';
 import { tmpdir } from 'os';
 import { dirname, join, resolve } from 'path';
 import { fileURLToPath } from 'url';
 
 const REPO = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const GUIDE = join(REPO, 'docs', 'guide');
+const DOCS = join(REPO, 'docs');
+const GUIDE = join(DOCS, 'guide');
 const CLI = join(REPO, 'packages', 'cli', 'bin', 'cli.js');
 
 type Status = 'shipped' | 'upcoming' | 'reference';
@@ -17,10 +18,10 @@ interface Page { file: string; status: Status; steps: Step[] }
 // commands and their output is replayed on every push, so it cannot drift without failing.
 // cm:edge lockstep -> docs/guide — every page here is executed. A page whose transcript stops
 // matching is a page that lies, and CI fails rather than the reader finding out.
-export function parsePage(file: string, text: string): Page {
+export function parsePage(file: string, text: string, fallback?: Status): Page {
   const front = /^---\n([\s\S]*?)\n---/.exec(text);
   const meta = front?.[1] ?? '';
-  const status = /status:\s*(shipped|upcoming|reference)/.exec(meta)?.[1] as Status | undefined;
+  const status = (/status:\s*(shipped|upcoming|reference)/.exec(meta)?.[1] as Status | undefined) ?? fallback;
   if (status === undefined) throw new Error(`${file}: frontmatter needs status: shipped | upcoming | reference`);
   // cm:guard `reference` is the only page kind CI cannot replay, so it must say WHY in the
   // frontmatter.
@@ -31,7 +32,9 @@ export function parsePage(file: string, text: string): Page {
   }
 
   const steps: Step[] = [];
-  for (const block of text.matchAll(/```console\n([\s\S]*?)```/g)) {
+  // cm:edge contract -> docs/guide/index.md — fences carry a rouge option (`console?prompt=%24+`), so
+  // dropping the query string here renders a page correctly while silently un-replaying it.
+  for (const block of text.matchAll(/```console(?:\?\S*)?\n([\s\S]*?)```/g)) {
     let current: Step | undefined;
     for (const line of block[1].split('\n')) {
       if (line.startsWith('$ ')) {
@@ -92,15 +95,36 @@ function runPage(page: Page): { ok: boolean; detail: string } {
   }
 }
 
-// cm:guard README.md in this directory is the RULE, not a page — it has no transcript and must not
-// be parsed as one.
-// cm:guard Every other .md file here is a page, deliberately: an un-replayed page must be
-// impossible to add by forgetting to register it.
-const pages = readdirSync(GUIDE)
-  .filter((f) => f.endsWith('.md') && f !== 'README.md')
-  .map((f) => parsePage(f, readFileSync(join(GUIDE, f), 'utf8')));
+// cm:guard guide/index.md is the RULE and the section landing page, not a transcript — the one
+// exemption, and the reason its prose may name a fence without owning one.
+// cm:guard Every other .md file in docs/guide is a page: an un-replayed page must be impossible to
+// add by forgetting to register it.
+const guidePages = readdirSync(GUIDE)
+  .filter((f) => f.endsWith('.md') && f !== 'index.md')
+  .map((f) => parsePage(join('guide', f), readFileSync(join(GUIDE, f), 'utf8')));
 
-describe('docs/guide is replayed, not trusted', () => {
+function markdownUnder(dir: string, rel = ''): string[] {
+  return readdirSync(dir).flatMap((name) => {
+    if (name.startsWith('_')) return [];
+    const full = join(dir, name);
+    if (statSync(full).isDirectory()) return markdownUnder(full, join(rel, name));
+    return name.endsWith('.md') ? [join(rel, name)] : [];
+  });
+}
+
+// cm:guard The rule is every transcript ON THE SITE, not every transcript in docs/guide: a landing
+// page showing an answer it does not actually produce is the exact failure this harness exists for.
+// cm:guard Outside docs/guide a console fence is implicitly `shipped` — roadmap pages live in the
+// guide, where a status can be argued for.
+const looseTranscripts = markdownUnder(DOCS)
+  .filter((f) => !f.startsWith('guide/'))
+  .map((f) => ({ f, text: readFileSync(join(DOCS, f), 'utf8') }))
+  .filter(({ text }) => /```console(?:\?\S*)?\n/.test(text))
+  .map(({ f, text }) => parsePage(f, text, 'shipped'));
+
+const pages = [...guidePages, ...looseTranscripts];
+
+describe('the site is replayed, not trusted', () => {
   it('has at least one page', () => {
     expect(pages.length).toBeGreaterThan(0);
   });

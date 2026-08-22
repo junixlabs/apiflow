@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+{%- assign is_home = false -%}
+{%- if page.url == '/' -%}{%- assign is_home = true -%}{%- endif -%}
+<title>{% if is_home %}{{ site.title }} — {{ site.tagline }}{% else %}{{ page.title | default: site.title }} · {{ site.title }}{% endif %}</title>
+<meta name="description" content="{{ page.blurb | default: site.description }}">
+<meta property="og:title" content="{% if is_home %}{{ site.title }}{% else %}{{ page.title }}{% endif %}">
+<meta property="og:description" content="{{ page.blurb | default: site.description }}">
+<meta property="og:type" content="website">
+<link rel="icon" type="image/svg+xml" href="{{ site.baseurl }}/assets/favicon.svg">
+<link rel="stylesheet" href="{{ site.baseurl }}/assets/style.css">
+</head>
+<body>
+
+<a class="skip" href="#main">Skip to content</a>
+
+<header class="top">
+  <a class="wordmark" href="{{ site.baseurl }}/">
+    <svg class="mark" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <g stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M6.75 4.6 H8.4 L12.8 11.05"/><path d="M19.21 4.77 L12.8 11.05"/>
+        <path d="M5.12 12.65 L12.8 11.05"/><path d="M12.97 18.05 L12.8 11.05"/>
+        <path d="M12.8 11.05 H17.6 L19.65 16.33"/>
+        <circle cx="5.5" cy="4.6" r="1.1"/><circle cx="20.1" cy="3.9" r="1.1"/>
+        <circle cx="3.9" cy="12.9" r="1.1"/><circle cx="13" cy="19.3" r="1.1"/>
+        <circle cx="20.1" cy="17.5" r="1.1"/>
+      </g>
+      <circle cx="12.8" cy="11.05" r="2.6" fill="currentColor"/>
+    </svg>
+    <span>apiflow</span>
+  </a>
+  <nav>
+    <a href="{{ site.baseurl }}/guide/">Guide</a>
+    <a class="ext" href="{{ site.repo }}/blob/main/packages/map/SPEC.md">Format</a>
+    <a href="{{ site.baseurl }}/research/product-shape.html">Research</a>
+    <a class="ext" href="{{ site.repo }}">GitHub</a>
+  </nav>
+</header>
+
+<main id="main" class="{% if is_home %}home{% else %}doc{% endif %}">
+
+{%- unless is_home -%}
+{%- if page.status -%}
+<div class="pagehead">
+  <p class="statusline">
+    <span class="pill {{ page.status }}">{{ page.status }}</span>
+    <span class="statuswhy">
+      {%- if page.status == 'shipped' -%}CI replays this transcript on every push. It passes.
+      {%- elsif page.status == 'upcoming' -%}Written before the code. CI asserts this transcript still <strong>fails</strong>.
+      {%- else -%}Not replayable in CI — {{ page['why-not-replayed'] | default: 'see the frontmatter' }}.
+      {%- endif -%}
+    </span>
+  </p>
+</div>
+{%- endif -%}
+{%- endunless -%}
+
+{{ content }}
+
+{%- unless is_home -%}
+{%- assign guide = site.pages
+      | where_exp: "p", "p.path contains 'guide/'"
+      | where_exp: "p", "p.name != 'index.md'"
+      | sort: "path" -%}
+{%- if page.path contains 'guide/' and page.name != 'index.md' -%}
+  {%- assign idx = 0 -%}
+  {%- for p in guide -%}{%- if p.path == page.path -%}{%- assign idx = forloop.index -%}{%- endif -%}{%- endfor -%}
+  {%- assign previdx = idx | minus: 1 -%}
+  {%- assign nextidx = idx | plus: 1 -%}
+<nav class="pager">
+  {%- for p in guide -%}
+    {%- if forloop.index == previdx -%}
+      <a class="prev" href="{{ p.url | relative_url }}"><span>Previous</span>{{ p.title }}</a>
+    {%- endif -%}
+  {%- endfor -%}
+  {%- for p in guide -%}
+    {%- if forloop.index == nextidx -%}
+      <a class="next" href="{{ p.url | relative_url }}"><span>Next</span>{{ p.title }}</a>
+    {%- endif -%}
+  {%- endfor -%}
+</nav>
+{%- endif -%}
+{%- endunless -%}
+
+</main>
+
+<footer class="bot">
+  <p>
+    <a href="{{ site.repo }}">GitHub</a> ·
+    <a href="{{ site.npm }}">npm</a> ·
+    <a href="{{ site.repo }}/blob/main/NORTH-STAR.md">NORTH-STAR</a> ·
+    <a href="{{ site.repo }}/blob/main/LICENSE">MIT</a>
+  </p>
+  <p class="fine">Every guide page on this site is a transcript replayed by CI. If one drifts from what
+  the tool prints, the build fails before the page is published.</p>
+</footer>
+
+</body>
+</html>

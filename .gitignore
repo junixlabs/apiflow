@@ -32,3 +32,7 @@ dist-ssr
 # cm:why apiflow's own scan output, when the tool is pointed at this repo while dogfooding.
 # Committing it would version a snapshot of this repo's own map that nothing reads.
 .apiview/
+
+# cm:edge lockstep -> .github/workflows/pages.yml — the build copies public/favicon.svg here; a
+# checked-in copy is how the site and the product start wearing different logos.
+docs/assets/favicon.svg

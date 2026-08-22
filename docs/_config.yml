@@ -1,5 +1,24 @@
 title: apiflow
-description: A screen ↔ endpoint ↔ field dependency map — which screens break if you change an endpoint or a field
-theme: jekyll-theme-primer
+tagline: A screen ↔ endpoint ↔ field dependency map
+description: Which screens break if you change an endpoint or a response field — answered before you edit.
+url: https://junixlabs.github.io
+baseurl: /apiflow
+repo: https://github.com/junixlabs/apiflow
+npm: https://www.npmjs.com/package/@junixlabs/apiflow
+
+# No theme gem: the layout in _layouts/ and the stylesheet in assets/ are the whole design, and they
+# carry the SAME tokens the product's own pages use. A theme would put a second identity on the site.
+theme:
+markdown: kramdown
+highlighter: rouge
+kramdown:
+  input: GFM
+  syntax_highlighter: rouge
+
+defaults:
+  - scope: { path: '' }
+    values: { layout: default }
+
 exclude:
-  - research/.gitkeep
+  - Gemfile
+  - Gemfile.lock

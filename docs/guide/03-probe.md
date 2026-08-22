@@ -1,4 +1,6 @@
 ---
+title: probe — confirm a field by running
+blurb: Record real responses so a field is observed, not only declared.
 status: reference
 why-not-replayed: needs an API process running and credentials; CI has neither, and pointing a probe at anything real from CI is exactly what --yes-remote exists to prevent
 ---

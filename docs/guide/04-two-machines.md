@@ -1,4 +1,6 @@
 ---
+title: FE here, BE elsewhere
+blurb: "Two machines, one map, no server: the file travels because it carries no machine path."
 status: reference
 why-not-replayed: needs two machines; the whole point of the page is that the file travels between them
 ---

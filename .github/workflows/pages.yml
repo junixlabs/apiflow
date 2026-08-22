@@ -35,6 +35,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/configure-pages@v5
+      # cm:why Copied rather than duplicated in the repo: public/favicon.svg is the one brand mark, and
+      # a second checked-in copy is how a site and a product start wearing different logos.
+      - run: cp public/favicon.svg docs/assets/favicon.svg
       - uses: actions/jekyll-build-pages@v1
         with:
           source: ./docs

@@ -1,4 +1,6 @@
 ---
+title: Your first impact answer
+blurb: Scan a frontend and ask which screens break, against a four-file fixture committed to this repo.
 status: shipped
 ---
 
@@ -12,7 +14,7 @@ the same on your machine as in CI and no real codebase is involved.
 
 ## 1. Read the frontend
 
-```console
+```console?prompt=%24+
 $ apiflow scan-fe fixtures/demo-app/web --name=demo --out=$TMP/fe.apimap
 ## FE Map Scan Results
 **Root**: github.com/junixlabs/apiflow//fixtures/demo-app/web
@@ -29,7 +31,7 @@ machine it ran on, which is why two people scanning the same commit get the same
 
 Ask before you guess an endpoint string — the answer is the exact form the next command takes.
 
-```console
+```console?prompt=%24+
 $ apiflow impact $TMP/fe.apimap
 ## demo — 3 endpoint(s), 3 screen(s)
 - DELETE /users/{param} — 1 caller(s)
@@ -43,7 +45,7 @@ a variable the scanner keeps separate rather than inventing a join for.
 
 ## 3. The answer the tool exists for
 
-```console
+```console?prompt=%24+
 $ apiflow impact $TMP/fe.apimap --endpoint="GET /users/{param}"
 ## Impact — GET /users/{param}
 1 screen(s) break if this changes:
@@ -58,7 +60,7 @@ thirty seconds. The label is the product; an answer without its confidence is a 
 
 ## 4. What it will not tell you
 
-```console
+```console?prompt=%24+
 $ apiflow impact $TMP/fe.apimap --endpoint="GET /api/users/{param}"
 Nothing matches GET /api/users/{param} in demo.
 ```

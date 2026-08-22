@@ -1,3 +1,8 @@
+---
+title: What kind of product this is
+blurb: The category, its graveyard, and the two roads Mermaid and draw.io took.
+---
+
 # What kind of product this is
 
 Researched 2026-08-22. Written down so nobody has to research it again in three months.
