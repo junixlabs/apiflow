@@ -1,0 +1,43 @@
+<svg class="dg" viewBox="0 0 760 210" role="img" aria-labelledby="dg-model-t">
+  <title id="dg-model-t">Two screens read one endpoint, which carries three fields; every edge keeps the file and line it was read from.</title>
+
+  <text class="dg-col" x="101" y="14">SCREEN</text>
+  <text class="dg-col" x="380" y="14">ENDPOINT</text>
+  <text class="dg-col" x="652" y="14">FIELD</text>
+
+  <path class="dg-edge" d="M186 67 C 232 67, 248 105, 290 105"/>
+  <path class="dg-edge" d="M186 143 C 232 143, 248 105, 290 105"/>
+  <path class="dg-edge" d="M470 105 C 508 105, 522 46, 560 46"/>
+  <path class="dg-edge" d="M470 105 L 560 106"/>
+  <path class="dg-edge" d="M470 105 C 508 105, 522 166, 560 166"/>
+
+  <g>
+    <rect class="dg-node" x="16" y="44" width="170" height="46" rx="9"/>
+    <text class="dg-name" x="101" y="65">UserPage</text>
+    <text class="dg-path" x="101" y="80">users/[id].tsx:4</text>
+  </g>
+  <g>
+    <rect class="dg-node" x="16" y="120" width="170" height="46" rx="9"/>
+    <text class="dg-name" x="101" y="141">UsersList</text>
+    <text class="dg-path" x="101" y="156">users/index.tsx:6</text>
+  </g>
+
+  <g>
+    <rect class="dg-node dg-focus" x="290" y="82" width="180" height="46" rx="9"/>
+    <text class="dg-name dg-mono" x="380" y="103">GET /users/{param}</text>
+    <text class="dg-path" x="380" y="118">routes/users.ts:12</text>
+  </g>
+
+  <g>
+    <rect class="dg-node" x="560" y="26" width="184" height="40" rx="9"/>
+    <text class="dg-name dg-mono" x="652" y="51">id</text>
+  </g>
+  <g>
+    <rect class="dg-node" x="560" y="86" width="184" height="40" rx="9"/>
+    <text class="dg-name dg-mono" x="652" y="111">email</text>
+  </g>
+  <g>
+    <rect class="dg-node" x="560" y="146" width="184" height="40" rx="9"/>
+    <text class="dg-name dg-mono" x="652" y="171">name</text>
+  </g>
+</svg>

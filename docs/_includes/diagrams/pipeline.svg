@@ -1,0 +1,58 @@
+<svg class="dg" viewBox="0 0 760 250" role="img" aria-labelledby="dg-pipe-t">
+  <title id="dg-pipe-t">Each repo is scanned into its own .apimap file; link joins them into one map, which impact, check and probe read.</title>
+
+  <text class="dg-col" x="79" y="14">READ</text>
+  <text class="dg-col" x="288" y="14">MAP</text>
+  <text class="dg-col" x="450" y="14">JOIN</text>
+  <text class="dg-col" x="647" y="14">ASK</text>
+
+  <path class="dg-edge dg-arrow" d="M142 74 L 214 74"/>
+  <path class="dg-edge dg-arrow" d="M142 194 L 214 194"/>
+
+  <path class="dg-edge" d="M362 74 C 392 74, 396 134, 420 134"/>
+  <path class="dg-edge" d="M362 194 C 392 194, 396 134, 420 134"/>
+  <path class="dg-edge dg-arrow" d="M480 134 L 522 134"/>
+
+  <g>
+    <rect class="dg-node" x="16" y="50" width="126" height="48" rx="9"/>
+    <text class="dg-name" x="79" y="72">frontend</text>
+    <text class="dg-path" x="79" y="87">any repo</text>
+  </g>
+  <g>
+    <rect class="dg-node" x="16" y="170" width="126" height="48" rx="9"/>
+    <text class="dg-name" x="79" y="192">api</text>
+    <text class="dg-path" x="79" y="207">another machine</text>
+  </g>
+
+  <g>
+    <rect class="dg-node dg-file" x="214" y="50" width="148" height="48" rx="9"/>
+    <text class="dg-name dg-mono" x="288" y="79">fe.apimap</text>
+  </g>
+  <g>
+    <rect class="dg-node dg-file" x="214" y="170" width="148" height="48" rx="9"/>
+    <text class="dg-name dg-mono" x="288" y="199">be.apimap</text>
+  </g>
+
+  <g>
+    <rect class="dg-node dg-focus" x="420" y="110" width="60" height="48" rx="9"/>
+    <text class="dg-name dg-mono" x="450" y="139">link</text>
+  </g>
+
+  <g>
+    <rect class="dg-node" x="522" y="44" width="222" height="40" rx="9"/>
+    <text class="dg-name dg-mono dg-left" x="540" y="69">impact</text>
+    <text class="dg-note" x="726" y="69">what breaks</text>
+  </g>
+  <g>
+    <rect class="dg-node" x="522" y="114" width="222" height="40" rx="9"/>
+    <text class="dg-name dg-mono dg-left" x="540" y="139">check</text>
+    <text class="dg-note" x="726" y="139">a CI gate</text>
+  </g>
+  <g>
+    <rect class="dg-node" x="522" y="184" width="222" height="40" rx="9"/>
+    <text class="dg-name dg-mono dg-left" x="540" y="209">probe</text>
+    <text class="dg-note" x="726" y="209">confirm by running</text>
+  </g>
+  <text class="dg-edgelabel" x="178" y="66">scan-fe</text>
+  <text class="dg-edgelabel" x="178" y="186">scan-be</text>
+</svg>

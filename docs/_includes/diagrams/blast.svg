@@ -1,0 +1,40 @@
+<svg class="dg" viewBox="0 0 760 208" role="img" aria-labelledby="dg-blast-t">
+  <title id="dg-blast-t">Changing GET /users/{param} reaches UserPage through fetchUser and useUser, three hops each with a file and line; one call site stayed unresolved and is not counted.</title>
+
+  <text class="dg-col" x="100" y="14">ENDPOINT</text>
+  <text class="dg-col" x="292" y="14">CLIENT</text>
+  <text class="dg-col" x="484" y="14">HOOK</text>
+  <text class="dg-col" x="676" y="14">SCREEN</text>
+
+  <path class="dg-edge dg-arrow" d="M184 82 L 202 82"/>
+  <path class="dg-edge dg-arrow" d="M376 82 L 394 82"/>
+  <path class="dg-edge dg-arrow" d="M568 82 L 586 82"/>
+
+  <g>
+    <rect class="dg-node dg-focus" x="16" y="56" width="168" height="52" rx="9"/>
+    <text class="dg-name dg-mono" x="100" y="80">GET /users/</text>
+    <text class="dg-name dg-mono" x="100" y="96">{param}</text>
+  </g>
+  <g>
+    <rect class="dg-node" x="208" y="56" width="168" height="52" rx="9"/>
+    <text class="dg-name" x="292" y="79">fetchUser</text>
+    <text class="dg-path" x="292" y="95">api/users.ts:3</text>
+  </g>
+  <g>
+    <rect class="dg-node" x="400" y="56" width="168" height="52" rx="9"/>
+    <text class="dg-name" x="484" y="79">useUser</text>
+    <text class="dg-path" x="484" y="95">hooks/useUser.ts:4</text>
+  </g>
+  <g>
+    <rect class="dg-node dg-guess" x="592" y="56" width="168" height="52" rx="9"/>
+    <text class="dg-name" x="676" y="79">UserPage</text>
+    <text class="dg-path" x="676" y="95">users/[id].tsx:4</text>
+  </g>
+
+  <rect class="dg-pill dg-pill-guess" x="690" y="120" width="70" height="20" rx="10"/>
+  <text class="dg-pilltext dg-t-guess" x="725" y="134">guess</text>
+  <text class="dg-note" x="678" y="134">reached through a module hop</text>
+
+  <rect class="dg-node dg-dashed" x="16" y="160" width="380" height="36" rx="9"/>
+  <text class="dg-note dg-left dg-t-dead" x="34" y="182">1 call site unresolved — never folded into the count</text>
+</svg>

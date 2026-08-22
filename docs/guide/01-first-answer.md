@@ -54,6 +54,13 @@ client    fetchUser  src/api/users.ts:3
 ↳ screen    UserPage  src/pages/users/[id].tsx:4
 ```
 
+<figure class="diagram">
+  <div class="scroll">{% include diagrams/blast.svg %}</div>
+  <figcaption>The same answer, drawn: the endpoint on the left, the screen that breaks on the right,
+  and the two hops in between. The label sits on the hop that earned it, and the unresolved call site
+  is drawn <em>outside</em> the count rather than folded into it.</figcaption>
+</figure>
+
 Three hops, each with a `file:line` you can open. The claim is labelled `guess` because the screen
 was reached through a module hop — read `exact` and `inferred` as answers, `guess` as a lead worth
 thirty seconds. The label is the product; an answer without its confidence is a liability.

@@ -125,6 +125,46 @@ div[class*="language-"] { border-radius:12px; overflow:hidden; }
 .language-console .o, .language-console .w { color:#c3d0e4; }
 .language-console .s2 { color:#8fd6a9; }
 
+/* ---------- diagrams ---------- */
+/* Hand-authored SVG rather than mermaid, for one reason: a build-time mermaid render cannot follow the
+   reader's theme (rehype-mermaid's inline-svg strategy has no dark option at all), and the subject of
+   this product IS a graph. Every colour below is a token, so one file is correct in both themes with
+   no javascript and no browser at build time.
+   cm:edge contract -> docs/_includes/diagrams — the class vocabulary is shared with every .svg there:
+   dg-node/focus/file/dashed/guess, dg-edge/arrow, dg-col/name/path/note/edgelabel/pill, dg-left. */
+
+figure.diagram { margin:0 0 24px; max-width:940px; }
+/* A diagram that shrinks to fit a phone is a diagram nobody can read: below the min-width it scrolls
+   inside its own box instead, the same rule the transcripts follow. */
+figure.diagram .scroll { overflow-x:auto; border:1px solid var(--line); border-radius:12px;
+  background:var(--surface); padding:18px 20px; }
+figure.diagram svg.dg { display:block; width:100%; min-width:560px; height:auto; }
+figure.diagram figcaption { margin:10px 2px 0; font-size:13.5px; color:var(--muted); }
+
+.dg text { font-family:var(--sans); }
+.dg-col { font-size:10.5px; font-weight:650; letter-spacing:.09em; fill:var(--muted); text-anchor:middle; }
+.dg-name { font-size:14.5px; font-weight:640; fill:var(--ink); text-anchor:middle; }
+.dg-path { font-size:11px; fill:var(--muted); text-anchor:middle; }
+.dg-note { font-size:12px; fill:var(--muted); text-anchor:end; }
+.dg-edgelabel { font-size:11.5px; fill:var(--muted); text-anchor:middle; }
+.dg-pilltext { font-size:10.5px; font-weight:700; letter-spacing:.05em; text-anchor:middle; }
+.dg-mono { font-family:var(--mono); font-size:13px; }
+.dg-left { text-anchor:start; }
+.dg-t-guess { fill:var(--guess); }
+.dg-t-dead { fill:var(--dead); }
+
+.dg-node { fill:var(--surface-2); stroke:var(--line-2); stroke-width:1.2; }
+.dg-focus { fill:var(--tint-brand); stroke:var(--brand); }
+.dg-file { fill:var(--tint-inferred); stroke:var(--inferred); }
+.dg-guess { fill:var(--tint-guess); stroke:var(--guess); }
+.dg-dashed { fill:none; stroke:var(--dead); stroke-dasharray:5 4; opacity:.75; }
+.dg-pill { fill:none; stroke-width:1.2; }
+.dg-pill-guess { stroke:var(--guess); fill:var(--tint-guess); }
+.dg-edge { fill:none; stroke:var(--line-2); stroke-width:1.6; }
+/* The marker itself lives once in the layout: two diagrams on one page cannot each define #dg-tip. */
+.dg-arrow { marker-end:url(#dg-tip); }
+.dg-tip { fill:var(--line-2); }
+
 /* ---------- tables ---------- */
 
 .table-wrap { overflow-x:auto; margin:0 0 24px; }
