@@ -25,7 +25,10 @@ jobs:
       - run: npm test
       - run: npm run boundary
       - run: npm run codemap
-      # cm:guard Publish the tarball verify:pack just checked, never a bare `npm publish`: at the repo
-      # root that packs 170 files including .forge/ and CLAUDE.md into a public tarball.
-      - run: npm run verify:pack -- "$RUNNER_TEMP"
-      - run: npm publish "$RUNNER_TEMP"/junixlabs-apiflow-*.tgz --access public
+      - run: npm run verify:pack
+      # cm:guard Publish from packages/cli, NEVER from the repo root: at the root `npm publish` packs
+      # 170 files including .forge/ and CLAUDE.md into a public tarball, and only `private` refuses it.
+      # cm:why A directory publish, not the tarball verify:pack built: 1.1.13 got its OIDC provenance
+      # attestation this way, and npm does not attest a tarball spec. prepack rebuilds the same bundle.
+      - run: npm publish --access public
+        working-directory: packages/cli

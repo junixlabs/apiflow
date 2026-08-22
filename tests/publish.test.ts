@@ -40,11 +40,13 @@ describe('one published artifact', () => {
     }
   });
 
-  // cm:why The release runs `npm publish <verified tarball>`, never a bare `npm publish`: a bare one
-  // at the repo root packs 170 files including .forge/ and CLAUDE.md into a public tarball.
-  it('publishes the tarball the workflow verified', () => {
+  // cm:guard A root publish packs 170 files including .forge/ and CLAUDE.md into a public tarball, and
+  // `private: true` on the root is all that refuses it — so the step must name its working-directory.
+  it('publishes from packages/cli, after verify:pack', () => {
     const wf = readFileSync(join(root, '.github/workflows/publish.yml'), 'utf8');
     expect(wf).toContain('npm run verify:pack');
-    expect(wf).not.toMatch(/^\s*- run: npm publish\s*(--|$)/m);
+    const publish = wf.slice(wf.indexOf('- run: npm publish'));
+    expect(publish).toMatch(/^- run: npm publish[^\n]*\n\s*working-directory: packages\/cli$/m);
+    expect(wf.indexOf('npm run verify:pack')).toBeLessThan(wf.indexOf('- run: npm publish'));
   });
 });
