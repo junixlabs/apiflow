@@ -125,19 +125,12 @@ that MCP adds an argument-selection step performed by a model. Hence: list first
 
 ## Contributing
 
-```bash
-git clone https://github.com/junixlabs/apiflow.git && cd apiflow && npm install
-npm test          # includes the docs transcripts
-npm run lint
-npm run boundary  # the four structural rules
-npm run codemap   # the comment convention, at zero errors
-```
+Five gates, the docs-authoring rule and the diagram convention are in
+[`CONTRIBUTING.md`](./CONTRIBUTING.md). **Read [`NORTH-STAR.md`](./NORTH-STAR.md) before proposing a
+feature** — §2 is the pain this exists for, §7 is what will not be built. A proposal that cannot be
+traced back to §2 is refused, including the API-to-API question above.
 
-**Read [`NORTH-STAR.md`](./NORTH-STAR.md) before proposing a feature** — §2 is the pain this exists
-for, §7 is what will not be built. A proposal that cannot be traced back to §2 is refused, including
-the API-to-API question above.
-
-PRs welcome. Please read the [Code of Conduct](CODE_OF_CONDUCT.md) first · [`CHANGELOG.md`](./CHANGELOG.md)
+[Code of Conduct](CODE_OF_CONDUCT.md) · [`CHANGELOG.md`](./CHANGELOG.md)
 
 ## License
 

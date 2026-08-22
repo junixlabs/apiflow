@@ -8,7 +8,7 @@ This file **points**; it holds no rules. Rules live where they can be enforced.
 - Mechanics and contracts → `packages/map/SPEC.md` (the `.apimap` format), then `README.md`.
 - **Docs are executed, not written.** Every ` ```console ` block published under `docs/` is replayed by
   `tests/guide.test.ts` on every push — the front page included. Read
-  [`docs/guide/index.md`](./docs/guide/index.md) before adding or editing a page: `shipped` must pass,
+  [`CONTRIBUTING.md`](./CONTRIBUTING.md#writing-a-documentation-page) before adding or editing a page: `shipped` must pass,
   `upcoming` must fail, `reference` must say why it cannot be replayed. Do not write a doc for work
   that is not being done now — that is what `docs/proposals/` was, and it was deleted.
 - **The site is built with the real Pages image.** `docker run ghcr.io/actions/jekyll-build-pages`
