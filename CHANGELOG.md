@@ -26,6 +26,22 @@ where a literal path would be needed — and they must stay visible.
 `docs/guide/02-a-wrapper-definition-is-not-a-call.md` was an `upcoming` page asserting the defect was
 still there; it is `shipped` now, and its transcript is the gate.
 
+### Fixed — a directory the scanner cannot read no longer ends the scan
+
+`scan-fe` and `scan-be` walked the tree with a bare `readdirSync`, so a single unreadable directory
+under the root — a root-owned cache, a mount, `/tmp/snap-private-tmp` — aborted the command with a
+raw EACCES stack and produced no map at all. Found by pointing the scanner at a path that happened to
+contain one.
+
+Both walks now skip what they cannot open and **print it**: `**Unreadable directories skipped**: N`.
+Silence was the other option and it is the worse one — a tree missed without a word reads exactly
+like a tree with nothing in it, which is the failure the `Nested checkouts skipped` line already
+exists to prevent. The same helper serves both commands, deduped across the config walk and the
+source walk, so one unreadable tree is reported once.
+
+Also fixed while there: `scan-be` cleared its skip list *after* the stack-detection probe had already
+walked directories, throwing away every skip that probe recorded.
+
 ## [1.2.0] — 2026-08-23
 
 The request runner is no longer part of this package.

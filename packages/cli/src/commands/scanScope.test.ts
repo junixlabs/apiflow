@@ -1,9 +1,9 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'fs';
+import { chmodSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { isNestedCheckout } from './scanScope';
-import { scanDirectory, lastScanStats } from './scanFe';
+import { scanDirectory, lastScanStats, skipReport } from './scanFe';
 
 let root: string;
 
@@ -67,5 +67,23 @@ describe('scanDirectory skips copies of itself', () => {
     const map = scanDirectory(root, 'bundle');
     expect(map.endpoints.map((e) => e.path)).toEqual(['/api/orders']);
     expect(lastScanStats.generatedSkipped).toEqual(['public/widget/chat.js']);
+  });
+
+  // cm:why One root-owned directory anywhere under the root used to end the scan with a raw EACCES
+  // stack and no map at all — the rest of the tree is still worth mapping.
+  // cm:guard Skipped as root rather than silently passing: `chmod 000` does not stop uid 0, so the
+  // assertion would be vacuous in a root container instead of testing anything.
+  it.skipIf(process.getuid?.() === 0)('finishes the scan around a directory it cannot read, and says so once', () => {
+    write('src/api.ts', call);
+    mkdirSync(join(root, 'locked', 'inner'), { recursive: true });
+    chmodSync(join(root, 'locked'), 0o000);
+    try {
+      const map = scanDirectory(root, 'locked-out');
+      expect(map.endpoints.map((e) => e.path)).toEqual(['/api/orders']);
+      expect(lastScanStats.unreadableSkipped).toEqual(['locked']);
+      expect(skipReport(lastScanStats)).toContain('**Unreadable directories skipped**: 1 — locked');
+    } finally {
+      chmodSync(join(root, 'locked'), 0o755);
+    }
   });
 });

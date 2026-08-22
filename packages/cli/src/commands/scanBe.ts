@@ -1,4 +1,4 @@
-import { readdirSync, readFileSync, mkdirSync, writeFileSync, statSync, existsSync, realpathSync } from 'fs';
+import { readFileSync, mkdirSync, writeFileSync, statSync, existsSync, realpathSync } from 'fs';
 import { join, relative, resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import type { ApiMapFile, FieldNode } from '@junixlabs/apiflow-map';
@@ -8,7 +8,7 @@ import type { ClassIndex, SchemaDef, Stack } from '@junixlabs/apiflow-scan';
 import { detectStack, indexClasses, isBackendFile, laravelRouteFilePrefixes, resolveHandlerSchemas, scanBackendFile } from '@junixlabs/apiflow-scan';
 import { enclosingSymbols, symbolAt } from '@junixlabs/apiflow-scan';
 import { buildMountGraph, joinPrefix, prefixesFor } from '@junixlabs/apiflow-scan';
-import { buildResolver, skipReport } from './scanFe';
+import { buildResolver, readEntries, skipReport } from './scanFe';
 import { tolerateClosedPipe } from './stdio';
 import { isNestedCheckout } from './scanScope';
 import { isGeneratedSource } from '@junixlabs/apiflow-scan';
@@ -24,10 +24,15 @@ const SKIP_DIRS = new Set([
   'storage', '.next', 'target', 'bin', 'obj',
 ]);
 
-export const lastBeScanStats = { checkoutsSkipped: [] as string[], generatedSkipped: [] as string[] };
+export const lastBeScanStats = {
+  checkoutsSkipped: [] as string[],
+  generatedSkipped: [] as string[],
+  unreadableSkipped: [] as string[],
+};
 
 function walk(root: string, dir: string, acc: string[] = []): string[] {
-  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+  const entries = readEntries(dir, lastBeScanStats.unreadableSkipped, relative(root, dir).split('\\').join('/'));
+  for (const entry of entries) {
     if (entry.isDirectory()) {
       if (SKIP_DIRS.has(entry.name)) continue;
       const full = join(dir, entry.name);
@@ -61,7 +66,7 @@ function stacksByDirectory(root: string): Array<{ dir: string; stack: Stack }> {
     const stack = detectStack(readManifests(root, dir));
     if (stack !== 'generic') found.push({ dir, stack });
     if (depth === 0) return;
-    for (const entry of readdirSync(join(root, dir), { withFileTypes: true })) {
+    for (const entry of readEntries(join(root, dir), lastBeScanStats.unreadableSkipped, dir || '.')) {
       if (entry.isDirectory() && !SKIP_DIRS.has(entry.name)) visit(join(dir, entry.name), depth - 1);
     }
   };
@@ -99,12 +104,15 @@ function mountPrefixes(
 }
 
 export function scanBackend(root: string, name: string): BeScanResult {
+  // cm:guard Reset BEFORE the stack probe, not after: that probe walks directories too, and
+  // clearing the list below it threw away every skip it had just recorded.
+  lastBeScanStats.checkoutsSkipped = [];
+  lastBeScanStats.generatedSkipped = [];
+  lastBeScanStats.unreadableSkipped = [];
   const stacks = stacksByDirectory(root);
   const stackAt = (file: string): Stack =>
     stacks.find(({ dir }) => dir === '' || file.startsWith(`${dir}/`))?.stack ?? 'generic';
   const stack = stacks[stacks.length - 1]?.stack ?? 'generic';
-  lastBeScanStats.checkoutsSkipped = [];
-  lastBeScanStats.generatedSkipped = [];
   const files = walk(root, root)
     .map((file) => ({ file, content: safeRead(join(root, file)) }))
     .filter(({ file, content }) => {

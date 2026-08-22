@@ -1,4 +1,5 @@
 import { readdirSync, readFileSync, mkdirSync, writeFileSync, statSync, realpathSync } from 'fs';
+import type { Dirent } from 'fs';
 import { join, relative, resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import type { ApiMapFile, Confidence, ScreenNode, UnresolvedCall } from '@junixlabs/apiflow-map';
@@ -25,7 +26,10 @@ const SKIP_DIRS = new Set([
 ]);
 
 function walk(root: string, dir: string, acc: string[] = []): string[] {
-  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+  // cm:why A directory the process cannot read used to end the scan with a raw EACCES stack — one
+  // root-owned cache anywhere under the root and the command produced no map at all.
+  const entries = readEntries(dir, lastScanStats.unreadableSkipped, normalizePosix(relative(root, dir)));
+  for (const entry of entries) {
     if (entry.isDirectory()) {
       if (SKIP_DIRS.has(entry.name)) continue;
       const full = join(dir, entry.name);
@@ -47,7 +51,7 @@ const EXTENSIONS = ['.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs', '.vue', '.svel
 const CONFIG_NAMES = new Set(['tsconfig.json', 'jsconfig.json']);
 
 function walkConfigs(root: string, dir: string, acc: string[] = []): string[] {
-  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+  for (const entry of readEntries(dir, lastScanStats.unreadableSkipped, normalizePosix(relative(root, dir)))) {
     const full = join(dir, entry.name);
     if (entry.isDirectory()) {
       if (!SKIP_DIRS.has(entry.name)) walkConfigs(root, full, acc);
@@ -128,10 +132,17 @@ export function buildResolver(root: string, files: Set<string>): ResolveImport {
 
 // cm:why A skip has to be printed. Silently dropping fifteen worktrees reads exactly like a scan
 // that found nothing there, and the reader would go looking for a bug in the walk instead.
-export function skipReport(stats: { checkoutsSkipped: string[]; generatedSkipped: string[] }): string[] {
+export function skipReport(stats: {
+  checkoutsSkipped: string[];
+  generatedSkipped: string[];
+  unreadableSkipped?: string[];
+}): string[] {
   const out: string[] = [];
   const show = (list: string[]): string =>
     list.slice(0, 3).join(', ') + (list.length > 3 ? `, +${list.length - 3} more` : '');
+  if (stats.unreadableSkipped?.length) {
+    out.push(`**Unreadable directories skipped**: ${stats.unreadableSkipped.length} — ${show(stats.unreadableSkipped)}`);
+  }
   if (stats.checkoutsSkipped.length > 0) {
     out.push(`**Nested checkouts skipped**: ${stats.checkoutsSkipped.length} — ${show(stats.checkoutsSkipped)}`);
   }
@@ -139,6 +150,20 @@ export function skipReport(stats: { checkoutsSkipped: string[]; generatedSkipped
     out.push(`**Generated files skipped**: ${stats.generatedSkipped.length} — ${show(stats.generatedSkipped)}`);
   }
   return out;
+}
+
+// cm:edge contract -> packages/cli/src/commands/scanBe.ts — both walks report an unreadable
+// directory the same way, so the two commands cannot disagree about what a skipped tree looks like.
+export function readEntries(dir: string, skipped: string[], label: string): Dirent[] {
+  try {
+    return readdirSync(dir, { withFileTypes: true });
+  } catch {
+    // cm:guard Deduped on the way in: the config walk and the source walk both cross the same
+    // directory, and one unreadable tree reported twice reads as two.
+    const name = label || '.';
+    if (!skipped.includes(name)) skipped.push(name);
+    return [];
+  }
 }
 
 function normalizePosix(p: string): string {
@@ -151,6 +176,7 @@ export const lastScanStats = {
   declaredRoutes: 0,
   checkoutsSkipped: [] as string[],
   generatedSkipped: [] as string[],
+  unreadableSkipped: [] as string[],
 };
 
 export function scanDirectory(root: string, name: string, hints?: ScanHints): ApiMapFile {
@@ -159,6 +185,7 @@ export function scanDirectory(root: string, name: string, hints?: ScanHints): Ap
   lastScanStats.serverFilesSkipped = 0;
   lastScanStats.checkoutsSkipped = [];
   lastScanStats.generatedSkipped = [];
+  lastScanStats.unreadableSkipped = [];
   for (const rel of walk(root, root)) {
     let content: string;
     try {
