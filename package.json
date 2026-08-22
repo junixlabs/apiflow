@@ -1,88 +1,20 @@
 {
-  "name": "@junixlabs/apiflow",
-  "version": "1.1.13",
-  "description": "A screen ↔ endpoint ↔ field dependency map: answers which screens break if you change an endpoint or a response field. Plus a visual request runner. Local-first, git-friendly, open source.",
+  "name": "apiflow-monorepo",
+  "private": true,
   "type": "module",
   "license": "MIT",
-  "keywords": [
-    "api",
-    "dependency-graph",
-    "impact-analysis",
-    "codebase-map",
-    "static-analysis",
-    "mcp",
-    "mcp-server",
-    "api-testing",
-    "api-client",
-    "visual",
-    "flow",
-    "rest",
-    "http",
-    "developer-tools",
-    "postman-alternative",
-    "openapi",
-    "curl"
-  ],
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/junixlabs/apiflow"
-  },
-  "homepage": "https://github.com/junixlabs/apiflow",
-  "bugs": {
-    "url": "https://github.com/junixlabs/apiflow/issues"
-  },
-  "author": "junixlabs",
-  "bin": {
-    "apiflow": "./bin/cli.js"
-  },
-  "files": [
-    "bin/",
-    "dist/",
-    "proxy/",
-    "src/core/",
-    "src/cli/",
-    "public/",
-    "src/view/",
-    "src/server/",
-    "src/workspace/",
-    "src/mcp/",
-    "skills/",
-    "package.json",
-    "index.html",
-    "vite.config.ts",
-    "tsconfig*.json",
-    "postcss.config.js",
-    "tailwind.config.*",
-    "!src/**/*.test.ts",
-    "!src/**/__fixtures__/**"
+  "workspaces": [
+    "packages/*"
   ],
   "scripts": {
-    "dev": "concurrently \"vite\" \"tsx proxy/index.ts\"",
-    "dev:client": "vite",
-    "dev:proxy": "tsx proxy/index.ts",
-    "dev:mcp": "tsx src/mcp/server.ts",
-    "build": "tsc -b && vite build",
-    "start": "node bin/cli.js",
-    "prepublishOnly": "npm run build",
+    "dev": "npm run dev -w @junixlabs/apiflow-runner",
+    "dev:mcp": "tsx packages/runner/src/mcp/server.ts",
+    "build": "tsc -b && npm run build -w @junixlabs/apiflow-runner",
+    "start": "node packages/cli/bin/cli.js",
     "lint": "eslint .",
-    "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
-    "boundary": "depcruise --config .dependency-cruiser.cjs src"
-  },
-  "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.27.1",
-    "@xyflow/react": "^12.8.2",
-    "cors": "^2.8.5",
-    "express": "^5.1.0",
-    "html-to-image": "^1.11.13",
-    "js-yaml": "^4.1.1",
-    "lucide-react": "^0.577.0",
-    "react": "^19.2.4",
-    "react-dom": "^19.2.4",
-    "tsx": "^4.19.3",
-    "zod": "^4.3.6",
-    "zustand": "^5.0.5"
+    "boundary": "depcruise --config .dependency-cruiser.cjs packages"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.4",

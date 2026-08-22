@@ -2,19 +2,19 @@
   "compilerOptions": {
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.node.tsbuildinfo",
     "target": "ES2023",
-    "lib": ["ES2023"],
+    "lib": [
+      "ES2023"
+    ],
     "module": "ESNext",
-    "types": ["node"],
+    "types": [
+      "node"
+    ],
     "skipLibCheck": true,
-
-    /* Bundler mode */
     "moduleResolution": "bundler",
     "allowImportingTsExtensions": true,
     "verbatimModuleSyntax": true,
     "moduleDetection": "force",
     "noEmit": true,
-
-    /* Linting */
     "strict": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
@@ -22,5 +22,12 @@
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true
   },
-  "include": ["vite.config.ts", "src/cli", "src/mcp", "src/workspace", "src/server", "src/view", "proxy"]
+  "include": [
+    "packages/map/src",
+    "packages/scan/src",
+    "packages/cli/src",
+    "packages/runner/src/mcp",
+    "packages/runner/proxy",
+    "packages/runner/vite.config.ts"
+  ]
 }
