@@ -1,5 +1,5 @@
-// cm:why Declares its own verb set instead of borrowing HttpMethod from the request-runner side:
-// that union has no OPTIONS, while the Laravel and Express scanners both match `options`.
+// cm:why Declares its own verb set rather than reusing a client library's: those unions leave out
+// OPTIONS, while the Laravel and Express scanners both match `options`.
 export const MAP_METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS', 'HEAD', 'UNKNOWN'] as const;
 import type { ShapeType } from './shape';
 

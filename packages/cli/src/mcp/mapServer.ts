@@ -12,10 +12,8 @@ import {
   screenDepsText,
 } from './mapTools';
 
-// cm:edge contract -> packages/runner/src/mcp/server.ts — two separate servers on purpose: that one
-// is the request RUNNER (flows, envs, execute) and pulls the run half of the repo in.
-// cm:why This one only reads .apimap, so it stays on the map side of the boundary in
-// .dependency-cruiser.cjs.
+// cm:why Named apiflow-map, not apiflow: the request-runner ships its own MCP server from its own
+// package now, and a config holding both needs two names that say which half answers.
 const server = new McpServer({ name: 'apiflow-map', version: '1.1.0' });
 
 const text = (body: string) => ({ content: [{ type: 'text' as const, text: body }] });

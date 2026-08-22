@@ -42,7 +42,6 @@ That axis is still true but it is not the one that decides where code goes. This
 | **1a — the format** (`packages/map`) | parse · query · serialize · link · diff | anywhere: node, a browser, a worker, a server process | **zero dependencies, zero node builtins.** Enforced in `.dependency-cruiser.cjs` |
 | **1b — the extractor** (`packages/scan`) | source on disk → `.apimap` | a dev machine or the repo's CI | needs `fs`, so `map` may never import it |
 | **2 — the hosts** (`packages/cli`) | commands · MCP · workspace · view · skills | wherever a person or an agent is | the CLI is the **reference implementation**; MCP borrows its resolution, never grows its own |
-| **(legacy)** (`packages/runner`) | the visual request runner | a browser | imports the other three zero times, and they import it zero times |
 
 "Generate the file" is `scan` plus `map`'s serializer; "load the file" is `map`'s parser plus its
 queries. The serializer lives with the parser because the intern/expand pair must round-trip and a
@@ -115,13 +114,15 @@ enough — naming the thing that must stay hidden would redo the very leak just 
 90 days without **mapping one real frontend and answering one real impact question** → archive the
 repo.
 
-Exactly three pieces would be kept (paths as of the 2026-08-22 restructure):
+Exactly three pieces would be kept:
 1. `packages/cli/skills/api-flow-analyzer/` — it has actually lived inside an internal project.
-2. `packages/runner/src/core/{postmanParser,openApiParser,curlParser,curlExporter}.ts` +
-   `packages/runner/src/utils/postmanExporter.ts` → `forge/packages/core/src/integrations/postman/`
-   (forge can write a collection but has no local parser/generator).
-3. `packages/runner/src/core/{executor,assertionRunner,httpClient,variableResolver,topologicalSort}.ts`
+2. The collection parsers, now in `junixlabs/apiflow-runner` at
+   `src/core/{postmanParser,openApiParser,curlParser,curlExporter}.ts` +
+   `src/utils/postmanExporter.ts` → `forge/packages/core/src/integrations/postman/` (forge can write a
+   collection but has no local parser/generator).
+3. That repo's `src/core/{executor,assertionRunner,httpClient,variableResolver,topologicalSort}.ts`
    (~730 lines, zero deps) — an optional headless runner for the `forge-test` stage.
+   Both now live outside this repo, so §6 archiving this one no longer touches them.
 
 A fourth is now worth keeping and was not before: **`packages/map`** — zero dependencies, zero I/O,
 and it is the whole answer to "which screens break". It is the piece another product could adopt
@@ -191,11 +192,30 @@ left, under the §3 axis.
    the impact question with apiflow" — is not instrumented and cannot be. The measurable candidates are
    Nx-shaped: how many times `check` blocked a stale map, how many `mcp map` calls a week from the
    projects it is wired into. **Open; the owner's call.**
-8. **Decide the runner's fate.** It is a package now, so retiring it is a dependency drop rather than
-   an excavation. Options: keep as legacy, split to its own repo, or hand the parsers to `forge` per
-   §6. Doing nothing is also a decision, and should be a recorded one.
+8. ✅ **The runner's fate is decided: split out** to `junixlabs/apiflow-runner` on 2026-08-23, with
+   history intact back to 2026-03-19. See the §9 entry. What stays open is whether `forge` takes the
+   parsers per §6 — a question for `forge`, not for this repo.
 
 ## 9. Decision log
+
+- **2026-08-23** — **The request runner is its own repo; this one is the engine only.** It was 9,873
+  lines: 5,094 of React canvas with zero tests, against 1,729 lines of tested headless core. Split to
+  `junixlabs/apiflow-runner` rather than retired, because the core is real — four working parsers, an
+  executor with retry, branching and four assertion kinds — and because it holds the one thing the map
+  cannot express: a value travelling from one response into the next request. No static analysis infers
+  that; it exists only in a flow someone drew, so retiring it would delete the only place this project
+  can say it.
+  The measured reason to move it rather than a tidiness one: `react`, `react-dom`, `@xyflow/react`,
+  `lucide-react` and `html-to-image` were runner-only, and published 1.1.13 shipped every one of them
+  to anyone installing a CLI that needed a parser. After the split, `npm run boundary` cruises 61
+  modules instead of 157, and frozen legacy-comment debt fell from 299 to 3 — it lived in the
+  components.
+  The cost, paid deliberately: a bare `apiflow` opened the canvas on every install since 1.0.0, and
+  `apiflow mcp run` served 13 tools. Both now exit 1 with a pointer to the new package, because a
+  published entry point that vanishes silently is worse than one that errors.
+  **Open, and a release blocker:** `@junixlabs/apiflow` declares exact-version deps on
+  `@junixlabs/apiflow-map` and `@junixlabs/apiflow-scan`, and neither exists on npm. Published 1.1.13
+  predates the restructure, so nothing is broken yet — the next `npm publish` is.
 
 - **2026-08-22** — **Prose refuses no commit; the structure is now a package boundary.** The repo
   described "two halves" in a paragraph and enforced it with one lint rule over path regexes. It is now

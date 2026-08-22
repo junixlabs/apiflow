@@ -80,7 +80,7 @@ ours.
 | `impact <map>` | which screens break — `--endpoint` / `--field` / `--screen`, `--json` |
 | `check <map>` | is the map still true — CI gate, exit 0 clean · 1 drifted · 2 cannot check |
 | `ui` · `hub` · `view` | browser UI (live, static workspace, single map) |
-| `mcp map` · `mcp run` | MCP servers: read the map (7 tools) · run requests (13 tools) |
+| `mcp map` | MCP server for an agent: 7 read-only tools over the map |
 
 Every command takes `--json` where a machine might read it. A scan of an unchanged repo is
 **byte-identical** and records the repo it came from, never the machine — so a map can be committed,
@@ -111,14 +111,19 @@ a weak proxy, not a data dependency.
 
 ## How it is put together
 
-Four packages, and the boundary between them is enforced rather than described.
+Three packages, and the boundary between them is enforced rather than described.
 
 | Package | Role | Rule that holds it |
 |---|---|---|
 | `packages/map` | the format: parse · query · serialize · link · diff | **zero dependencies, zero node builtins** — the only half that runs in a browser or a worker |
 | `packages/scan` | the extractor: source on disk → `.apimap` | may never be imported by `map` |
 | `packages/cli` | the reference implementation: commands · MCP · workspace · view · skills | `mcp/mapTools.ts` must depend on `commands/` — MCP borrows the CLI's resolution |
-| `packages/runner` | the visual request runner, the older half ([docs](docs/request-runner.md)) | the two halves import each other zero times |
+
+The visual request runner that used to be the fourth package — canvas, flow execution,
+cURL/OpenAPI/Postman import — is now
+[junixlabs/apiflow-runner](https://github.com/junixlabs/apiflow-runner). It answered a bare `apiflow`
+and `apiflow mcp run`; both now print where it went. That split is why installing this no longer
+pulls React into your dependency tree.
 
 The accuracy gap between the CLI and MCP is not the query layer — both read the same kernel. It is
 that MCP adds an argument-selection step performed by a model. Hence: list first, then ask.

@@ -3,7 +3,6 @@
 const MAP = '^packages/map/';
 const SCAN = '^packages/scan/';
 const CLI = '^packages/cli/';
-const RUNNER = '^packages/runner/';
 
 module.exports = {
   forbidden: [
@@ -36,25 +35,6 @@ module.exports = {
       severity: 'error',
       from: { path: `${MAP}|${SCAN}` },
       to: { path: CLI },
-    },
-    {
-      name: 'engine-khong-goi-runner',
-      comment:
-        'The map side must not import the request-runner side. The map side has to run headless, ' +
-        'with no DOM and no React.',
-      severity: 'error',
-      from: { path: `${MAP}|${SCAN}|${CLI}` },
-      to: { path: RUNNER, pathNot: 'packages/runner/src/mcp' },
-    },
-    {
-      name: 'runner-khong-goi-map',
-      comment:
-        'The request-runner side must not import the map side. To use a map, read the .apimap ' +
-        'through the CLI instead of wiring it in directly — otherwise the SPA drags the scanner ' +
-        'into the browser bundle.',
-      severity: 'error',
-      from: { path: RUNNER },
-      to: { path: `${MAP}|${SCAN}|${CLI}` },
     },
     {
       name: 'khong-phu-thuoc-vong',

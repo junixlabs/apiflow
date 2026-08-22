@@ -1,7 +1,7 @@
 {
   "name": "@junixlabs/apiflow",
   "version": "1.1.13",
-  "description": "A screen \u2194 endpoint \u2194 field dependency map: answers which screens break if you change an endpoint or a response field. Plus a visual request runner. Local-first, git-friendly, open source.",
+  "description": "A screen \u2194 endpoint \u2194 field dependency map: answers which screens break if you change an endpoint or a response field. Local-first, git-friendly, open source.",
   "type": "module",
   "license": "MIT",
   "keywords": [
@@ -12,16 +12,8 @@
     "static-analysis",
     "mcp",
     "mcp-server",
-    "api-testing",
-    "api-client",
-    "visual",
-    "flow",
-    "rest",
-    "http",
     "developer-tools",
-    "postman-alternative",
-    "openapi",
-    "curl"
+    "openapi"
   ],
   "repository": {
     "type": "git",
@@ -48,7 +40,6 @@
   "dependencies": {
     "@junixlabs/apiflow-map": "1.1.13",
     "@junixlabs/apiflow-scan": "1.1.13",
-    "@junixlabs/apiflow-runner": "1.1.13",
     "@modelcontextprotocol/sdk": "^1.27.1",
     "express": "^5.1.0",
     "tsx": "^4.19.3",

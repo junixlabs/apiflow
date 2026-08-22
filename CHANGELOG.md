@@ -1,6 +1,45 @@
 # Changelog
 
-All notable changes to API View are documented here.
+All notable changes to apiflow are documented here.
+
+---
+
+## [Unreleased]
+
+The request runner is no longer part of this package.
+
+### Removed — the canvas, and the two commands that opened it
+
+`packages/runner` (canvas, flow executor, cURL/OpenAPI/Postman import, its own 13-tool MCP server) now
+lives at **[junixlabs/apiflow-runner](https://github.com/junixlabs/apiflow-runner)**, with history back
+to 2026-03-19 preserved there.
+
+**Breaking.** Two published spellings are gone:
+
+```console
+$ apiflow
+A bare `apiflow` opened the visual request runner, which is now its own package.
+  npm i @junixlabs/apiflow-runner  ·  github.com/junixlabs/apiflow-runner
+
+This command is the map side only now — run `apiflow --help` for what it does.
+$ echo $?
+1
+```
+
+`apiflow --mcp` prints the same pointer for the runner's MCP server.
+
+Both exit 1 with a pointer rather than "unknown command" — a published entry point that vanishes
+silently is worse than one that errors.
+
+Why: the two halves share no code and answer different questions. apiflow reads source to build a
+screen ↔ endpoint ↔ field map and never sends a request; the runner sends requests and knows nothing
+about your screens. The split is why installing this no longer pulls React, Vite, Tailwind and
+`@xyflow/react` into a dependency tree that only needed a parser — 12 devDependencies and one runtime
+dependency dropped.
+
+`apiflow ui`, `hub`, `view` and `mcp map` are untouched: those read the map and were never the runner.
+
+394 tests (417 − the 23 that moved with the runner).
 
 ---
 

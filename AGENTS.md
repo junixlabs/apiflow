@@ -14,8 +14,8 @@ This file **points**; it holds no rules. Rules live where they can be enforced.
 - **The site is built with the real Pages image.** `docker run ghcr.io/actions/jekyll-build-pages`
   against `docs/` catches what reading markdown cannot: invalid frontmatter YAML, Liquid that silently
   renders nothing, a fence whose highlighter options got dropped.
-- **Structure is enforced, not described.** Four rules in `.dependency-cruiser.cjs` fail CI: `map`
-  imports no node builtin, `map` never imports `scan`, the engine never imports the runner, and
+- **Structure is enforced, not described.** Three rules in `.dependency-cruiser.cjs` fail CI: `map`
+  imports no node builtin, `map` never imports `scan`, `map`/`scan` never import `cli`, and
   `mcp/mapTools.ts` must depend on `commands/` — the CLI is the reference implementation and MCP
   borrows its resolution rather than growing its own.
 - **Comments are gated.** `npm run codemap` (`cm verify`) runs in CI and is at **zero errors**. An
