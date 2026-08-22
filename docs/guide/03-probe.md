@@ -28,7 +28,7 @@ its `{param}`. `url` is what was actually sent. Both are needed: without `url`, 
 `GET /api/v1/orders/{param}` cannot be reproduced, because nobody can tell which id answered, and a
 200 you cannot reproduce is a claim rather than evidence.
 
-| flag | |
+| Flag | What it does |
 |---|---|
 | `--fill=<value>` | a value for a `{param}`, positional — two placeholders take two `--fill`s. An endpoint with an unfilled placeholder is skipped and named. |
 | `--header='K: V'` | repeatable; an auth header goes here |
