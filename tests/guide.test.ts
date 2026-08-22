@@ -124,6 +124,10 @@ const looseTranscripts = markdownUnder(DOCS)
 
 const pages = [...guidePages, ...looseTranscripts];
 
+// cm:guard A replay spawns the real CLI once per command, so 4.5–6.5s is work, not a hang — and the
+// 5s default failed 1 run in 3. The gate must fail on a wrong transcript, never on a slow machine.
+const REPLAY_TIMEOUT = 120_000;
+
 describe('the site is replayed, not trusted', () => {
   it('has at least one page', () => {
     expect(pages.length).toBeGreaterThan(0);
@@ -135,22 +139,30 @@ describe('the site is replayed, not trusted', () => {
         expect(page.steps.length >= 0).toBe(true);
       });
     } else if (page.status === 'shipped') {
-      it(`${page.file} — shipped, so the transcript must run`, () => {
-        const result = runPage(page);
-        expect(result.ok, result.detail).toBe(true);
-      });
+      it(
+        `${page.file} — shipped, so the transcript must run`,
+        () => {
+          const result = runPage(page);
+          expect(result.ok, result.detail).toBe(true);
+        },
+        REPLAY_TIMEOUT,
+      );
     } else {
       // cm:guard An `upcoming` page must FAIL.
       // cm:guard Both directions of drift are caught this way: a page cannot claim shipped for
       // something broken, and cannot sit at upcoming after it starts working.
       // cm:guard Status is a test result, never a label someone remembered to change.
-      it(`${page.file} — upcoming, so the transcript must NOT run yet`, () => {
-        const result = runPage(page);
-        expect(
-          result.ok,
-          `${page.file} is marked upcoming but its transcript now passes — change status to shipped`,
-        ).toBe(false);
-      });
+      it(
+        `${page.file} — upcoming, so the transcript must NOT run yet`,
+        () => {
+          const result = runPage(page);
+          expect(
+            result.ok,
+            `${page.file} is marked upcoming but its transcript now passes — change status to shipped`,
+          ).toBe(false);
+        },
+        REPLAY_TIMEOUT,
+      );
     }
   }
 });
