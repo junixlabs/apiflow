@@ -310,6 +310,25 @@ const DEFINITION_HEAD =
 // admitted here would take a real call site's open paren away from findCallSites.
 const NOT_A_DEFINITION = new Set(['if', 'for', 'while', 'switch', 'catch', 'return', 'function', 'do', 'with']);
 
+// cm:guard A return type is a TYPE, so its parens close: `(a: string) => void` balances, while
+// `Promise.resolve(` does not — that one is a ternary alternate whose `{` opens an argument list.
+function parenBalanced(text: string): boolean {
+  let depth = 0;
+  for (const ch of text) {
+    if (ch === '(') depth++;
+    else if (ch === ')' && --depth < 0) return false;
+  }
+  return depth === 0;
+}
+
+// cm:guard `?` can never precede a declaration in valid JS, so a head sitting on the consequent of
+// a ternary is an expression — and mistaking one for a definition DELETES a real call site.
+function afterTernaryQuestion(content: string, at: number): boolean {
+  let i = at;
+  while (i >= 0 && /\s/.test(content[i])) i--;
+  return content[i] === '?';
+}
+
 export function matchingClose(content: string, open: number, openChar: string, closeChar: string): number {
   let depth = 0;
   for (let i = open; i < content.length; i++) {
@@ -335,12 +354,14 @@ export function definitionHeads(content: string): DefinitionHead[] {
   const out: DefinitionHead[] = [];
   for (const m of content.matchAll(DEFINITION_HEAD)) {
     if (NOT_A_DEFINITION.has(m[1])) continue;
+    if (afterTernaryQuestion(content, m.index)) continue;
     const openParen = m.index + m[0].length - 1;
     const closeParen = matchingClose(content, openParen, '(', ')');
     if (closeParen === -1) continue;
-    const body = /^\s*(?::\s*[^{;=]+)?\{/.exec(content.slice(closeParen + 1, closeParen + 400));
+    const after = /^\s*(?::\s*([^{;=]+))?\{/.exec(content.slice(closeParen + 1, closeParen + 400));
     // cm:guard The body brace is the discriminator: `fetchUser(id);` is a call and only a real `{`
-    // after the signature — past an optional return type — makes the same text a definition.
+    // after the signature — past an optional, paren-balanced return type — makes it a definition.
+    const body = after && (after[1] === undefined || parenBalanced(after[1])) ? after : null;
     // cm:guard An overload signature carries no body, so the `function` keyword stands in for it.
     if (!body && !/\bfunction\b/.test(m[0])) continue;
     const openBrace = body ? closeParen + body[0].length : -1;

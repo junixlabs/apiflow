@@ -143,6 +143,31 @@ describe('definitionHeads', () => {
     expect(heads[1].openBrace).toBeGreaterThan(0);
   });
 
+  // cm:why The inverse of the bug this file exists for: a call misread as a definition is DELETED,
+  // leaving neither an endpoint nor an unresolved entry — a gap that does not even show as a gap.
+  it('does not read a ternary consequent as a definition with a return type', () => {
+    const src = "const p = id ? fetch(`/api/u/${id}`) : Promise.resolve({ data: null });";
+    expect(definitionHeads(src)).toEqual([]);
+    expect(findCallSites(src).map((s) => s.via)).toEqual(['fetch']);
+  });
+
+  it('holds when the consequent is awaited, so the `?` no longer sits next to the name', () => {
+    const src = "const p = id ? await fetch(`/api/u/${id}`) : Promise.resolve({ data: null });";
+    expect(definitionHeads(src)).toEqual([]);
+    expect(findCallSites(src).map((s) => s.via)).toEqual(['fetch']);
+  });
+
+  it('still accepts a genuine return type whose parens balance', () => {
+    const src = 'export function make(): (a: string) => void {\n  fetch("/x");\n  return () => {};\n}';
+    expect(definitionHeads(src).map((d) => d.name)).toEqual(['make']);
+    expect(findCallSites(src).map((s) => s.via)).toEqual(['fetch']);
+  });
+
+  it('still sees an object-literal method that follows a comma', () => {
+    const src = 'export const api = {\n  first(id) { return fetch(`/a/${id}`); },\n  second(id) { return fetch(`/b/${id}`); },\n};';
+    expect(definitionHeads(src).map((d) => d.name)).toEqual(['first', 'second']);
+  });
+
   it('never claims a control-flow keyword', () => {
     expect(definitionHeads('for (const x of xs) {\n  use(x);\n}').map((d) => d.name)).toEqual([]);
   });

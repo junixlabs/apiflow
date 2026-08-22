@@ -15,7 +15,11 @@ real call sites, and no fix could ever have resolved them — permanent noise in
 `apiflow check` watches for drift.
 
 A definition and a call are spelled identically up to the open paren; what separates them is a real
-body `{` after the closing one, past an optional return type. `findCallSites` now drops any site whose
+body `{` after the closing one, past an optional return type — and a return type is a *type*, so its
+parens close. `cond ? fetch(url) : Promise.resolve({ … })` does not balance, which is how a ternary
+alternate is kept from passing as one. Getting that wrong is worse than the bug being fixed: a call
+misread as a definition is dropped from `endpoints` **and** from `unresolved`, so the gap does not
+even show up as a gap. `findCallSites` now drops any site whose
 paren belongs to such a head — on every path, not only the wrapper path, so `function request(url) {`
 cannot report itself either — and `findHttpWrappers` walks the same heads, so the two halves cannot
 drift into disagreeing about what a definition is.
@@ -39,8 +43,10 @@ like a tree with nothing in it, which is the failure the `Nested checkouts skipp
 exists to prevent. The same helper serves both commands, deduped across the config walk and the
 source walk, so one unreadable tree is reported once.
 
-Also fixed while there: `scan-be` cleared its skip list *after* the stack-detection probe had already
-walked directories, throwing away every skip that probe recorded.
+One ordering detail, so the next reader does not go looking for a fault that was never there:
+`scan-be` cleared its skip list *after* the stack-detection probe ran. That was harmless before —
+the probe recorded nothing — and only became wrong once this change gave the probe something to
+record, so the reset moved above it in the same commit.
 
 ## [1.2.0] — 2026-08-23
 
