@@ -187,6 +187,17 @@ describe('definitionHeads', () => {
     expect(definitionHeads(src).map((d) => d.name)).toContain('request');
   });
 
+  // cm:guard DEFINITION_HEAD eats modifiers in ONE fixed order, so any second spelling is left on
+  // the line — `public get` refused the member, and a refused transport breaks the wrapper chain.
+  it.each([
+    ['public get', 'public get current() {\n    return fetch("/c");\n  }', 'current'],
+    ['public override', 'public override load(p: string) {\n    return fetch(p);\n  }', 'load'],
+    ['static override', 'static override ping(p: string) {\n    return fetch(p);\n  }', 'ping'],
+    ['protected set', 'protected set target(v: string) {\n    fetch(v);\n  }', 'target'],
+  ])('still sees a member spelled %s', (_label, member, name) => {
+    expect(definitionHeads(`export class Api {\n  ${member}\n}`).map((d) => d.name)).toContain(name);
+  });
+
   // cm:guard A class member reaches declarationPosition through `{`/`}`/`;`, an accessor through the
   // `get` keyword — the two spellings a project's api client is actually written in.
   it('still sees a class method and an accessor', () => {

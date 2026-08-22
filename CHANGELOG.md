@@ -20,7 +20,9 @@ body `{` after the closing one — **and** a position where a definition can leg
 `function` keyword is required, so in expression position it is a call. That test rejects on an
 operator first and admits on a boundary-or-own-line second, in that order: an admit-list alone is
 one missing spelling away from reinstating the very phantom this fixes — a class field with no
-trailing semicolon (`timeout = 5000`) was exactly that miss during review. Getting that second half
+trailing semicolon (`timeout = 5000`) was exactly that miss during review, and `public get` was the
+next one, because the head regex takes modifiers in one fixed order and leaves any second spelling
+on the line. Getting that second half
 wrong is worse than the bug being fixed: `cond ? await fetch(url) : { data: null }` reads as a
 signature with a return type, and the call is then dropped from `endpoints` **and** from
 `unresolved` — a gap that does not show up as a gap, and that `apiflow check` cannot see. `findCallSites` now drops any site whose

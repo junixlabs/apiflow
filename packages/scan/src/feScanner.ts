@@ -324,9 +324,12 @@ const EXPRESSION_KEYWORD = new Set([
   'return', 'await', 'yield', 'typeof', 'void', 'delete', 'new', 'case', 'throw', 'in', 'of', 'else', 'do',
 ]);
 
-// cm:guard A member owns its line, modulo modifiers the head regex does not eat and a decorator —
-// this is what carries a method whose preceding class field has NO trailing semicolon.
-const MEMBER_PREFIX = /^\s*(?:@[A-Za-z_$][\w$.]*\s*)?(?:(?:get|set|declare|abstract|override|readonly)\s+)*$/;
+// cm:guard A member owns its line, modulo modifiers and decorators — this is what carries a method
+// whose preceding class field has NO trailing semicolon, where no boundary character is available.
+// cm:guard Every modifier, in any order, including the ones DEFINITION_HEAD eats: it takes them in
+// ONE fixed order, so `public get` leaves `public ` behind and the member would be refused.
+const MEMBER_PREFIX =
+  /^\s*(?:@[A-Za-z_$][\w$.]*(?:\([^)]*\))?\s*)*(?:(?:export|default|declare|public|private|protected|static|readonly|abstract|override|accessor|async|get|set)\s+)*$/;
 
 // cm:why A bare `name(…) {` is a definition ONLY as a class member or an object-literal method —
 // everywhere else the `function` keyword is required, so in expression position it is a call.
