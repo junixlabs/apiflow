@@ -71,6 +71,20 @@ Two failure modes found while wiring it, both now gated by `tests/publish.test.t
   public tarball. `private: true` on the root was the only thing refusing it. The workflow now
   publishes the verified tarball by path.
 
+**Known limitation of the bundling, measured after publishing.** `npm install`, `npm ci`, `npm audit`,
+`npm ls` and `npm outdated` are all clean in a consumer project — the lockfile records the bundled
+packages as `inBundle: true` with no `resolved` URL, so nothing is fetched. But `npm audit signatures`
+fails the whole command:
+
+```console
+$ npm audit signatures
+npm error 404 Not Found - GET https://registry.npmjs.org/@junixlabs%2fapiflow-scan
+```
+
+It queries every name in the tree against the registry and ignores `inBundle`. Nothing is broken by
+it, and the workaround is to skip that one command; the real fix is publishing the two packages, which
+is waiting on the condition in `NORTH-STAR.md` §7. Recorded here rather than left for a user to find.
+
 398 tests (417 − the 23 that moved with the runner, + 4 for the release contract).
 
 ---
