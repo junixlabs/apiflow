@@ -22,11 +22,11 @@ Local-first, git-friendly, open source.
 | `impact` | The blast radius of a change **before** you make it — which screens, through which client → hook → component chain, at which line. This is the product; everything else exists to make this answer trustworthy. |
 | `scan-fe` | You learn which screens consume an API without reading the frontend yourself. Framework-agnostic: it reads call sites, not conventions. |
 | `scan-be` | The API's own declared surface, so the two halves get compared instead of assumed. |
-| `probe` | Response shapes **confirmed by running**, inside the project's own test suite. Turns "the code declares this field" into "the API actually sent it" — the only version safe to build on. |
+| `probe` | Response shapes **confirmed by running**. Turns "the code declares this field" into "the API actually sent it" — the only version safe to build on. Two modes, and the difference matters: `--emit` writes a harness that runs inside the project's own test suite, on a test database; `--live` sends **real requests** to a running API — GET/HEAD only by default, and a non-localhost host needs `--yes-remote`. |
 | `link` | Three questions neither half can answer alone: a field the API sends that no screen reads · a field declared but never sent · an endpoint no screen calls. |
 | `check` | The map cannot go stale quietly. A CI gate: exit 0 clean · 1 drifted · 2 cannot check. |
 | `mcp map` | Your agent asks before it edits a route, a handler, an api client or a response field. 0.4s to connect, 5ms per call on a clean install. |
-| `map-audit` | "How much can I trust this map" becomes a **measured number** for your repo instead of a label. |
+| [`apiflow-map-audit`](packages/cli/skills/apiflow-map-audit/) | A **skill**, not a command: "how much can I trust this map" becomes a measured number for your repo instead of a label. |
 | `ui` · `hub` · `view` | A page you can hand to someone who will never run a CLI. |
 
 ## Quick start
@@ -41,11 +41,11 @@ apiflow ui                                                                 # htt
 Nothing is written into the project being scanned — maps live in `~/.apiflow/`
 (`APIFLOW_HOME` moves that). One side is enough; `--be` is optional.
 
-From a clone, `node bin/cli.js …` replaces `apiflow …` and needs no build:
+From a clone, `node packages/cli/bin/cli.js …` replaces `apiflow …` and needs no build:
 
 ```bash
 git clone https://github.com/junixlabs/apiflow.git && cd apiflow && npm install   # ~15s
-node bin/cli.js --help
+node packages/cli/bin/cli.js --help
 ```
 
 ## Ask
@@ -87,7 +87,7 @@ Unresolved is never folded into another number, and an alert (understood, and da
 counted together with an unresolved (not understood at all).
 
 Audited on a real Next.js app — 28 `guess`-level claims sampled with
-[`skills/apiflow-map-audit`](skills/apiflow-map-audit/): the **endpoint was right 28/28**, the
+[`apiflow-map-audit`](packages/cli/skills/apiflow-map-audit/): the **endpoint was right 28/28**, the
 **screen 17/28**. Both numbers matter. Read `exact` and `inferred` as answers, `guess` as a lead
 worth thirty seconds — and run the audit against your own repo rather than trusting ours.
 
@@ -100,16 +100,16 @@ worth thirty seconds — and run the audit against your own repo rather than tru
 ```
 
 From a clone, or when the agent's environment has a trimmed `PATH`, spell it out instead:
-`"command": "node", "args": ["/path/to/apiflow/bin/cli.js", "mcp", "map"]`.
+`"command": "node", "args": ["/path/to/apiflow/packages/cli/bin/cli.js", "mcp", "map"]`.
 
 Seven read-only tools — `impact_endpoint` · `impact_field` · `screen_deps` · `find` · `map_health` ·
 `map_check` · `map_list`. Every answer ends with the map it came from and its unresolved count, so an
 agent cannot quote a number without its caveat.
 
-Four skills, each with one job: [`apiflow-impact`](skills/apiflow-impact/) tells the agent *when* to
-ask · [`fe-map-extractor`](skills/fe-map-extractor/) and
-[`be-map-extractor`](skills/be-map-extractor/) resolve what the scanner could not read ·
-[`apiflow-map-audit`](skills/apiflow-map-audit/) measures how often the map is right.
+Four skills, each with one job: [`apiflow-impact`](packages/cli/skills/apiflow-impact/) tells the agent *when* to
+ask · [`fe-map-extractor`](packages/cli/skills/fe-map-extractor/) and
+[`be-map-extractor`](packages/cli/skills/be-map-extractor/) resolve what the scanner could not read ·
+[`apiflow-map-audit`](packages/cli/skills/apiflow-map-audit/) measures how often the map is right.
 
 ## Keep the map honest
 
@@ -130,7 +130,7 @@ which is why sharing a map needs no server.
 |---|---|
 | Frontend | framework-agnostic — it reads call sites, not conventions, then walks the import graph back to the screen (`client → hook → component → route`), keeping `file:line` for every hop |
 | Backend | Laravel · Strapi · NestJS/Express · Go (gin/chi/echo/fiber) · FastAPI/Flask, plus a generic pass on every file |
-| Response shapes | from code (Resource / DTO / `response_model` / struct tags), then **confirmed by running** — the probe harness runs inside the project's own test suite (PHPUnit · vitest+supertest · Go `httptest` · pytest), so it never touches a real database |
+| Response shapes | from code (Resource / DTO / `response_model` / struct tags), then **confirmed by running**. `probe --emit` writes a harness for the project's own test suite (PHPUnit · vitest+supertest · Go `httptest` · pytest), so it sits on a test database. `probe --live` is the other mode and it does send real requests — never point it at production; see [the probe page](docs/guide/03-probe.md) |
 
 ## What it does not answer yet
 
@@ -171,20 +171,39 @@ npm run dev                       # from a clone
 
 ## Docs
 
-- [Getting started](docs/getting-started.md) — the same path with real output, and what to do when a map looks thin
-- [FE here, BE elsewhere](docs/cross-machine.md) — two machines, one map, no server
-- [probe](docs/probe.md) — record real responses, so a field is `observed` and not only declared
-- [File formats](docs/formats.md) — `.apimap`, `.apiview`, and the `.apiflow` layout
-- [Request runner](docs/request-runner.md) — the canvas half, in full
+Every page in `docs/guide/` is a **transcript replayed by CI** — see
+[how that works](docs/guide/README.md). A page that stops matching what the tool prints fails the
+build, so none of this can go stale quietly.
+
+- [Your first impact answer](docs/guide/01-first-answer.md) — the whole path against a fixture in this repo
+- [A wrapper definition is not a call](docs/guide/02-a-wrapper-definition-is-not-a-call.md) — `upcoming`: a real defect, written down before it is fixed
+- [probe](docs/guide/03-probe.md) — record real responses, so a field is `observed` and not only declared
+- [FE here, BE elsewhere](docs/guide/04-two-machines.md) — two machines, one map, no server
+- [The `.apimap` format](packages/map/SPEC.md) — the public contract
+- [What kind of product this is](docs/research/product-shape.md) — the category, the graveyard, and why the shape is what it is
 - [`CHANGELOG.md`](./CHANGELOG.md)
+
+## How it is put together
+
+Four packages, and the boundary between them is enforced rather than described.
+
+| Package | Role | Rule that holds it |
+|---|---|---|
+| `packages/map` | the format: parse · query · serialize · link · diff | **zero dependencies, zero node builtins.** It is the only half that runs in a browser, a worker or a server process |
+| `packages/scan` | the extractor: source on disk → `.apimap` | may never be imported by `map` |
+| `packages/cli` | the reference implementation: commands · MCP · workspace · view · skills | `mcp/mapTools.ts` must depend on `commands/` — MCP borrows the CLI's resolution, never grows its own |
+| `packages/runner` | the visual request runner (the older half) | the two halves import each other zero times |
+
+The accuracy difference between the CLI and MCP is not the query layer — both read the same kernel.
+It is that MCP adds an argument-selection step performed by a model. Hence: list first, then ask.
 
 ## Contributing
 
 ```bash
 git clone https://github.com/junixlabs/apiflow.git && cd apiflow && npm install
-npm test          # 332 tests
+npm test          # 417 tests, including the docs/guide transcripts
 npm run lint
-npm run boundary  # the two halves must not import each other
+npm run boundary  # the four structural rules
 npm run build
 ```
 

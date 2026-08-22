@@ -91,8 +91,11 @@ function runPage(page: Page): { ok: boolean; detail: string } {
   }
 }
 
+// cm:guard README.md in this directory is the RULE, not a page — it has no transcript and must not be
+// parsed as one. Every other .md file here is a page, deliberately: an un-replayed page must be
+// impossible to add by forgetting to register it.
 const pages = readdirSync(GUIDE)
-  .filter((f) => f.endsWith('.md'))
+  .filter((f) => f.endsWith('.md') && f !== 'README.md')
   .map((f) => parsePage(f, readFileSync(join(GUIDE, f), 'utf8')));
 
 describe('docs/guide is replayed, not trusted', () => {

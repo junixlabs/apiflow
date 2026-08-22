@@ -136,7 +136,7 @@ Under-collapsing leaves noise; over-collapsing **deletes real field names**. So 
 conditions disagree the field names survive — `data.en.passwords` (8 keys, all strings) stays
 expanded, and that is the intended side to fail on.
 
-### Measured on adminhub
+### Measured on webapp
 
 | observed fields | before | after |
 |---|---|---|
@@ -182,16 +182,16 @@ answered a one-file change with sixteen files.
 
 ### Measured
 
-| sid-desk | `scan-fe/3` | `scan-fe/4` |
+| crm | `scan-fe/3` | `scan-fe/4` |
 |---|---|---|
 | calls | 11,340 | **855** |
 | screens | 719 | **141** |
 | endpoints | 300 | **254** |
 | unresolved | 13,163 | **192** |
 
-**adminhub 879/240/565 and kinetrak 21/17/21 are unchanged**, and getcontent's BE gives 108/169 with
+**webapp 879/240/565 and kinetrak 21/17/21 are unchanged**, and webapp's BE gives 108/169 with
 the rules on and 108/169 with them stashed off. The fix bites where the defect is and nowhere else.
-Re-scanning sid-desk twice is still byte-identical.
+Re-scanning crm twice is still byte-identical.
 
 Readers bumped to `scan-fe/4` / `scan-be/4`, so `check` says the reader improved rather than
 "the code moved".
@@ -313,8 +313,8 @@ that name one** — both at the ceiling of what the code declares.
 
 ### Measured
 
-getcontent BE: 106 endpoints · 159 schemas · **166 fields** · 100 behind auth · 6 public.
-adminhub BE: unchanged at 1018 · 354 · 881 — no regression. Re-scanning either twice is still
+webapp BE: 106 endpoints · 159 schemas · **166 fields** · 100 behind auth · 6 public.
+webapp BE: unchanged at 1018 · 354 · 881 — no regression. Re-scanning either twice is still
 byte-identical.
 
 ---
@@ -356,7 +356,7 @@ tool was dark.
   `*.test.*`, `*.spec.*`, `*.stories.*`, `*_test.go`, `conftest.py`.
 - **One schema gap per endpoint, not per route hit.** A route legitimately gets seen twice now
   (manifest plus mount), and 106 endpoints were reporting **317** missing schemas.
-- **`unresolved` was one number wearing the label of one of its two halves.** 881 of adminhub's 900
+- **`unresolved` was one number wearing the label of one of its two halves.** 881 of webapp's 900
   entries are endpoints whose path is perfectly well known and whose schema was not found — printed
   everywhere as "calls whose path could not be resolved", which is untrue. Every count now separates
   *N calls whose path could not be resolved* from *M endpoints with no request/response schema in the
@@ -364,7 +364,7 @@ tool was dark.
 
 ### Result on a real pair
 
-getcontent went from `BE not scanned` to **107 endpoints, 88 seen from both sides, 1 FE-only,
+webapp went from `BE not scanned` to **107 endpoints, 88 seen from both sides, 1 FE-only,
 18 declared-but-uncalled**. The one FE-only is real: the frontend builds the last path segment
 dynamically where the API enumerates the actions. Re-scanning twice is still byte-identical.
 
@@ -780,8 +780,8 @@ lives in one file — `appStyle.ts` — so the next change lands on both.
   `apiflow view` writes — a dead link in an offline file is worse than none.
 - `+ Add project` moved from the project header to the foot of the rail on both pages. It is a
   workspace action; in the header row it read as one of the things you can do to the project you opened.
-- A project page is now titled by the project (`adminhub`), not by the map (`adminhub-ui+adminhub-api`).
-  The rail on the hub calls it `adminhub`, so landing on a differently-named page read as another thing.
+- A project page is now titled by the project (`webapp`), not by the map (`webapp-ui+webapp-api`).
+  The rail on the hub calls it `webapp`, so landing on a differently-named page read as another thing.
   The map's own name still shows in the generator line under the roots.
 - Both pages' tiles carry the same three lines, so the two strips are the same height, and every tile on
   the hub says which map it was measured on — a project can hold three.
@@ -797,7 +797,7 @@ lives in one file — `appStyle.ts` — so the next change lands on both.
   detail fills the right. Cards in a grid row stretched to the tallest of them, so one project with
   three maps and five buttons left a hole beside the two next to it — and every card had to repeat the
   name, the id, both roots, the revisions and five buttons to be readable on its own.
-- Selecting a project writes the hash, so `/#adminhub` is a link, a reload comes back to the same
+- Selecting a project writes the hash, so `/#webapp` is a link, a reload comes back to the same
   project, and Back walks the selection. Every switch goes through the hash, so the address bar can
   never name one project while the pane shows another.
 - `Whole workspace` sits at the top of the rail: the six workspace totals, and under them one ranked

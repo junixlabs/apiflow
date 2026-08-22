@@ -1,13 +1,14 @@
 # apiflow — north star
 
-> A **screen ↔ endpoint ↔ field** map for systems that talk over HTTP — laid out visually as nodes,
-> the way n8n does it, and runnable as an e2e test.
+> A **screen ↔ endpoint ↔ field** map for systems that talk over HTTP: an engine that produces a
+> portable, git-diffable artifact, and hosts — a CLI, an MCP server, a page — that answer questions
+> from it.
 
 **This file exists to stop the goal from drifting.** Read §2 and §7 before adding any feature. This
 repo has already gone quiet for four months once; this file exists so that whoever comes back next
 still knows what it is for.
 
-Updated 2026-08-20. Siblings: `README.md` · `~/tools/repo-gates/NORTH-STAR.md` (the index of the four
+Updated 2026-08-22. Siblings: `README.md` · `~/tools/repo-gates/NORTH-STAR.md` (the index of the four
 products).
 
 ---
@@ -31,14 +32,29 @@ not know your screens exist** — it stores requests, not the relationship betwe
 UI. Swagger/OpenAPI describes the API, not who consumes it. Grepping a field name returns a thousand
 lines that cannot tell a definition from a consumption.
 
-## 3. Two uses — and the order of priority
+## 3. Two parts — the axis that decides everything
 
-1. **Reading (where it stands alone).** Which screen calls which API · how the APIs connect · where a
-   field is used.
-2. **Running (where it meets Postman).** That same map turned into an automated, visual e2e test flow.
+Updated 2026-08-22. The previous version of this section split the repo into *reading* and *running*.
+That axis is still true but it is not the one that decides where code goes. This one is:
 
-**Keep that order.** Doing half 2 first is walking straight into an occupied product with a repo that
-has zero tests.
+| Part | What it is | Where it runs | The rule that holds it |
+|---|---|---|---|
+| **1a — the format** (`packages/map`) | parse · query · serialize · link · diff | anywhere: node, a browser, a worker, a server process | **zero dependencies, zero node builtins.** Enforced in `.dependency-cruiser.cjs` |
+| **1b — the extractor** (`packages/scan`) | source on disk → `.apimap` | a dev machine or the repo's CI | needs `fs`, so `map` may never import it |
+| **2 — the hosts** (`packages/cli`) | commands · MCP · workspace · view · skills | wherever a person or an agent is | the CLI is the **reference implementation**; MCP borrows its resolution, never grows its own |
+| **(legacy)** (`packages/runner`) | the visual request runner | a browser | imports the other three zero times, and they import it zero times |
+
+"Generate the file" is `scan` plus `map`'s serializer; "load the file" is `map`'s parser plus its
+queries. The serializer lives with the parser because the intern/expand pair must round-trip and a
+`cm:edge lockstep` across a package boundary is a lockstep nobody checks.
+
+**Why `map` must stay pure is not tidiness.** A store needs I/O. Forbidding I/O forbids the kernel
+growing a store — which is the only thing a hosted product would have left to sell. draw.io learned
+this the expensive way: in 2024-08 it added a clause to its own Apache-2.0 licence to stop its open
+core replacing its paid Confluence integration, and reverted it four months later
+(`docs/research/product-shape.md` §4).
+
+**The order still holds: the map first, running requests second.**
 
 | What already exists | Why it cannot replace this |
 |---|---|
@@ -99,71 +115,146 @@ enough — naming the thing that must stay hidden would redo the very leak just 
 90 days without **mapping one real frontend and answering one real impact question** → archive the
 repo.
 
-Exactly three pieces would be kept:
-1. `skills/api-flow-analyzer/` — it has actually lived inside an internal project.
-2. `src/core/{postmanParser,openApiParser,curlParser,curlExporter}.ts` + `src/utils/postmanExporter.ts`
-   → `forge/packages/core/src/integrations/postman/` (forge can write a collection but has no local
-   parser/generator).
-3. `src/core/{executor,assertionRunner,httpClient,variableResolver,topologicalSort}.ts`
+Exactly three pieces would be kept (paths as of the 2026-08-22 restructure):
+1. `packages/cli/skills/api-flow-analyzer/` — it has actually lived inside an internal project.
+2. `packages/runner/src/core/{postmanParser,openApiParser,curlParser,curlExporter}.ts` +
+   `packages/runner/src/utils/postmanExporter.ts` → `forge/packages/core/src/integrations/postman/`
+   (forge can write a collection but has no local parser/generator).
+3. `packages/runner/src/core/{executor,assertionRunner,httpClient,variableResolver,topologicalSort}.ts`
    (~730 lines, zero deps) — an optional headless runner for the `forge-test` stage.
+
+A fourth is now worth keeping and was not before: **`packages/map`** — zero dependencies, zero I/O,
+and it is the whole answer to "which screens break". It is the piece another product could adopt
+without adopting apiflow.
 
 These survival conditions are written down because the root diagnosis was: **“done” was never
 defined, so it was never possible to stop.**
 
-## 7. Do not build
+## 7. Not yet — and the condition that opens each one
 
-- **Do not build the “run the tests” half before the “map” half stands up.** That is walking into
-  Postman with a repo that has zero tests.
-- **Do not carry a stub forward.** The loop node: implement it, or delete both `LoopConfigTab` and
-  `LoopNodeConfig`. A headline feature with a complete UI that does not run is worse than not having
-  it.
-- **Do not write more `docs/proposals/`.** It is already 2,123 lines for a repo with zero tests. That
-  is the fingerprint of exactly the failure mode that killed four other repos.
-- **Do not `git add -A` in this repo.** `.claude/` and `.mcp.json` are ignored now, but the repo is
-  public and the working directory holds internal material.
-- **Do not build more canvas before the extraction side exists.** The canvas is how the map **gets
-  read** — meaningless while there is no map to read.
+Updated 2026-08-22. This section used to be a list of prohibitions. A prohibition invites the
+argument "this time is different". A **condition** can be checked, so it ends the argument instead.
+
+| Not yet | Opens when |
+|---|---|
+| a hosted/SaaS map | a real CI is already pushing a map somewhere. Not before |
+| OIDC, tenancy, sharing, RLS | there is a **second person** in an org. Not before |
+| the canvas that reads the map | someone **asks for it twice**. It is how *one person* reads a map, and that is CodeSee's road, which ended in a shutdown |
+| incremental scanning | one scan of a real repo passes **60 seconds** |
+| an ingest envelope (commit, branch, sha) | something actually ingests |
+| a schema-generated type layer | the first time a hand-written type and the format disagree, or the first externally-supplied `.apimap` arrives |
+
+And these stay flatly forbidden, because each one has already cost this repo something:
+
+- **Do not carry a stub forward.** A headline feature with a complete UI that does not run is worse
+  than not having it. The loop node was deleted rather than finished, and that was right.
+- **Do not write code for a consumer that does not exist.** This is the general form of the rule
+  above, and it is what killed `docs/proposals/`: 1,544 lines of specification for a repo with zero
+  tests.
+- **Do not write a document for work that is not being done now.** `docs/guide/` is the only place
+  documentation goes, every page there is replayed by CI, and a page may be written one step ahead of
+  the code only as `status: upcoming` — which CI asserts is still failing.
+- **Do not `git add -A` in this repo.** It is public and the working directory holds internal
+  material. See the 2026-08-22 entry in §9: customer repo identifiers reached the public history once
+  already.
+- **Do not point `probe --live` at anything but a test environment.** GET/HEAD-only and
+  `--yes-remote` are the guards; they exist because a full authenticated walk was once launched at
+  three GET routes that shell out to `supervisorctl`, and was stopped at position 376 of 382.
 
 ## 8. The road for this repo
 
-This order replaces the old list (the previous version filed the canvas under “drop”, which is wrong
-under the current positioning).
+Rewritten 2026-08-22. Items 1–5 of the previous list are done and stay done; what follows is what is
+left, under the §3 axis.
 
-1. ✅ **Builds again from a clean clone.** `bin/cli.js` builds `dist/` itself when it is missing.
-2. ✅ **The FE extraction side.** `apiflow scan-fe` + `.apimap` + `apiflow impact` +
-   `skills/fe-map-extractor`.
-2b. ✅ **The BE extraction side, in the CLI, plus probe.** `apiflow scan-be` (4 stacks + a generic
-   pass), `apiflow probe` (real responses measured with test data), `apiflow link` (joins the two
-   halves), `skills/be-map-extractor`. `api-flow-analyzer` is now the agent-only version of the same
-   job.
-3. ✅ **Decide the loop node.** Deleted.
-4. ✅ **Tests for `src/core/`.** 90 tests: executor, assertionRunner, the three parsers, and the whole
-   new map layer.
-5. ✅ **Map one real frontend** (the 60-day milestone in §5) — done against a real Next.js + Strapi
-   system: 196 FE endpoints · 419 BE endpoints · 166 seen from both sides. The impact answer was
-   verified by hand: `GET /agents` → `/admin/agents`, through the right page → component → hook →
-   api client chain. Left to do: resolve the Unresolved entries with hints, and run `probe` for real
-   inside the project's own test suite.
-6. **A map that a team and an agent can share** (moved ahead of the canvas — see §9, 2026-08-20).
-   ✅ `.apimap` no longer carries machine paths (`metadata.root` is a repo id), so it can be committed
-   and reviewed · ✅ `apiflow impact --json` + exit codes · ✅ `apiflow check` as a CI gate.
-   ✅ `apiflow mcp map` (7 map-reading tools) + `skills/apiflow-impact` · ✅ wired into two real
-   projects (`.mcp.json` + a block in `CLAUDE.md` + the skill — all three per-machine/gitignored
-   files, so nothing touched those repos' histories).
-   Left to do: **one place to keep the shared map** (the server keeps **maps**, not code — scanning
-   still runs where the code is; the loopback fence must be **replaced** by auth, not removed), and
-   the CI gate plus a map committed in the repo — both wait on the hosting decision, because a server
-   takes the place of a committed map.
-
-7. **A canvas that reads the map.** Only after §8.6 — layout via elkjs/dagre, collapsed by default,
-   focus one node and expand by degree. Never render the whole map.
-8. **Only then** consider binding it as an MCP into `pipelineConfig.states.testing.mcpServers`
-   (`pipeline-config-schema.ts:245` — config only, no change to forge core).
-
-Of the four products, apiflow goes public **last** — because **least has been built**, not because it
-is worth less.
+1. ✅ **Builds from a clean clone** · **FE extraction** · **BE extraction + probe** · **the loop node
+   decided (deleted)** · **tests for the core** · **one real frontend mapped** — all shipped between
+   2026-08-19 and 2026-08-21. 412 tests.
+2. ✅ **The structure is enforced, not described.** Four packages, four dependency-cruiser rules, CI on
+   every push (it previously ran only on a version tag, so nothing was gated).
+3. ✅ **Documentation that cannot go stale.** `docs/guide/` is replayed by `tests/guide.test.ts`;
+   `shipped` must pass, `upcoming` must fail, `reference` must say why it cannot be replayed.
+   `docs/proposals/`, `docs/architecture/` and `docs/decisions/` deleted.
+4. **A map a team and an agent share — the part that does not need a server.** `.apimap` is already
+   byte-identical and machine-path-free, `impact --json` and `check` already exist. What is left is
+   the loop that closes deterministically: **apiflow's own map committed to this repo and gated by
+   `apiflow check` in its own CI.** This was previously filed as waiting on a hosting decision. It is
+   not: two people scanning one commit get identical bytes, so sharing needs no server, and hosting is
+   a separate and later question (§7).
+5. **Pay down the comment-grammar debt.** `cm verify` reports 182 pre-existing errors and is not yet a
+   gate. It can only become one after the number is zero; adding a red gate teaches people to ignore
+   gates.
+6. **Fix what the fixture found.** `docs/guide/02` is an `upcoming` page describing a real scanner
+   defect: a client wrapper's own definition line is read as a call site, padding `unresolved` with
+   entries that can never be resolved — inside the one number the map promises never to fold into
+   another. The page flips itself to `shipped` when fixed.
+7. **Decide what §5 measures.** The current north-star metric — "the number of times a person answers
+   the impact question with apiflow" — is not instrumented and cannot be. The measurable candidates are
+   Nx-shaped: how many times `check` blocked a stale map, how many `mcp map` calls a week from the
+   projects it is wired into. **Open; the owner's call.**
+8. **Decide the runner's fate.** It is a package now, so retiring it is a dependency drop rather than
+   an excavation. Options: keep as legacy, split to its own repo, or hand the parsers to `forge` per
+   §6. Doing nothing is also a decision, and should be a recorded one.
 
 ## 9. Decision log
+
+- **2026-08-22** — **Prose refuses no commit; the structure is now a package boundary.** The repo
+  described "two halves" in a paragraph and enforced it with one lint rule over path regexes. It is now
+  four packages with four rules that fail CI, and the load-bearing one is `map-stays-pure`: zero node
+  builtins in `packages/map`. Verified by adding an `fs` import and watching the gate fail. That rule
+  is a *business* boundary wearing a technical costume — a store needs I/O, so forbidding I/O forbids
+  the kernel growing one, which is what draw.io's reverted 2024-08 licence clause was trying to do
+  after the fact. Also: CI now runs on push and pull_request. It previously ran only on a version tag,
+  which means for the whole life of the repo no rule had teeth on an ordinary commit.
+- **2026-08-22** — **Documentation is executed or it is deleted.** Measured staleness: README claimed
+  332 tests against 412; `RELEASE.md` still described v1.0.0 as a "Visual API flow testing tool" with
+  Visual Canvas as its first highlight; `docs/proposals/` held 1,544 lines describing a positioning
+  §9 had withdrawn on 2026-08-19 — and six of its eight files had been *translated to English* on
+  2026-08-21, i.e. maintained rather than abandoned. None of it could fail anything. Now: `docs/guide/`
+  only, every page a transcript CI replays. `upcoming` pages must FAIL, so a page can neither claim to
+  work nor stay a roadmap after it works — status is a test result, not a label. `reference` is the one
+  escape hatch and must state why it cannot be replayed. **This is document-first with the one property
+  `docs/proposals/` lacked: a page can be wrong, and CI says so this week.**
+- **2026-08-22** — **The fixture is a precondition for publishing, not a convenience.**
+  `fixtures/demo-app/` exists because guide transcripts are published, and an `.apimap` of a real
+  project is that project's internal API surface. It paid for itself immediately: writing the first
+  page surfaced a scanner defect nobody had read the code closely enough to find — a wrapper's own
+  definition line counted as an unresolved call site.
+- **2026-08-22** — **Customer repo identifiers had reached the public history.**
+  `scanOrigin.test.ts` carried real private-repo names, a vendored schema carried an internal org, and
+  a mockup published a customer system's measured numbers. Unlike the `.claude/` leak §9 closed on
+  2026-08-19 — which had never entered git — **this one is in pushed history**. Sanitized forward to
+  neutral names (`acme`, `webapp`, `demo`); the history still holds it, and rewriting it is the owner's
+  decision (0 stars, 0 forks, so it is still feasible). `.forge/` was left alone: it is vendored
+  tooling that an upgrade overwrites.
+- **2026-08-22** — **A quality loop can only be closed where there is no model in it.** An earlier
+  draft of this plan proposed measuring whether the agent asks before it edits. That is a function of
+  the model, the skill and the harness — none of which this repo controls. So: CI (`check`, exit codes)
+  is the only place a hard gate belongs, and the agent surface is a *surface*, whose contract is
+  stability and completeness instead. Concretely, that means refuse-and-enumerate over fuzzy matching,
+  every answer carrying its own caveat, no silent truncation, and outputs that are valid inputs. The
+  first three are already implemented; the fourth needs a round-trip test and does not have one yet.
+- **2026-08-22** — **The CLI is the reference implementation and MCP is an adapter.** Both read the
+  same kernel, so the accuracy gap is not the query layer — it is that MCP adds an argument-selection
+  step performed by a model. `packages/cli/src/mcp/mapTools.ts` already imported the CLI's resolution;
+  a `required` rule in `.dependency-cruiser.cjs` now makes that structural rather than accidental, and
+  `mcp/` sits next to `commands/` so borrowing is the natural act and reimplementing is the odd one.
+- **2026-08-22** — **AI-first does not need a new artifact; the writable surface already exists.** The
+  earlier claim that a machine-generated `.apimap` closes off Mermaid's format-led road was too broad:
+  the criterion is not "can a human write it" but "can whoever authors it emit it", and with agents as
+  authors that holds. But what agents write is `hints.json`, not the map — a hinted call resolves to
+  `inferred`, never `exact`, and the skill records a `note` "so the next reader can check you". That
+  split must survive: `.apimap` is **evidence** while a diagram is **intent**, and an agent writing the
+  map directly would reduce apiflow to asking a model which screens call an endpoint, which is the
+  thing it exists to replace. The new risk this creates is that a confident `note` can be a guess, so
+  `apiflow-map-audit` stops being optional at the point agents write a large share of the map.
+- **2026-08-22** — **Shape: draw.io, not Mermaid Chart.** Free OSS core, no accounts, the artifact
+  living in the user's own repo, distribution through a host that already has the users — GitHub PR
+  checks, and the agent's context via MCP and skills. Mermaid Chart's shape (a standalone SaaS with
+  accounts) was built by a funded company after the format had 8M users; apiflow has 9 downloads a
+  week. Consequence taken deliberately: if the primary consumer is an agent, the canvas is not a
+  priority. The honest gap, recorded so it is not glossed: draw.io works because the Atlassian
+  Marketplace is a payment rail into an existing budget, and the AI-first channel has no equivalent
+  rail yet. AI-first answers what to build and how to distribute, not how to charge.
 
 - **2026-08-20** — **The map has to be *shareable* before the canvas is worth discussing.** The owner
   moved apiflow from a one-machine tool to **shared context** for a team and for agents, on two real
