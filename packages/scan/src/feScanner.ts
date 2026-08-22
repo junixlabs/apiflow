@@ -310,29 +310,38 @@ const DEFINITION_HEAD =
 // admitted here would take a real call site's open paren away from findCallSites.
 const NOT_A_DEFINITION = new Set(['if', 'for', 'while', 'switch', 'catch', 'return', 'function', 'do', 'with']);
 
-// cm:guard Member position, not "anything before a brace": `{`/`,` open one, `}`/`;` end the member
-// before it, `)`/`]` are a decorator or a computed key.
+// cm:guard Statement or member boundary: `{`/`,` open a member, `}`/`;` end the one before it,
+// `)`/`]` are a decorator or a computed key.
 const MEMBER_POSITION = new Set(['{', '}', ',', ';', ')', ']']);
 
-// cm:guard `get`/`set` are not in DEFINITION_HEAD, so a getter's name reads as if `get` preceded it
-// in expression position — without this list every accessor stops being a definition.
-const MEMBER_KEYWORD = new Set([
-  'get', 'set', 'static', 'public', 'private', 'protected', 'readonly', 'abstract', 'override', 'async', 'default',
+// cm:guard An operator before the name makes it an OPERAND: `? fetch(u) : { … }` is a ternary, not a
+// signature with a return type, and reading it as one deletes the call from the map entirely.
+const EXPRESSION_BEFORE = new Set(['?', ':', '=', '+', '-', '*', '/', '%', '&', '|', '^', '!', '~', '(', '[']);
+
+// cm:guard `<`/`>` are deliberately absent: they end JSX and an arrow, so blocking them would reject
+// the method after a `render = () => <div/>` class field and put its phantom back in Unresolved.
+const EXPRESSION_KEYWORD = new Set([
+  'return', 'await', 'yield', 'typeof', 'void', 'delete', 'new', 'case', 'throw', 'in', 'of', 'else', 'do',
 ]);
+
+// cm:guard A member owns its line, modulo modifiers the head regex does not eat and a decorator —
+// this is what carries a method whose preceding class field has NO trailing semicolon.
+const MEMBER_PREFIX = /^\s*(?:@[A-Za-z_$][\w$.]*\s*)?(?:(?:get|set|declare|abstract|override|readonly)\s+)*$/;
 
 // cm:why A bare `name(…) {` is a definition ONLY as a class member or an object-literal method —
 // everywhere else the `function` keyword is required, so in expression position it is a call.
-// cm:guard Without this, `cond ? await fetch(u) : { … }` reads as a definition with a return type
-// and the call is DELETED — absent from `endpoints` and from `unresolved`, a gap that shows as none.
+// cm:guard Rejects on operators FIRST and admits on boundary-or-own-line second: an admit-list alone
+// missed `timeout = 5000` with no semicolon, and that one gap put the issue's own phantom back.
 function declarationPosition(content: string, head: string, at: number): boolean {
   if (/\bfunction\b/.test(head)) return true;
-  if (at === 0) return true;
   let i = at;
   while (i >= 0 && /\s/.test(content[i])) i--;
   if (i < 0) return true;
   if (MEMBER_POSITION.has(content[i])) return true;
-  const word = /([A-Za-z_$][\w$]*)$/.exec(content.slice(Math.max(0, i - 20), i + 1));
-  return word !== null && MEMBER_KEYWORD.has(word[1]);
+  if (EXPRESSION_BEFORE.has(content[i])) return false;
+  const word = /([A-Za-z_$][\w$]*)\s*$/.exec(content.slice(Math.max(0, i - 24), i + 1));
+  if (word && EXPRESSION_KEYWORD.has(word[1])) return false;
+  return MEMBER_PREFIX.test(content.slice(content.lastIndexOf('\n', at) + 1, at + 1));
 }
 
 export function matchingClose(content: string, open: number, openChar: string, closeChar: string): number {

@@ -154,6 +154,9 @@ describe('definitionHeads', () => {
     ['arrow alternate', 'const p = id ? fetch("/api/u") : (v) => { return v; };'],
     ['switch case', 'function f() { switch (k) { case "z": fetch("/api/u"); } }'],
     ['object value', 'const o = { key: fetch("/api/u") };'],
+    ['array element', 'const o = [fetch("/api/u"), { y: 2 }];'],
+    ['operator at line end', 'const p = id ?\n  fetch("/api/u") :\n  { data: null };'],
+    ['operator at line start', 'const p = id\n  ? await fetch("/api/u")\n  : { data: null };'],
   ])('does not read a call in expression position as a definition (%s)', (_label, src) => {
     expect(definitionHeads(src).map((d) => d.name)).not.toContain('fetch');
     expect(findCallSites(src).map((s) => s.via)).toContain('fetch');
@@ -168,6 +171,20 @@ describe('definitionHeads', () => {
   it('still sees an object-literal method that follows a comma', () => {
     const src = 'export const api = {\n  first(id) { return fetch(`/a/${id}`); },\n  second(id) { return fetch(`/b/${id}`); },\n};';
     expect(definitionHeads(src).map((d) => d.name)).toEqual(['first', 'second']);
+  });
+
+  // cm:why One missing spelling here is not a near-miss: a member the position test rejects is not a
+  // definition head, so its signature goes back into `unresolved` — the issue's own defect returning.
+  // cm:guard None of these end in a boundary character, so only the own-line rule can admit them.
+  it.each([
+    ['field with no trailing semicolon', 'timeout = 5000'],
+    ['string-valued field', 'base = "x"'],
+    ['type-annotated field', 'private client: ApiClient'],
+    ['arrow field returning JSX', 'render = () => <div />'],
+    ['paren-less decorator', 'base = "x"\n  @action'],
+  ])('still sees a class method after %s', (_label, field) => {
+    const src = `export class Api {\n  ${field}\n  request(path: string) {\n    return fetch(path);\n  }\n}`;
+    expect(definitionHeads(src).map((d) => d.name)).toContain('request');
   });
 
   // cm:guard A class member reaches declarationPosition through `{`/`}`/`;`, an accessor through the
