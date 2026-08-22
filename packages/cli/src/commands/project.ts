@@ -62,9 +62,8 @@ export function renderList(rows: ProjectRow[]): string {
   }
   const lines: string[] = [`## ${rows.length} project · ${workspaceRoot()}`, ''];
   for (const { entry, maps } of rows) {
-    // cm:why The badge counts the MAPS, not the registered directories: a side scanned on another
-    // machine has a map and no directory, and reading the registry alone printed (FE) for a project
-    // that had both halves and was already reconciling them.
+    // cm:why The badge counts MAPS, not registered directories: a side scanned on another machine has
+    // a map and no directory, and the registry alone printed (FE) for a project holding both halves.
     const held = new Set(maps.filter((m) => m.kind !== 'linked').map((m) => m.kind.toUpperCase()));
     lines.push(`### ${entry.id}  (${[...held].sort().reverse().join('+') || 'no map'})`);
     if (entry.fe !== undefined) lines.push(`- FE  ${entry.fe}`);
@@ -169,9 +168,10 @@ function main(): void {
       console.log(args.includes('--json') ? JSON.stringify(rows, null, 2) : renderList(rows));
       return;
     }
-    // cm:why CI and a terminal need the same scan the UI button runs — same staging file, same
-    // history write, same automatic re-link — so this reuses scanInBackground instead of shelling out
-    // to scan-fe with a hand-built --out path, which is how the two would drift apart.
+    // cm:why CI and a terminal need the same scan the UI button runs — same staging file, same history
+    // write, same automatic re-link.
+    // cm:why So this reuses scanInBackground rather than shelling out to scan-fe with a hand-built
+    // --out path, which is how the two would drift apart.
     if (verb === 'scan') {
       const id = positional[0];
       if (id === undefined) throw new Error('missing id');

@@ -34,10 +34,9 @@ export function headlineFor(before: ApiMapFile, after: ApiMapFile): string {
   const bt = before.calls.length;
   const at = after.calls.length;
 
-  // cm:why A BE map has no calls, so every one of them came out as "No meaningful change" — printed
-  // directly under "the map has drifted from the code", which is a contradiction the reader has to
-  // resolve alone. The BE analogue of coverage is endpoints, and of certainty, endpoints that carry a
-  // declared shape.
+  // cm:why A BE map has no calls, so every one came out as "No meaningful change" printed directly
+  // under "the map has drifted from the code" — a contradiction the reader has to resolve alone.
+  // cm:why The BE analogue of coverage is endpoints, and of certainty, endpoints with a declared shape.
   if (bt === 0 && at === 0) {
     const shaped = (m: ApiMapFile) => new Set(m.fields.map((f) => f.endpointId)).size;
     const cov = after.endpoints.length - before.endpoints.length;

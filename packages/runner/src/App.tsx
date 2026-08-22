@@ -65,8 +65,9 @@ export default function App() {
   }, []);
 
   // cm:why The draft IS the banner: one piece of state, so dismissing the banner cannot leave a
-  // draft behind for a later Restore to load. Read while rendering rather than in an effect, guarded
-  // by the mode it was read for, which is what re-reads it when standalone mode comes back.
+  // draft behind for a later Restore to load.
+  // cm:why Read while rendering rather than in an effect, guarded by the mode it was read for,
+  // which is what re-reads it when standalone mode comes back.
   if (draftFor !== isProjectMode) {
     setDraftFor(isProjectMode);
     const found = isProjectMode ? null : loadDraft();

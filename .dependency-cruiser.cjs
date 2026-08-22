@@ -66,9 +66,9 @@ module.exports = {
   required: [
     {
       // cm:why The accuracy gap between the CLI and MCP is not the query layer — both read the same
-      // kernel. It is that MCP adds an argument-selection step performed by a model. So the CLI is
-      // the reference implementation and MCP must BORROW its resolution, never grow its own: two
-      // implementations mean two different answers to one question.
+      // kernel. It is that MCP adds an argument-selection step performed by a model.
+      // cm:why So the CLI is the reference implementation and MCP must BORROW its resolution, never
+      // grow its own: two implementations mean two different answers to one question.
       name: 'mcp-phai-dung-lai-cli',
       comment:
         'packages/cli/src/mcp must depend on packages/cli/src/commands. If this fails, someone has ' +

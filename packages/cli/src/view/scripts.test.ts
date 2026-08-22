@@ -4,9 +4,10 @@ import { PANES_SCRIPT, PANES_SCRIPT_2, PANES_SCRIPT_3, PANES_SCRIPT_4 } from './
 import { HUB_SCRIPT } from './hub';
 import { THEME_BOOT, THEME_SCRIPT } from './theme';
 
-// cm:why Compiles every embedded script instead of eyeballing it. A backtick or a real newline inside
-// a quoted string ends the String.raw literal early or breaks the JS, and the only symptom is one
-// console error in the browser — the page still renders, having silently lost that whole script.
+// cm:why Compiles every embedded script instead of eyeballing it.
+// cm:why A backtick or a real newline inside a quoted string ends the String.raw literal early or
+// breaks the JS, and the only symptom is one console error in the browser.
+// cm:why The page still renders, having silently lost that whole script.
 const compiles = (source: string) => {
   new Function(source);
 };

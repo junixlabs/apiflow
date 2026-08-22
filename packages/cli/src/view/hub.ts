@@ -44,9 +44,10 @@ export interface HubOptions {
   live: boolean;
 }
 
-// cm:edge lockstep -> packages/cli/src/view/appStyle.ts — the shell, the rail, the head, the tiles, the panels and
-// the watch list all come from there so both pages are one design. Only what is unique to the list of
-// projects lives here; anything added below that a project page would also want belongs there instead.
+// cm:edge lockstep -> packages/cli/src/view/appStyle.ts — the shell, the rail, the head, the tiles,
+// the panels and the watch list all come from there so both pages are one design.
+// cm:why Only what is unique to the list of projects lives here; anything added below that a
+// project page would also want belongs there instead.
 const HUB_STYLE = `
 .detail { display:flex; flex-direction:column; }
 .has-js .detail { display:none; }
@@ -237,7 +238,7 @@ const newestAge = (project: HubProject, now: number): string => {
   return newest === 0 ? 'not scanned' : relativeAge(new Date(newest).toISOString(), now);
 };
 
-// cm:edge lockstep -> packages/cli/src/view/app.ts overview() — the same four buckets, the same class names, so the
+// cm:edge lockstep -> packages/cli/src/view/app.ts#overview — the same four buckets, the same class names, so the
 // bar on a project card and the bar on that project's own page cannot end up telling different stories.
 const SEGMENTS = [
   { key: 'both' as const, css: 'd-both', label: 'seen from both sides' },
@@ -272,7 +273,7 @@ function recon(map: HubMap): string {
 
 // cm:guard Says what is MISSING before it says what is wrong: on a one-sided scan the honest label
 // is "BE not scanned", and printing a comparison finding there invents a defect out of a gap.
-// cm:edge lockstep -> packages/cli/src/view/app.ts overview() — same `watch` rows, so a finding looks the same
+// cm:edge lockstep -> packages/cli/src/view/app.ts#overview — same `watch` rows, so a finding looks the same
 // here and on the project page it links into.
 function watch(map: HubMap, href: string | null): string {
   const rows: string[] = [];
@@ -302,13 +303,13 @@ const revOf = (project: HubProject, kind: 'fe' | 'be'): string => {
     : `<span class="rev">${escapeHtml(label)}</span>`;
 };
 
-// cm:edge lockstep -> packages/cli/src/view/panes.ts kpiStrip() — same three lines in the same order, because the
+// cm:edge lockstep -> packages/cli/src/view/panes.ts#kpiStrip — same three lines in the same order, because the
 // strip on a project page and the strip here sit one click apart and must not be different heights.
 const kpi = (lab: string, value: number, sub: string, alarm = false): string =>
   `<div class="k1${alarm && value > 0 ? ' alarm' : ''}"><div class="lab">${lab}</div>`
   + `<div class="val">${value.toLocaleString('en-US')}</div><div class="dlt">${sub}</div></div>`;
 
-// cm:edge contract -> HUB_SCRIPT above — it filters, sorts and selects on these data-* attributes,
+// cm:edge contract -> packages/cli/src/view/hub.ts#HUB_SCRIPT — it filters, sorts and selects on these data-* attributes,
 // so a renamed attribute silently turns a filter into a no-op.
 function railItem(project: HubProject, now: number): string {
   const best = bestOf(project);
@@ -349,9 +350,8 @@ function detail(project: HubProject, options: HubOptions, now: number): string {
       + ` ${revOf(project, kind)}</div>`)
     .join('');
 
-  // cm:guard A map scanned from a directory the project no longer points at is labelled on its own
-  // line, not folded into the findings: the numbers next to it describe a different repo, so the
-  // reader has to see that before reading them.
+  // cm:guard A map scanned from a directory the project no longer points at gets its own line, never
+  // folded into the findings: its numbers describe a different repo, so that must be read first.
   const lines = project.maps
     .map((m) => `<div class="mapline${m.scannedFrom === undefined ? '' : ' stale'}"><span class="kind2">${m.kind}</span>`
       + `<span>${m.endpoints.toLocaleString('en-US')} endpoints · ${m.screens.toLocaleString('en-US')} screens · ${m.calls.toLocaleString('en-US')} calls</span>`
@@ -447,8 +447,7 @@ function todos(projects: HubProject[], options: HubOptions): Todo[] {
 }
 
 // cm:why Totals over every project, with unresolved kept OUT of the endpoint count: the two are
-// counted separately everywhere else in apiflow, and a hub that adds them up contradicts every
-// other page.
+// counted separately everywhere else, and a hub that adds them up contradicts every other page.
 function overview(projects: HubProject[], options: HubOptions, live: boolean): string {
   const best = projects.map(bestOf).filter((m): m is HubMap => m !== undefined);
   const sum = (pick: (m: HubMap) => number) => best.reduce((n, m) => n + pick(m), 0);

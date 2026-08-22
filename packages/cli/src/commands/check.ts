@@ -14,8 +14,9 @@ import { tolerateClosedPipe } from './stdio';
 
 
 // cm:why Drift and a reader upgrade look identical in a diff and mean opposite things: one is
-// "someone changed the code", the other is "apiflow got better at reading it". Saying which one it is
-// is the difference between a gate people trust and a gate people mute.
+// "someone changed the code", the other is "apiflow got better at reading it".
+// cm:why Saying which one it is is the difference between a gate people trust and a gate people
+// mute.
 export function readerChanged(stored: ApiMapFile, side: Side): string | null {
   const current = side === 'fe' ? FE_GENERATOR : BE_GENERATOR;
   return stored.metadata.generator === current ? null : `${stored.metadata.generator} → ${current}`;
@@ -33,8 +34,9 @@ export interface CheckResult {
 }
 
 // cm:why Byte equality is the verdict and the diff is only the explanation: a scan is deterministic
-// (no timestamp, no coordinates), so different bytes means the code moved under the map. Deciding
-// with the diff instead would pass a map whose confidence collapsed while the endpoint list held.
+// (no timestamp, no coordinates), so different bytes means the code moved under the map.
+// cm:why Deciding with the diff instead would pass a map whose confidence collapsed while the
+// endpoint list held.
 export function checkAgainst(stored: ApiMapFile, fresh: ApiMapFile): CheckResult {
   const identical = serializeMap(stored) === serializeMap(fresh);
   const diff = diffMaps(stored, fresh);
@@ -63,9 +65,8 @@ export function renderCheck(result: CheckResult, mapPath: string, reader?: strin
     lines.push('The map still matches the code. Nothing to do.');
     return lines.join('\n');
   }
-  // cm:why Names WHERE it drifted when no endpoint moved. "Drifted" with an empty endpoint diff under
-  // it reads as a bug in check; the difference is real and lives in the fields, the unresolved list or
-  // the metadata, and saying so is what makes the exit code actionable.
+  // cm:why Names WHERE it drifted when no endpoint moved: "drifted" over an empty endpoint diff
+  // reads as a bug in check, when the difference is real and lives in fields, unresolved or metadata.
   const surfaceMoved = diff.endpoints.added.length + diff.endpoints.removed.length + diff.endpoints.changed.length > 0;
   lines.push(`**Verdict**: the map has drifted from the code — ${diff.headline}`);
   if (!surfaceMoved) {
@@ -88,9 +89,10 @@ export function renderCheck(result: CheckResult, mapPath: string, reader?: strin
   lines.push(`**Unresolved**: ${diff.unresolved.before} → ${diff.unresolved.after}`);
   if (!result.structural) {
     lines.push('');
-    // cm:why Names the usual cause first. Measured on a live repo: same 27 screens / 182 calls, but the
-    // handlers had moved and every file:line under them moved with it. Blaming the scanner version
-    // sends the reader looking in the wrong repo for a change that is right there in their diff.
+    // cm:why Names the usual cause first. Measured on a live repo: same 27 screens / 182 calls, but
+    // the handlers had moved and every file:line under them moved with it.
+    // cm:why Blaming the scanner version sends the reader looking in the wrong repo for a change
+    // that is right there in their diff.
     lines.push('Same counts, different bytes — usually code that moved, taking every file:line with it;');
     lines.push('sometimes a scanner version change. Equal counts do not mean the map is still true: the');
     lines.push('part a reader clicks is file:line, and it now points at the wrong line.');

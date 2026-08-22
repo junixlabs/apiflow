@@ -55,14 +55,14 @@ export function hubProjects(): HubProject[] {
   }));
 }
 
-// cm:why Compares the root the map RECORDS against the root the registry now points at, and returns
-// the old one when they differ. Editing a project's FE directory does not move its map, so without
-// this the card would show numbers scanned from a different repo and say nothing about it.
-// cm:edge contract -> packages/map/src/apimap.ts linkMaps() — a linked map's root is the two sides joined
-// by " + ", which is why this checks containment for that kind instead of equality.
-// cm:edge contract -> packages/cli/src/workspace/scanOrigin.ts — the map records the repo id, not the machine
-// path, so "scanned somewhere else" is decided by running the registry path through the SAME
-// function the scan used. Comparing against the raw path here would mark every map stale.
+// cm:why Compares the root the map RECORDS against the root the registry now points at, returning the
+// old one when they differ. Editing a project's FE directory does not move its map.
+// cm:why Without this the card would show numbers scanned from a different repo and not say so.
+// cm:edge contract -> packages/map/src/apimap.ts#linkMaps — a linked map's root is the two sides
+// joined by " + ", which is why this checks containment for that kind instead of equality.
+// cm:edge contract -> packages/cli/src/workspace/scanOrigin.ts — the map records the repo id, not the
+// machine path, so "scanned elsewhere" runs the registry path through the SAME function.
+// cm:why Comparing against the raw path here would mark every map stale.
 function staleRoot(entry: ProjectEntry, kind: MapKind, root: string): string | undefined {
   if (kind === 'linked') {
     const sides = [entry.fe, entry.be].filter((side): side is string => side !== undefined);

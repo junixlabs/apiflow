@@ -23,8 +23,9 @@ export function parsePage(file: string, text: string): Page {
   const status = /status:\s*(shipped|upcoming|reference)/.exec(meta)?.[1] as Status | undefined;
   if (status === undefined) throw new Error(`${file}: frontmatter needs status: shipped | upcoming | reference`);
   // cm:guard `reference` is the only page kind CI cannot replay, so it must say WHY in the
-  // frontmatter. Without that field the status is a loophole: every stale page would become a
-  // reference page the day its transcript broke.
+  // frontmatter.
+  // cm:guard Without that field the status is a loophole: every stale page would become a reference
+  // page the day its transcript broke.
   if (status === 'reference' && !/why-not-replayed:\s*\S/.test(meta)) {
     throw new Error(`${file}: status: reference must also carry "why-not-replayed: <reason>"`);
   }
@@ -48,9 +49,9 @@ export function parsePage(file: string, text: string): Page {
 }
 
 // cm:guard Subsequence, not equality: an exact-output assertion breaks on a counter nobody promised
-// and teaches the next person to delete the test. Every expected line must appear, IN ORDER — that
-// catches a changed number, a dropped row and a reordered chain, and tolerates nothing else being
-// promised.
+// and teaches the next person to delete the test.
+// cm:guard Every expected line must appear, IN ORDER — that catches a changed number, a dropped row
+// and a reordered chain, and tolerates nothing else being promised.
 export function matchesTranscript(expected: string[], actual: string): { ok: boolean; missing?: string } {
   const lines = actual.split('\n').map((l) => l.trim());
   let at = 0;
@@ -91,8 +92,9 @@ function runPage(page: Page): { ok: boolean; detail: string } {
   }
 }
 
-// cm:guard README.md in this directory is the RULE, not a page — it has no transcript and must not be
-// parsed as one. Every other .md file here is a page, deliberately: an un-replayed page must be
+// cm:guard README.md in this directory is the RULE, not a page — it has no transcript and must not
+// be parsed as one.
+// cm:guard Every other .md file here is a page, deliberately: an un-replayed page must be
 // impossible to add by forgetting to register it.
 const pages = readdirSync(GUIDE)
   .filter((f) => f.endsWith('.md') && f !== 'README.md')
@@ -114,9 +116,10 @@ describe('docs/guide is replayed, not trusted', () => {
         expect(result.ok, result.detail).toBe(true);
       });
     } else {
-      // cm:guard An `upcoming` page must FAIL. Both directions of drift are caught this way: a page
-      // cannot claim shipped for something broken, and cannot sit at upcoming after it starts
-      // working. Status is a test result, never a label someone remembered to change.
+      // cm:guard An `upcoming` page must FAIL.
+      // cm:guard Both directions of drift are caught this way: a page cannot claim shipped for
+      // something broken, and cannot sit at upcoming after it starts working.
+      // cm:guard Status is a test result, never a label someone remembered to change.
       it(`${page.file} — upcoming, so the transcript must NOT run yet`, () => {
         const result = runPage(page);
         expect(

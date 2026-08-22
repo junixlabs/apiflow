@@ -17,9 +17,8 @@ function fixture(): string {
   return root;
 }
 
-// cm:guard This is the test that keeps the map shareable. One absolute path in the output and the
-// file stops being reviewable in a PR and stops being the same bytes on two machines — the whole
-// reason a team can hold one map instead of everybody holding their own.
+// cm:guard The test that keeps the map shareable. One absolute path and the file stops being
+// reviewable in a PR and stops being the same bytes on two machines, which is the whole point.
 describe('a scanned map carries no machine path', () => {
   it('records the repo it came from, not where the repo sits', () => {
     const root = fixture();

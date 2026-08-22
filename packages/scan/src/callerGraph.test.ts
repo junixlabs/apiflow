@@ -228,8 +228,9 @@ describe('anonymous dynamic import', () => {
 });
 
 // cm:why The shape is copied from a real app: a barrel whose own comment NAMES the components it
-// adapts, and an api module whose comment on one export mentions another. Both were producing usages
-// at the comment's line, and the widening that followed sent one call to every route in the barrel.
+// adapts, and an api module whose comment on one export mentions another.
+// cm:why Both were producing usages at the comment's line, and the widening that followed sent one
+// call to every route in the barrel.
 describe('a comment that names a symbol is not a usage', () => {
   const BARREL = `import { BrandVoice } from './brand-voice';
 import { PipelineTab } from './pipeline-tab';
@@ -251,7 +252,7 @@ export function SetupPipeline() {
   it('does not invent a local usage from prose about another export', () => {
     const parsed = parseModule(`export async function login() {}
 
-// cm:why the same bypass as login: a wrong password answers 401
+// cm:why Same bypass as login: a wrong password answers 401
 export async function changePassword() {}`);
     expect(parsed.localUsages.filter((u) => u.symbol === 'login')).toEqual([]);
   });

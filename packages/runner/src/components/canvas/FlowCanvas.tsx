@@ -16,9 +16,10 @@ import { GroupNode } from './GroupNode';
 import { ConditionNode } from './ConditionNode';
 import { ConnectionLine } from './ConnectionLine';
 
-// cm:why xyflow types every node component as taking the full NodeProps with `data:
-// Record<string, unknown>`, while each node here takes its own data type. Cast the map once rather
-// than widening four components and losing the type each of their bodies is written against.
+// cm:why xyflow types every node component as taking the full NodeProps with `data: Record<string,
+// unknown>`, while each node here takes its own data type.
+// cm:why Cast the map once rather than widening four components and losing the type each of their
+// bodies is written against.
 const nodeTypes = {
   apiNode: ApiNode,
   annotationNode: AnnotationNode,

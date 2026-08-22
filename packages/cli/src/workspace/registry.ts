@@ -59,9 +59,9 @@ export function findProject(id: string): ProjectEntry | undefined {
   return readWorkspace().projects.find((p) => p.id === id);
 }
 
-// cm:why The map stopped carrying a machine path on purpose (see scanOrigin), so anything that needs
-// the real directory back — probe emitting a harness, a re-scan — resolves it HERE against the local
-// registry. The map says which repo it is; only this machine knows where that repo sits on it.
+// cm:why The map stopped carrying a machine path on purpose (see scanOrigin), so anything needing the
+// real directory back — probe emitting a harness, a re-scan — resolves it HERE against the registry.
+// cm:why The map says which repo it is; only this machine knows where that repo sits on it.
 export function localRootFor(origin: string): string | undefined {
   for (const p of readWorkspace().projects) {
     for (const side of [p.fe, p.be]) {
@@ -93,9 +93,9 @@ export interface AddOptions {
 export function addProject(options: AddOptions): ProjectEntry {
   const id = options.id !== undefined && options.id !== '' ? options.id : slug(options.name);
   if (!ID.test(id)) throw new Error(`invalid id (a-z, 0-9 and dashes only): ${id}`);
-  // cm:why An imported side counts as a side. A BE that runs on another machine has no directory
-  // here, and refusing the project would push the whole cross-machine case out of the workspace —
-  // where linking, reconciliation and the alert list all live.
+  // cm:why An imported side counts as a side: a BE on another machine has no directory here, and
+  // refusing it would push the cross-machine case out of the workspace.
+  // cm:why The workspace is where linking, reconciliation and the alert list all live.
   if (options.fe === undefined && options.be === undefined && (options.imported ?? []).length === 0) {
     throw new Error('needs at least an FE or a BE directory, or a map file to import');
   }

@@ -115,11 +115,12 @@ export function parseModule(content: string): ParsedModule {
 
   // cm:guard Masks the import/export CLAUSES in place — same length, newlines kept — for the same
   // reason maskComments does: every line below is an index into this string.
-  // cm:why The clause names every symbol it binds, so a `\bname\b` scan finds the binding itself and
-  // calls it a use. A fixed-width lookbehind cannot see past a multi-line clause: `import {\n  A,\n
-  // apiFetch,` puts 26 characters between `import` and the name, and 24 was the window. The usage
-  // then landed on a line with no enclosing declaration, which widened the chain to ANY and sent
-  // POST /auth/refresh to 26 of 27 screens — including one that imports only a class from the file.
+  // cm:why The clause names every symbol it binds, so a `\bname\b` scan finds the binding itself
+  // and calls it a use.
+  // cm:why A fixed-width lookbehind cannot see past a multi-line clause: `import {\n A,\n apiFetch,`
+  // puts 26 characters between `import` and the name, and 24 was the window.
+  // cm:why The usage landed on a line with no enclosing declaration, widening the chain to ANY and
+  // sending POST /auth/refresh to 26 of 27 screens — one of which imports only a class.
   const body = maskSpans(code, [IMPORT, REEXPORT, EXPORT_LIST]);
 
   const usages: Usage[] = [];
@@ -186,8 +187,8 @@ export interface Origin {
 }
 
 // cm:why Roles come from the NAMING CONVENTION, not from analysis: `use*` is a hook by convention
-// and Capitalised is a component by convention. Recorded as a hint for reading the chain, never as a
-// fact about what the module is.
+// and Capitalised is a component by convention.
+// cm:why Recorded as a hint for reading the chain, never as a fact about what the module is.
 export type ChainRole = 'client' | 'hook' | 'component' | 'module' | 'screen';
 
 export interface ChainStep {
@@ -307,8 +308,8 @@ export function attributeToScreens(
               precise,
               line: usage.line,
               // cm:guard Names the module's default export, not `symbolAt`: line 113 of a screen is
-              // JSX inside the return, so the nearest declaration above it is some inner handler —
-              // truthful about the line, misleading about whose chain step this is.
+              // JSX inside the return, so the nearest declaration above it is some inner handler.
+              // cm:guard Truthful about the line, misleading about whose chain step this is.
               chain: [...current.chain, {
                 file: consumer.file,
                 symbol: module.parsed.defaultExport ?? enclosing.symbol,

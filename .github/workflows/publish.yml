@@ -24,4 +24,5 @@ jobs:
       - run: npm run lint
       - run: npm test
       - run: npm run boundary
+      - run: npm run codemap
       - run: npm publish --access public

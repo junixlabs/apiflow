@@ -33,9 +33,8 @@ describe('apiflow check', () => {
     }
   });
 
-  // cm:why This is the whole point of the command: an endpoint that appeared in code while the
-  // committed map still says it does not exist is exactly the state that makes the map worse than
-  // nothing — read as an answer, it says "no screen calls this".
+  // cm:why The whole point of the command: an endpoint in the code that the committed map says does
+  // not exist makes the map worse than nothing — read as an answer it says "no screen calls this".
   it('fails and names the endpoint that appeared in code', () => {
     const root = repo();
     try {

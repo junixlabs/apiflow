@@ -1,8 +1,9 @@
-// cm:edge lockstep -> packages/cli/src/view/hub.ts, packages/cli/src/commands/view.ts — one token set for every page apiflow
-// renders; a second copy is how the hub and the map view start looking like different products.
+// cm:edge lockstep -> packages/cli/src/view/hub.ts — one token set for every page apiflow renders;
+// a second copy is how the hub and the map view start looking like different products.
 // cm:guard One string, interpolated into BOTH dark selectors — the media query for a viewer who
-// never chose, and [data-theme=dark] for one who did. Two hand-written copies drift, and the drift
-// only shows up for the half of viewers on the other path.
+// never chose, and [data-theme=dark] for one who did.
+// cm:guard Two hand-written copies drift, and the drift only shows up for the half of viewers on
+// the other path.
 const DARK = `
   --bg:#070b14; --surface:#101827; --surface-2:#0b111d; --surface-3:#18243a;
   --ink:#e8eef8; --ink-2:#b3c1d6; --muted:#7d8da5; --line:#1e2a3e; --line-2:#2c3d58;
@@ -13,9 +14,9 @@ const DARK = `
   --shadow:0 1px 2px rgba(0,0,0,.5), 0 10px 30px rgba(0,0,0,.4);
 `;
 
-// cm:guard Must stay in the shared sheet, and must keep `!important`: `hidden` only wins against the
-// UA sheet, so any rule that sets `display` on a component outranks it and the element the script just
-// hid stays on screen — the hub filter counted 1 of 3 while all 3 were still painted.
+// cm:guard Must stay in the shared sheet and must keep `!important`: `hidden` only wins against the UA
+// sheet, so any rule setting `display` outranks it and the element the script just hid stays painted.
+// cm:guard Measured: the hub filter counted 1 of 3 while all 3 were still on screen.
 const HIDDEN = '[hidden] { display:none !important; }';
 
 export const STYLE = `
@@ -93,8 +94,9 @@ h1 { font-size:20px; margin:0 0 4px; font-weight:650; letter-spacing:-.01em; }
   color:var(--muted); font-size:12.5px; background:var(--surface-2); }
 `;
 
-// cm:edge lockstep -> public/logo-mark.svg, public/favicon.svg — inlined so a rendered page needs no
-// network and no sibling file; changing the .svg on disk without changing this ships two logos.
+// cm:edge lockstep -> public/logo-mark.svg — inlined so a rendered page needs no network and no
+// sibling file; changing the .svg without changing this ships two logos.
+// cm:edge lockstep -> public/favicon.svg — same inlined copy, same rule.
 export const MARK = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" role="img" aria-label="apiflow">
   <g stroke="currentColor" stroke-width="0.9" stroke-linecap="round" stroke-linejoin="round">
     <path d="M6.75 4.6 H8.4 L12.8 11.05"/>
@@ -114,19 +116,20 @@ export const MARK = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"
 
 
 
-// cm:guard Percent-encodes the quote, angle brackets AND the colon: the string is emitted inside
-// href="..." where a raw `"` closes the attribute, and a raw `http://` in the xmlns reads as a
-// network reference to anything auditing this page for outbound requests.
+// cm:guard Percent-encodes the quote, the angle brackets AND the colon. The string is emitted inside
+// href="..." where a raw `"` closes the attribute.
+// cm:guard A raw `http://` in the xmlns reads as a network reference to anything auditing this page
+// for outbound requests.
 export const FAVICON = 'data:image/svg+xml,%3Csvg xmlns=%22http%3A//www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22%3E %3Cg stroke=%22%230360FB%22 stroke-width=%221.5%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E %3Cpath d=%22M6.6 4.6 H8.4 L12.8 11.05%22/%3E %3Cpath d=%22M19.3 4.7 L12.8 11.05%22/%3E %3Cpath d=%22M4.9 12.7 L12.8 11.05%22/%3E %3Cpath d=%22M12.95 18.1 L12.8 11.05%22/%3E %3Cpath d=%22M12.8 11.05 H17.6 L19.6 16.2%22/%3E %3C/g%3E %3Cg fill=%22%230360FB%22%3E %3Ccircle cx=%2212.8%22 cy=%2211.05%22 r=%223%22/%3E %3Ccircle cx=%225.5%22 cy=%224.6%22 r=%221.45%22/%3E %3Ccircle cx=%2220.1%22 cy=%223.9%22 r=%221.45%22/%3E %3Ccircle cx=%223.9%22 cy=%2212.9%22 r=%221.45%22/%3E %3Ccircle cx=%2213%22 cy=%2219.3%22 r=%221.45%22/%3E %3Ccircle cx=%2220.1%22 cy=%2217.5%22 r=%221.45%22/%3E %3C/g%3E %3C/svg%3E';
 
-// cm:edge contract -> packages/cli/src/view/theme.ts STYLE — --brand is a token defined there, in both palettes.
+// cm:edge contract -> packages/cli/src/view/theme.ts#STYLE — --brand is a token defined there, in both palettes.
 export const BRAND_STYLE = `
 .brandbar { display:flex; align-items:center; gap:10px; margin:0 0 4px; }
 .brandbar .mark { width:30px; height:30px; color:var(--brand); flex:none; }
 .brandbar h1 { margin:0; }
 `;
 
-// cm:edge lockstep -> packages/cli/src/view/app.ts, packages/cli/src/view/hub.ts — both pages ship this control, so the styles
+// cm:edge lockstep -> packages/cli/src/view/app.ts — both pages ship this control, so the styles
 // and the behaviour live here rather than in either page's own stylesheet.
 export const THEME_STYLE = `
 .thbtn { text-align:left; font:500 11.5px/1.3 inherit; color:var(--muted);
@@ -139,7 +142,7 @@ export const THEME_STYLE = `
 
 // cm:why Three states, not a boolean: "follow the OS" has to stay reachable, otherwise the first
 // click pins the page forever to whatever it happened to look like at that moment.
-// cm:edge contract -> THEME_BOOT below — same localStorage key, same two valid stored values.
+// cm:edge contract -> packages/cli/src/view/theme.ts#THEME_BOOT — same localStorage key, same two valid stored values.
 export const THEME_SCRIPT = String.raw`
 (function () {
   const btn = document.getElementById('theme-btn');

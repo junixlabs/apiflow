@@ -33,7 +33,8 @@ function diffFor(id: string, kind: MapKind): MapDiff | undefined {
 }
 
 // cm:guard Every READ route resolves an id through the registry and never takes a path from the
-// request. The one route that does take paths is POST /api/projects, and it sits behind
+// request.
+// cm:guard The one route that does take paths is POST /api/projects, and it sits behind
 // localWritesOnly for exactly that reason — see packages/cli/src/server/guard.ts.
 export function buildApp(): Express {
   const app = express();
@@ -88,10 +89,11 @@ export function buildApp(): Express {
     }));
   });
 
-  // cm:why Rejects a name apiflow cannot use BEFORE touching the disk, and says what to type
-  // instead: `slug()` silently returns '' for a name with no latin letters, and the registry's own
-  // message ("invalid id") does not tell the person which field to fix.
-  // cm:edge contract -> packages/cli/src/view/panes.ts submitAdd() — it renders `message` verbatim to the user.
+  // cm:why Rejects a name apiflow cannot use BEFORE touching the disk, and says what to type instead.
+  // `slug()` returns '' for a name with no latin letters.
+  // cm:why The registry's own message ("invalid id") does not tell the person which field to fix.
+  // cm:edge contract -> packages/cli/src/view/panes.ts#PANES_SCRIPT — it renders `message` verbatim
+  // to the user.
   app.post('/api/projects', localWritesOnly, (req, res) => {
     const body = (req.body ?? {}) as Record<string, unknown>;
     const text = (key: string): string | undefined => {
@@ -135,9 +137,9 @@ export function buildApp(): Express {
     }
   });
 
-  // cm:why Import is its own route rather than part of PATCH: it is the step that repeats. Every
-  // re-scan on the other machine produces a new file, and each import writes a history entry and
-  // re-links, exactly as a local scan does.
+  // cm:why Import is its own route rather than part of PATCH: it is the step that repeats.
+  // cm:why Every re-scan on the other machine produces a new file, and each import writes a history
+  // entry and re-links, exactly as a local scan does.
   app.post('/api/projects/:id/import', localWritesOnly, (req: Request<{ id: string }>, res) => {
     const body = (req.body ?? {}) as Record<string, unknown>;
     const kind = body.kind === 'be' ? 'be' : body.kind === 'fe' ? 'fe' : null;
@@ -157,10 +159,12 @@ export function buildApp(): Express {
     }
   });
 
-  // cm:why Distinguishes "field absent" from "field empty": absent leaves a root alone, empty clears
-  // it. A form posts every field it has, so without that distinction editing the FE path would wipe
-  // the BE path of every project whose form did not happen to show it.
-  // cm:edge contract -> packages/cli/src/workspace/registry.ts updateProject() — null there means clear.
+  // cm:why Distinguishes "field absent" from "field empty": absent leaves a root alone, empty
+  // clears it.
+  // cm:why A form posts every field it has, so without that distinction editing the FE path would
+  // wipe the BE path of every project whose form did not happen to show it.
+  // cm:edge contract -> packages/cli/src/workspace/registry.ts#updateProject — null there means
+  // clear.
   app.patch('/api/projects/:id', localWritesOnly, (req: Request<{ id: string }>, res) => {
     const body = (req.body ?? {}) as Record<string, unknown>;
     const field = (key: string): string | null | undefined => {
@@ -193,9 +197,10 @@ export function buildApp(): Express {
     }
   });
 
-  // cm:guard Removes the WORKSPACE ENTRY only — the scanned maps under ~/.apiflow/projects/<id> stay
-  // on disk. Deleting a map here would make a mis-click destroy a 40-second scan of a real repo, and
-  // nothing in the UI would have warned that it was about to.
+  // cm:guard Removes the WORKSPACE ENTRY only — the scanned maps under ~/.apiflow/projects/<id>
+  // stay on disk.
+  // cm:guard Deleting a map here would make a mis-click destroy a 40-second scan of a real repo,
+  // and nothing in the UI would have warned that it was about to.
   app.delete('/api/projects/:id', localWritesOnly, (req: Request<{ id: string }>, res) => {
     if (!removeProject(req.params.id)) {
       res.status(404).json({ error: 'NO_PROJECT', message: `no project named ${req.params.id}` });

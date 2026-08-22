@@ -27,9 +27,10 @@ function stackOf(root: string, override?: string): Stack {
 }
 
 
-// cm:why `--only` exists because a fill is positional: `--fill=laravel.log` reaches the one route that
-// wants a filename by way of the other 189 that do not. Without a scope the only way to probe one
-// endpoint was to leave the tool and use curl, and a sample taken by hand is not in the samples file.
+// cm:why `--only` exists because a fill is positional: `--fill=laravel.log` reaches the one route
+// that wants a filename by way of the other 189 that do not.
+// cm:why Without a scope the only way to probe one endpoint was to leave the tool and use curl, and
+// a sample taken by hand is not in the samples file.
 function matchesAny(method: string, path: string, patterns: string[]): boolean {
   const subject = `${method} ${path}`.toLowerCase();
   return patterns.some((raw) => {
@@ -45,24 +46,24 @@ export function matchesOnly(method: string, path: string, patterns: string[]): b
   return matchesAny(method, path, patterns);
 }
 
-// cm:why `--skip` is the exclusion `--only` cannot express. The three GET routes that run
-// `sudo supervisorctl` / `queue:restart` sit at the END of the walk, so an --only that covers the API
-// surface still can't leave them out by pattern — and the one time this was a manual "remember not
-// to", the full walk was launched straight at them. A subtractive filter is the guard that does not
-// depend on remembering.
-// cm:edge protocol -> packages/cli/src/commands/probe.ts#matchesOnly — skip is applied AFTER only: an endpoint must pass the include
-// (if any) AND clear every skip pattern. Skip wins ties, because the safe default when the two
-// filters disagree is "do not send".
+// cm:why `--skip` is the exclusion `--only` cannot express. Three GET routes running
+// `sudo supervisorctl` sit outside `/api/`, so an API-surface --only cannot exclude them by pattern.
+// cm:why The one time this was a manual "remember not to", the full walk was launched straight at
+// them. A subtractive filter is the guard that does not depend on remembering.
+// cm:edge protocol -> packages/cli/src/commands/probe.ts#matchesOnly — skip is applied AFTER only:
+// an endpoint must pass the include (if any) AND clear every skip pattern.
+// cm:why Skip wins ties, because the safe default when the two filters disagree is "do not send".
 export function passesScope(method: string, path: string, only: string[], skip: string[]): boolean {
   if (!matchesOnly(method, path, only)) return false;
   if (skip.length > 0 && matchesAny(method, path, skip)) return false;
   return true;
 }
 
-// cm:why This is impact→probe: instead of walking 1018 endpoints with a fictional `--fill=1`, a screen
-// names the handful it actually reads and the walk hits exactly those. Measured on a real API, a blind
-// full walk of the GET surface was 63% usable; the rest were 400s for query params a walk cannot guess
-// and 404s for ids that do not exist. A screen's own dependency list is the only honest scope.
+// cm:why This is impact→probe: instead of walking 1018 endpoints with a fictional `--fill=1`, a
+// screen names the handful it actually reads and the walk hits exactly those.
+// cm:why Measured on a real API, a blind full walk of the GET surface was 63% usable; the rest were
+// 400s for query params a walk cannot guess and 404s for ids that do not exist.
+// cm:why A screen's own dependency list is the only honest scope.
 // cm:guard Needs a map with BOTH sides — screens map to endpoints only in a linked (fe+be) map. A
 // pure BE map has zero screens, so `--screen` there would silently select nothing; that is refused.
 export function endpointsForScreens(
@@ -86,11 +87,11 @@ export function endpointsForScreens(
 const SAFE_METHODS = new Set(['GET', 'HEAD']);
 const LOCAL_HOST = /^(localhost|127\.0\.0\.1|\[::1\]|0\.0\.0\.0)$/;
 
-// cm:guard GET and HEAD only unless `--methods` names more AND `--unsafe` is passed. A probe walks
-// every endpoint in the map, and that list contains DELETE — running it against a live API is how a
-// diagnostic tool deletes someone's data.
-// cm:guard A non-local base url needs `--yes-remote`. The same list pointed at a production host is a
-// scripted walk over every write endpoint the map knows about.
+// cm:guard GET and HEAD only unless `--methods` names more AND `--unsafe` is passed.
+// cm:guard A probe walks every endpoint in the map, and that list contains DELETE — running it
+// against a live API is how a diagnostic tool deletes someone's data.
+// cm:guard A non-local base url needs `--yes-remote`. The same list pointed at a production host is
+// a scripted walk over every write endpoint the map knows about.
 export function liveTargets(
   endpoints: Array<{ method: string; path: string }>,
   fills: Record<string, string>,
@@ -174,8 +175,8 @@ async function runLive(map: ApiMapFile, base: string, args: string[], mapPath: s
       const res = await fetch(new URL(t.url, base), { method: t.method, headers, signal: AbortSignal.timeout(10_000) });
       const text = await res.text();
       // cm:why Records the sample even on a non-2xx and even when the body is not JSON: `ingest` is
-      // what decides a sample is unusable, and it says why per endpoint. Dropping them here would
-      // turn a 500 into silence.
+      // what decides a sample is unusable, and it says why per endpoint.
+      // cm:why Dropping them here would turn a 500 into silence.
       let body: unknown = text;
       try { body = JSON.parse(text); } catch { /* left as text */ }
       samples.push({ method: t.method, path: t.path, status: res.status, body, url: t.url });
@@ -238,9 +239,9 @@ function main(): void {
     console.log(`**Samples**: ${samples.length} · applied ${samples.length - skipped.length} · skipped ${skipped.length}`);
     console.log(`**Fields now observed**: ${observed} (${applied} field observations merged)`);
     console.log(`**Probed endpoints**: ${next.endpoints.filter((e) => e.probed).length}/${next.endpoints.length}`);
-    // cm:why A collapse that is not printed reads as an endpoint with one field. Naming the widest
-    // ones is also the only way a WRONG collapse — a real 20-field record read as a dictionary — is
-    // ever noticed by whoever knows the API.
+    // cm:why A collapse that is not printed reads as an endpoint with one field.
+    // cm:why Naming the widest ones is also the only way a WRONG collapse — a real 20-field record
+    // read as a dictionary — is ever noticed by whoever knows the API.
     const dicts = finalized.fields.filter((f) => f.keys !== undefined).sort((a, b) => (b.keys ?? 0) - (a.keys ?? 0));
     if (dicts.length > 0) {
       const byId = new Map(finalized.endpoints.map((e) => [e.id, e]));
@@ -284,9 +285,10 @@ function main(): void {
     process.exit(1);
   }
   const emitDir = resolve(flag('emit') ?? root);
-  // cm:guard The stack belongs to the REPO being probed, not to the directory the harness is written
-  // to. Reading it from --emit meant any path outside the repo detected as `generic`, so every Node
-  // project got the manual checklist instead of the runnable test — which is why nobody ever ran it.
+  // cm:guard The stack belongs to the REPO being probed, not the directory the harness is written to.
+  // Reading it from --emit made every path outside the repo `generic`.
+  // cm:guard Node projects then got the manual checklist instead of the runnable test, which is why
+  // nobody ever ran it.
   const stack = stackOf(root, flag('stack'));
   const harness = buildHarness(stack, map.endpoints, RESULT_FILE);
   const target = join(emitDir, harness.filename);

@@ -587,9 +587,10 @@ describe('verb outside the union', () => {
   });
 });
 
-// cm:why A route declared as DATA is not a Strapi peculiarity. Measured on a real Hono API, every
-// mount is `.get(declared(SPEC), h)` with no literal at the call site: the verb-call readers found 2
-// of 106 routes, and the other 104 sat in a plain exported array the reader never looked at.
+// cm:why A route declared as DATA is not a Strapi peculiarity.
+// cm:why Measured on a real Hono API, every mount is `.get(declared(SPEC), h)` with no literal at the
+// call site, so the verb-call readers found 2 of 106 routes.
+// cm:why The other 104 sat in a plain exported array the reader never looked at.
 describe('routes declared as object literals', () => {
   it('reads a manifest of { method, path } literals in a node repo', () => {
     const src = [
@@ -643,9 +644,9 @@ describe('routes declared as object literals', () => {
   });
 });
 
-// cm:why The linking was never the hard part — `schemas` is already global by NAME. What was missing
-// was a handler two modules from its mount yielding the name, and a schema reader that did not eat
-// its neighbour. Measured on a real Hono API: 0 fields to 166.
+// cm:why The linking was never the hard part — `schemas` is already global by NAME.
+// cm:why What was missing was a handler two modules from its mount yielding the name, and a schema
+// reader that did not eat its neighbour. Measured on a real Hono API: 0 fields to 166.
 describe('attaching a schema to a route that lives in another module', () => {
   it('does not let a one-line z.object swallow the schema after it', () => {
     const src = [
@@ -681,8 +682,9 @@ describe('attaching a schema to a route that lives in another module', () => {
   });
 
   // cm:why A discriminated union is one response shape with branches: a key present in every member
-  // is required, a key in only one is optional. Reporting one branch would promise fields that may
-  // never arrive; reporting nothing would hide the endpoint.
+  // is required, a key in only one is optional.
+  // cm:why Reporting one branch would promise fields that may never arrive; reporting nothing would
+  // hide the endpoint.
   it('merges the members of a discriminated union and marks the partial keys optional', () => {
     const src = [
       "const S = z.discriminatedUnion('outcome', [",

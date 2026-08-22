@@ -7,9 +7,10 @@ import { createApiMap, finalizeApiMap, serializeMap } from '@junixlabs/apiflow-m
 import type { ApiMapFile } from '@junixlabs/apiflow-map';
 import { endpointsForScreens } from './probe';
 
-// cm:why A linked (fe+be) map built by hand: one screen at /account, two calls that resolve to two BE
-// endpoints, plus a third endpoint no screen reads. endpointsForScreens must return the screen's two
-// and never the orphan — that is the whole point of impact→probe.
+// cm:why A linked map built by hand: one screen at /account, two calls resolving to two BE
+// endpoints, plus an endpoint no screen reads.
+// cm:why endpointsForScreens must return the screen's two and never the orphan — the point of
+// impact→probe is probing what a screen reads, not the API.
 function linkedMap(): ApiMapFile {
   const m = createApiMap('t', 'r', 'apiflow test');
   m.screens.push({ id: 'sc', label: 'Account', route: '/account', symbol: 'Account', source: { file: 'account.tsx', line: 1 } } as never);

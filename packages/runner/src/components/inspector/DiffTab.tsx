@@ -6,11 +6,12 @@ interface Props {
 }
 
 export function DiffTab({ nodeId }: Props) {
-  // cm:why Reads the run history rather than remembering the previous result itself. Running from this
-  // panel switches to the Response tab, which unmounts this component — so whatever it remembered was
-  // thrown away exactly when the second result arrived, and the diff never appeared at all.
-  // cm:edge contract -> packages/runner/src/store/historyResultStore.ts — newest result first, so [0] is the run just
-  // finished and [1] is the one to compare it against.
+  // cm:why Reads the run history rather than remembering the previous result itself.
+  // cm:why Running from this panel switches to the Response tab, which unmounts this component — so
+  // whatever it remembered was thrown away exactly when the second result arrived.
+  // cm:why The diff then never appeared at all.
+  // cm:edge contract -> packages/runner/src/store/historyResultStore.ts — newest result first, so
+  // [0] is the run just finished and [1] is the one to compare it against.
   const [currentResult, previousResult] = useHistoryResultStore((s) => s.nodeHistory.get(nodeId)) ?? [];
 
   if (!currentResult) {

@@ -3,17 +3,17 @@
 // character class containing a quote (`/['"`]/`) put it in a string state that swallowed the REST OF
 // THE FILE. Three phantom endpoints reached a published map that way, read out of the scanner's own
 // comments. Two implementations of one rule is how one of them stays broken.
-// cm:edge lockstep -> packages/scan/src/feScanner.ts · packages/scan/src/beScanner.ts · packages/scan/src/callerGraph.ts — every
+// cm:edge lockstep -> packages/scan/src/feScanner.ts — every
 // reader masks through this module; a reader that scans raw source reads prose as code.
 
 // cm:guard Masks comments IN PLACE — same length, newlines kept — because every line number and
 // every lookbehind below is an index into this string, and a shorter copy silently moves them.
 // cm:why A `\bname\b` scan over raw source counts prose as code: a barrel whose comment lists the
-// components it adapts produced a usage with no enclosing declaration, which widened the chain to
-// ANY and sent one call to every route importing that barrel — measured at 10 of 11 wrong screens on
-// a real app. Codebases that document well were penalised the hardest.
-// cm:why Bare `//` in JSX text (an unquoted url) is masked to end of line — accepted, because a
-// quoted url is protected by the string states and unquoted prose holds no identifiers worth an edge.
+// components it adapts produced a usage with no enclosing declaration.
+// cm:why That widened the chain to ANY and sent one call to every route importing the barrel —
+// measured at 10 of 11 wrong screens. Codebases that document well were penalised hardest.
+// cm:why Bare `//` in JSX text (an unquoted url) is masked to end of line, which is accepted: a quoted
+// url is protected by the string states, and unquoted prose holds no identifiers worth an edge.
 export function maskComments(src: string): string {
   const out = src.split('');
   let state: 'code' | 'line' | 'block' | 'sq' | 'dq' | 'tpl' = 'code';
@@ -57,12 +57,12 @@ export function maskComments(src: string): string {
 // cm:why Type-only imports are dropped here: a screen that imports only a type from an api module
 // does not call it, and counting those turns every shared type into a fake dependency edge.
 
-// cm:guard Blanks the TEXT of a template literal, keeping `${…}` intact — the interpolations are real
-// code and a reader still has to see them. Route-shaped JSON inside a template is not a route: the
-// probe harness's own example, `{ "method": "GET", "path": "/api/users" }`, was published as an
-// endpoint of this repo.
-// cm:why Applied only by the BE route readers, not by the FE call reader: a FE call legitimately
-// builds its url as a template, and blanking that text would erase the paths the map exists to find.
+// cm:guard Blanks the TEXT of a template literal, keeping `${…}` intact — the interpolations are
+// real code and a reader still has to see them.
+// cm:guard Route-shaped JSON inside a template is not a route: the probe harness's own example, `{
+// "method": "GET", "path": "/api/users" }`, was published as an endpoint of this repo.
+// cm:why Applied only by the BE route readers, never the FE call reader: a FE call legitimately builds
+// its url as a template, and blanking that text would erase the paths the map exists to find.
 export function maskTemplateText(src: string): string {
   const out = src.split('');
   let i = 0;

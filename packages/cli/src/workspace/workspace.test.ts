@@ -438,8 +438,9 @@ describe('hub staleness', () => {
 
 describe('a BE half too thin to compare', () => {
   // cm:why This is the webapp case measured on 2026-08-20: 2 routes read out of 103, because the
-  // mount sites carry no literal path. Without the guard the map reports 86 endpoints the API "does
-  // not declare" — and an agent handed that list goes and edits an API that was never wrong.
+  // mount sites carry no literal path.
+  // cm:why Without the guard the map reports 86 endpoints the API "does not declare" — and an agent
+  // handed that list goes and edits an API that was never wrong.
   function thinBe(): ApiMapFile {
     const map = createApiMap('thin', 'github.com/acme/app', 'apiflow link/1');
     const declared = endpointId('GET', '/api/media/{param}');

@@ -38,23 +38,24 @@ export interface BeFileScan {
   schemas: SchemaDef[];
   routes: RouteHit[];
   unresolved: UnresolvedCall[];
-  // cm:why Two name-keyed indexes instead of following imports: `schemas` is already global by NAME,
-  // so a handler two modules away from its mount only has to yield the NAME of the schema it
-  // validates with. Measured on a real Hono API, that is the whole distance between 0 fields and the
-  // request shape of every route that validates one.
+  // cm:why Two name-keyed indexes instead of following imports: `schemas` is already global by NAME, so
+  // a handler two modules from its mount only has to yield the NAME of the schema it validates with.
+  // cm:why Measured on a real Hono API, that is the whole distance between 0 fields and the request
+  // shape of every route that validates one.
   handlers?: HandlerDef[];
-  // cm:why `export type Foo = z.infer<typeof fooSchema>` is how a TS+zod codebase names a shape for
-  // its consumers — the route mentions the TYPE and the fields live on the schema, so without the
-  // alias the response half is unreachable by name.
+  // cm:why `export type Foo = z.infer<typeof fooSchema>` is how a TS+zod codebase names a shape for its
+  // consumers: the route mentions the TYPE while the fields live on the schema.
+  // cm:why Without the alias the response half is unreachable by name.
   aliases?: Array<{ type: string; schema: string }>;
 }
 
 export function detectStack(manifests: Record<string, string>): Stack {
   if ('artisan' in manifests || 'composer.json' in manifests) return 'laravel';
   if ('go.mod' in manifests) return 'go';
-  // cm:guard Tests PRESENCE, not truthiness. A caller that records "this manifest exists" as an empty
-  // string — which `probe` does — fell through to generic, so every Node repo got the manual checklist
-  // instead of the runnable harness. The content only ever decides strapi-vs-node.
+  // cm:guard Tests PRESENCE, not truthiness. A caller recording "this manifest exists" as an empty
+  // string — which `probe` does — fell through to generic.
+  // cm:guard Every Node repo then got the manual checklist instead of the runnable harness. The
+  // content only ever decides strapi-vs-node.
   if ('package.json' in manifests) {
     return /@strapi\/strapi/.test(manifests['package.json'] ?? '') ? 'strapi' : 'node';
   }
@@ -66,9 +67,10 @@ export function detectStack(manifests: Record<string, string>): Stack {
 // type — excluding it would leave the whole Strapi stack with routes and no shapes.
 const BE_EXT = /(\.(php|[jt]sx?|mjs|cjs|go|py|rb)|content-types\/[^/]+\/schema\.json)$/;
 const BE_SKIP = /(^|\/)(node_modules|vendor|dist|build|storage|__pycache__|\.git|migrations|tests?|spec)(\/|$)/;
-// cm:guard A test FILE beside the code it tests, not in a tests/ directory: `src/surface.test.ts`
-// held a `{ method: 'GET', path: '/nope-not-declared' }` fixture, and the route-object reader turned
-// it into an endpoint the API does not serve. A fixture must never become part of the surface.
+// cm:guard A test FILE beside the code it tests, not in a tests/ directory: `src/surface.test.ts` held
+// a `{ method: 'GET', path: '/nope-not-declared' }` fixture.
+// cm:guard The route-object reader turned it into an endpoint the API does not serve. A fixture must
+// never become part of the surface.
 const BE_SKIP_FILE = /\.(test|spec|stories|fixture|mock)\.[jt]sx?$|(^|\/)(conftest\.py|.*_test\.go)$/;
 
 export function isBackendFile(file: string): boolean {
@@ -329,10 +331,10 @@ const STRAPI_ROUTE = /\{[^{}]*?\bmethod\s*:\s*(['"`])(GET|POST|PUT|PATCH|DELETE)
 // in a backend repo, and `{ method: 'POST', path: 'upload' }` in an SDK call config is not a route.
 const ROUTE_OBJECT = /\{[^{}]*?\bmethod\s*:\s*(['"`])(GET|POST|PUT|PATCH|DELETE)\1[^{}]*?\bpath\s*:\s*(['"`])(\/[^'"`]*)\3/g;
 
-// cm:why `.get(declared(HEALTH), h)` names its path through a const, which is the shape a repo lands
-// on as soon as the path has to be shared between the mount and its own auth declaration. Reading the
-// const in the same file recovers the mount SITE, which is better evidence than the manifest entry:
-// it is where the route is actually served, and its line carries the middleware.
+// cm:why `.get(declared(HEALTH), h)` names its path through a const, which is the shape a repo
+// lands on as soon as the path has to be shared between the mount and its own auth declaration.
+// cm:why Reading the const in the same file recovers the mount SITE, which is better evidence than the
+// manifest entry: it is where the route is actually served, and its line carries the middleware.
 const SPEC_CONST = /\b(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*\{[^{}]*?\bmethod\s*:\s*(['"`])(GET|POST|PUT|PATCH|DELETE)\2[^{}]*?\bpath\s*:\s*(['"`])(\/[^'"`]*)\4/g;
 const SPEC_MOUNT = /\.\s*(get|post|put|patch|delete|options|all)\s*\(\s*(?:[A-Za-z_$][\w$]*\s*\(\s*)?([A-Z][A-Z0-9_]{2,})\b/g;
 
@@ -455,10 +457,10 @@ const EXPRESS_ROUTE = /\b(\w+)\s*\.\s*(get|post|put|patch|delete|options|all)\s*
 const EXPRESS_MOUNT = /\.\s*use\s*\(\s*(['"`])(\/[^'"`]*)\1\s*,\s*(\w+)/g;
 const ZOD_INFER = /export\s+type\s+(\w+)\s*=\s*z\s*\.\s*infer\s*<\s*typeof\s+(\w+)\s*>/g;
 
-// cm:guard Brace-balanced and quote-aware, not a regex terminator. `z.object({ a: z.string() })`
-// written on ONE line has no `\n})` to stop at, so the old pattern ran on to the next multi-line
-// close and swallowed the schema after it: in one real contracts file the first schema absorbed the
-// second, and the second vanished from the index entirely.
+// cm:guard Brace-balanced and quote-aware, not a regex terminator. `z.object({ a: z.string() })` on
+// ONE line has no `\n})` to stop at, so the old pattern swallowed the schema after it.
+// cm:guard In one real contracts file the first schema absorbed the second, and the second vanished
+// from the index entirely.
 function balancedFrom(src: string, open: number): { body: string; end: number } {
   let depth = 0;
   let quote: string | null = null;
@@ -500,8 +502,9 @@ function zodFields(body: string): SchemaField[] {
     if (key === null || (i > 0 && /[\w$.]/.test(body[i - 1]))) continue;
 
     // cm:guard The field's text ends at ITS OWN top-level comma. A fixed-width window ran past it and
-    // read the NEXT field's `.optional()`, so a required field was reported optional — which is the
-    // wrong direction: it tells a caller a field may be absent when the API always sends it.
+    // read the NEXT field's `.optional()`, so a required field was reported optional.
+    // cm:guard That is the wrong direction: it tells a caller a field may be absent when the API
+    // always sends it.
     let j = i + key[0].length;
     let inner = 0;
     let q: string | null = null;
@@ -531,9 +534,10 @@ function zodFields(body: string): SchemaField[] {
 
 const ZOD_HEAD = /(?:const|let|var)\s+(\w+)\s*=\s*z\s*\.\s*(object|strictObject|looseObject|discriminatedUnion|union)\s*\(/g;
 
-// cm:why A discriminated union IS one response shape with branches. Taking the union of the members'
-// keys, and marking a key optional unless every member has it, is the honest reading — reporting
-// nothing would hide the whole endpoint, and reporting one branch would claim fields that may not come.
+// cm:why A discriminated union IS one response shape with branches, so the honest reading is the union
+// of the members' keys with a key optional unless every member has it.
+// cm:why Reporting nothing would hide the whole endpoint, and reporting one branch would claim fields
+// that may not come.
 function zodSchemas(file: string, content: string): SchemaDef[] {
   const out: SchemaDef[] = [];
   for (const m of content.matchAll(ZOD_HEAD)) {
@@ -577,8 +581,9 @@ const HANDLER_DEF = /export\s+const\s+(\w+)\s*=\s*([\s\S]*?)(?=\nexport\s|$)/g;
 const VALIDATOR_ARG = /\b(?:zValidator|validator|validate)\s*\(\s*(['"`])\w+\1\s*,\s*(\w+)/;
 const SCHEMA_PARSE = /\b(\w+)\s*\.\s*(?:parse|safeParse|parseAsync)\s*\(/;
 // cm:why Three ways a handler names its response shape, all same-file: an explicit annotation on a
-// helper it calls, `satisfies T`, and `c.json<T>`. Following an import to find a fourth would buy
-// little — a codebase that annotates at all annotates in one of these.
+// helper it calls, `satisfies T`, and `c.json<T>`.
+// cm:why Following an import to find a fourth would buy little — a codebase that annotates at all
+// annotates in one of these.
 const TYPED_RETURN = /function\s+(\w+)\s*\([\s\S]{0,600}?\)\s*:\s*([A-Z]\w*)\s*\{/g;
 const SATISFIES_TYPE = /\bsatisfies\s+([A-Z]\w*)|\.\s*json\s*<\s*([A-Z]\w*)\s*>/;
 
@@ -636,9 +641,10 @@ function scanNode(file: string, content: string): BeFileScan {
     return out;
   }
 
-  // cm:edge protocol -> ROUTE_OBJECT · SPEC_CONST — both may name the same route, and that is fine:
-  // endpoint ids are derived from METHOD + normalized path, so the two collapse into one endpoint and
-  // the mount site wins the source line by being pushed second.
+  // cm:edge protocol -> packages/scan/src/beScanner.ts#ROUTE_OBJECT — may name the same route as
+  // SPEC_CONST, and that is fine.
+  // cm:why Endpoint ids derive from METHOD + normalized path, so the two collapse into one endpoint
+  // and the mount site wins the source line by being pushed second.
   for (const m of content.matchAll(ROUTE_OBJECT)) {
     const block = content.slice(m.index, m.index + 400);
     out.routes.push(route(m[2], m[4], file, lineOf(content, m.index), {
@@ -655,8 +661,8 @@ function scanNode(file: string, content: string): BeFileScan {
     if (spec === undefined) continue;
     const line = content.slice(m.index, m.index + 300);
     // cm:why The handler SYMBOL is the only link from the mount to the module that validates the
-    // request — `...patchPolicyRoute` names a file two directories away, and the schema index is
-    // keyed by name, so the symbol is enough and no import has to be resolved.
+    // request: `...patchPolicyRoute` names a file two directories away.
+    // cm:why The schema index is keyed by name, so the symbol is enough and no import is resolved.
     const handler = /\)\s*,\s*(?:\.\.\.)?([a-z_$][\w$]*)/.exec(line)?.[1];
     // cm:guard The verb at the mount wins over the verb in the const: `.post(declared(X))` where X
     // says GET is a real mismatch, and reporting the const would hide the route that is served.
@@ -822,10 +828,11 @@ function scanGeneric(file: string, content: string): BeFileScan {
 }
 
 export function scanBackendFile(file: string, rawContent: string, stack: Stack): BeFileScan {
-  // cm:edge lockstep -> packages/scan/src/mask.ts — the JS/TS readers mask template TEXT as well as comments,
-  // because a route declaration never lives inside a template literal while route-shaped JSON in a
-  // doc string does: the probe harness's own example was published as an endpoint of this repo.
-  // cm:guard JS/TS ONLY. A backtick in Go is a RAW STRING, and struct tags live in one — masking it
+  // cm:edge lockstep -> packages/scan/src/mask.ts — the JS/TS readers mask template TEXT as well as
+  // comments, because a route declaration never lives inside a template literal.
+  // cm:why Route-shaped JSON in a doc string does: the probe harness's own example was published as an
+  // endpoint of this repo.
+  // cm:guard JS/TS ONLY. A backtick in Go is a RAW STRING and struct tags live in one — masking it
   // erased every `json:"id"` and the Go schema reader stopped finding fields at all.
   const masked = maskComments(rawContent);
   const content = /\.[cm]?[jt]sx?$/.test(file) ? maskTemplateText(masked) : masked;

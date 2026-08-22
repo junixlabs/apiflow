@@ -38,9 +38,9 @@ describe('renderApp offline', () => {
     }
   });
 
-  // cm:guard The page ships the scan and add-project code even offline, so the ONLY thing keeping a
-  // file:// page from posting at a server that is not there is the live gate — assert the gate and
-  // the relative target, not the absence of fetch.
+  // cm:guard The page ships the scan and add-project code even offline, so the only thing keeping a
+  // file:// page from posting at an absent server is the live gate.
+  // cm:guard Assert the gate and the relative target, not the absence of fetch.
   it('aims every fetch at a relative apiflow route, and ships no control that fires one', () => {
     const calls = html.match(/fetch\([^,)]*/g) ?? [];
     expect(calls.length).toBeGreaterThan(0);

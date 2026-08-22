@@ -15,7 +15,7 @@ import { tolerateClosedPipe } from './stdio';
 import { isNestedCheckout } from './scanScope';
 import { isGeneratedSource } from '@junixlabs/apiflow-scan';
 
-// cm:edge contract -> packages/cli/src/commands/check.ts readerChanged() — the READER's version, bumped in the same
+// cm:edge contract -> packages/cli/src/commands/check.ts#readerChanged — the READER's version, bumped in the same
 // commit as any change to what the FE reader produces for unchanged input.
 export const GENERATOR = 'apiflow scan-fe/4';
 

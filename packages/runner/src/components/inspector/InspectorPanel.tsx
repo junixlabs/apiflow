@@ -17,9 +17,10 @@ import type { ApiNodeData } from '../../types';
 
 type Tab = 'config' | 'request' | 'response' | 'diff' | 'history';
 
-// cm:why The tabs that already say something about a finished run. A run started from one of these
-// must leave it alone: yanking someone off the diff they opened on purpose is how that tab came to
-// look broken, and the history list is watched while it grows.
+// cm:why The tabs that already say something about a finished run.
+// cm:why A run started from one of these must leave it alone: yanking someone off the diff they
+// opened on purpose is how that tab came to look broken.
+// cm:why The history list is watched while it grows.
 const SHOWS_A_RUN: Tab[] = ['response', 'diff', 'history'];
 
 const MIN_WIDTH = 320;

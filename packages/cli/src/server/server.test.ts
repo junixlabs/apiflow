@@ -35,9 +35,9 @@ afterEach(() => {
   rmSync(repo, { recursive: true, force: true });
 });
 
-// cm:why Uses node:http rather than fetch for these: `Host` is a forbidden header name, so fetch
-// drops it silently and the request arrives at the loopback host — the assertion then passes against
-// a server with no guard at all. A browser drops it too, which is what makes the Host check useful.
+// cm:why Uses node:http rather than fetch: `Host` is a forbidden header name, so fetch drops it and
+// the request arrives at the loopback host — the assertion then passes against no guard at all.
+// cm:why A browser drops it too, which is what makes the Host check useful.
 const rawPost = (path: string, headers: Record<string, string>): Promise<number> =>
   new Promise((done, fail) => {
     const url = new URL(base + path);
@@ -101,8 +101,8 @@ describe('POST /api/projects', () => {
 });
 
 // cm:why These four cases are the whole reason a write route may accept a filesystem path at all.
-// Any page in the browser can reach 127.0.0.1; without them it could register the user's home
-// directory as a project and have it scanned.
+// cm:why Any page in the browser can reach 127.0.0.1; without them it could register the user's
+// home directory as a project and have it scanned.
 describe('write guard', () => {
   it('rejects a Host that is not loopback, which is what DNS rebinding produces', async () => {
     expect(await rawPost('/api/projects', { host: 'evil.example', 'content-type': 'application/json' })).toBe(403);
@@ -156,9 +156,9 @@ describe('PATCH /api/projects/:id', () => {
     expect(res.project?.be).toBe(repo);
   });
 
-  // cm:why This is the case the field-vs-absent split exists for: a form posts every input it has, so
-  // if an empty string did not mean "clear", editing the FE path could never remove a BE path — and
-  // if an absent key did not mean "leave alone", the project view's form would wipe the hints file.
+  // cm:why The case the field-vs-absent split exists for: a form posts every input it has, so if an
+  // empty string did not mean "clear", editing the FE path could never remove a BE path.
+  // cm:why And if an absent key did not mean "leave alone", the project form would wipe the hints file.
   it('treats an empty field as clear and an absent field as unchanged', async () => {
     expect((await patch('doi-goc', { be: '' })).project?.be).toBeUndefined();
     expect((await patch('doi-goc', { name: 'new name' })).project?.fe).toBe(repo);

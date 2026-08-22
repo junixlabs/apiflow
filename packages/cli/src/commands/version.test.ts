@@ -20,8 +20,9 @@ describe('apiflow --version', () => {
 });
 
 // cm:why HELP is a template literal, and a backtick in a flag description ended it mid-string: node
-// still parsed the file, `--help` printed `NaN`, and nothing failed. This asserts the rendering, not
-// the source, because that is the only thing that catches the next one.
+// still parsed the file, `--help` printed `NaN`, and nothing failed.
+// cm:why This asserts the rendering, not the source, because that is the only thing that catches
+// the next one.
 describe('apiflow --help', () => {
   it('renders the command list', () => {
     const out = execFileSync('node', [join(root, 'bin', 'cli.js'), '--help'], { encoding: 'utf8', timeout: 20_000 });

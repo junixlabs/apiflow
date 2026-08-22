@@ -11,10 +11,9 @@ export function loadMap(path: string): ApiMapFile {
   return map;
 }
 
-// cm:guard A query that names a verb keeps that verb through the fuzzy fallback. It used to drop it:
-// asking for `POST /mcp` on a map that has only DELETE and GET /mcp printed those two as the answer,
-// so the reader — or an agent — concluded that POST /mcp breaks those screens. Widen the PATH, never
-// the method: the method is the half the user was explicit about.
+// cm:guard A query that names a verb keeps it through the fuzzy fallback. Asking `POST /mcp` on a map
+// holding only DELETE and GET /mcp printed those two, so a reader concluded POST breaks those screens.
+// cm:guard Widen the PATH, never the method: the method is the half the user was explicit about.
 export function resolveEndpointQuery(map: ApiMapFile, query: string): string[] {
   const parts = query.trim().split(/\s+/);
   const verb = parts.length >= 2 ? toMapMethod(parts[0]) : undefined;
@@ -28,9 +27,8 @@ export function resolveEndpointQuery(map: ApiMapFile, query: string): string[] {
   return (withVerb.length > 0 ? withVerb : map.endpoints.filter((e) => (verb === undefined ? hit(e) : false))).map((e) => e.id);
 }
 
-// cm:why Separate from the resolver so the caller can SAY why it found nothing: "no POST on this
-// path, but DELETE and GET exist" is a different fact from "this path does not exist", and the
-// second one sends someone looking for a typo that isn't there.
+// cm:why Separate from the resolver so the caller can SAY why it found nothing. "No POST here, but
+// DELETE and GET exist" is a different fact from "no such path", which sends you hunting a typo.
 export function otherMethodsOn(map: ApiMapFile, query: string): string[] {
   const parts = query.trim().split(/\s+/);
   if (parts.length < 2) return [];
@@ -134,8 +132,9 @@ function mapFacts(map: ApiMapFile): ImpactJson['map'] {
 }
 
 // cm:why The agent-facing shape is deliberately NOT the .apimap shape: it carries the answer plus
-// the file:line evidence for it, and nothing else. A tool that hands an agent the whole map spends
-// its context on data the agent then has to re-derive.
+// the file:line evidence for it, and nothing else.
+// cm:why A tool that hands an agent the whole map spends its context on data the agent then has to
+// re-derive.
 // cm:guard `unresolved` travels with every answer. An empty screen list means "nothing in the map
 // consumes it", never "nothing consumes it" — dropping the count here is how that becomes a lie.
 export function impactJson(map: ApiMapFile, kind: 'endpoint' | 'field', value: string, answers: ImpactAnswer[]): ImpactJson {
@@ -211,9 +210,9 @@ function main(): void {
   const asJson = args.includes('--json');
   const emit = (payload: ImpactJson): void => {
     process.stdout.write(`${JSON.stringify(payload, null, 2)}\n`);
-    // cm:edge protocol -> packages/cli/skills/apiflow-impact/skill.md — stdout stays valid JSON even when nothing
-    // matched, and the verdict rides on the exit code (0 found · 2 nothing found). A hook that has to
-    // parse prose to learn "no match" is a hook that reports a miss as an answer.
+    // cm:edge protocol -> packages/cli/skills/apiflow-impact/skill.md — stdout stays valid JSON even
+    // when nothing matched, and the verdict rides on the exit code (0 found · 2 nothing found).
+    // cm:why A hook that has to parse prose to learn "no match" reports a miss as an answer.
     process.exit(payload.found ? 0 : 2);
   };
 

@@ -11,11 +11,12 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = join(__dirname, '..');
 
 // cm:why The runner is a SEPARATE package (the canvas half), so its dist/, proxy and run-MCP server
-// are not under this one. Two layouts have to work: a monorepo checkout (../runner) and an npm
-// install (node_modules/@junixlabs/apiflow-runner). Resolved once, here, rather than guessed at each
-// use site.
-// cm:edge lockstep -> packages/runner/package.json — `files` must ship src/, proxy/ and dist/, or the
-// three paths below resolve to nothing on an installed copy.
+// are not under this one.
+// cm:why Two layouts have to work: a monorepo checkout (../runner) and an npm install
+// (node_modules/@junixlabs/apiflow-runner).
+// cm:why Resolved once, here, rather than guessed at each use site.
+// cm:edge lockstep -> packages/runner/package.json — `files` must ship src/, proxy/ and dist/, or
+// the three paths below resolve to nothing on an installed copy.
 const runnerRoot = [
   join(root, '..', 'runner'),
   join(root, 'node_modules', '@junixlabs', 'apiflow-runner'),
@@ -23,10 +24,9 @@ const runnerRoot = [
 ].find((d) => existsSync(join(d, 'package.json'))) ?? join(root, '..', 'runner');
 const distDir = join(runnerRoot, 'dist');
 
-// cm:why Spawns tsx through its resolved entry instead of `npx tsx`: measured on a clean install,
-// npx costs ~0.3s of registry/bin resolution on EVERY subcommand, and the map MCP server pays it at
-// session start where it is felt most (1.7s → 1.1s to first tool). Falls back to npx only if tsx
-// cannot be resolved, which on a normal install means the dependency tree is broken anyway.
+// cm:why Resolves tsx directly instead of `npx tsx`: npx costs ~0.3s per subcommand on a clean
+// install, and the map MCP server pays it at session start (1.7s → 1.1s to first tool).
+// cm:why Falls back to npx only if tsx cannot be resolved, which means a broken dependency tree.
 function tsxRunner(script, rest) {
   try {
     const tsx = createRequire(import.meta.url).resolve('tsx/cli');
@@ -38,8 +38,8 @@ function tsxRunner(script, rest) {
 
 const args = process.argv.slice(2);
 // cm:guard No backtick and no ${...} anywhere in this string — it is a template literal, and one
-// backtick in a flag description ended it mid-sentence and made `apiflow --help` print `NaN`. The
-// break is silent: node parses the file fine, the rest of the help becomes code.
+// backtick in a flag description ended it mid-sentence and made `apiflow --help` print `NaN`.
+// cm:guard The break is silent: node parses the file fine, the rest of the help becomes code.
 const HELP = `apiflow — a screen ↔ endpoint ↔ field map
 
   apiflow                        open the app (proxy + built UI)
@@ -78,9 +78,9 @@ const HELP = `apiflow — a screen ↔ endpoint ↔ field map
 
 Workspace: ~/.apiflow — apiflow writes nothing into the project it scans unless --out points there.`;
 
-// cm:guard --help must be answered BEFORE dispatch: `apiflow scan-fe --help` used to fall through
-// with no positional argument, which means "scan the current directory" — it scanned this repo and
-// wrote a map into it. A help flag must never be able to start a scan.
+// cm:guard --help is answered BEFORE dispatch. `apiflow scan-fe --help` used to fall through with no
+// positional argument, which means "scan the current directory" — it scanned this repo.
+// cm:guard A help flag must never be able to start a scan.
 if (args.includes('--help') || args.includes('-h') || args[0] === 'help') {
   console.log(HELP);
   process.exit(0);
@@ -104,8 +104,7 @@ const port = parseInt(args.find(a => a.startsWith('--port='))?.split('=')[1] || 
 // cm:edge protocol -> packages/cli/src/commands/scanFe.ts — subcommands are matched before the flag parsing below,
 // so `apiflow scan-fe <dir>` never falls through to the serve path and never needs dist/.
 // cm:guard Paths are relative to this package's src/, not to src/commands/: the map MCP server lives
-// outside commands/, and spelling it as a ../ escape from commands/ is how a package layout change
-// breaks one entry silently.
+// outside commands/, and a ../ escape from commands/ is how a layout change breaks one entry.
 const SUBCOMMANDS = {
   'scan-fe': 'commands/scanFe.ts',
   'scan-be': 'commands/scanBe.ts',
@@ -120,9 +119,11 @@ const SUBCOMMANDS = {
   hub: 'commands/hub.ts',
 };
 // cm:why Two MCP servers, one word apart, because they are two different halves of the repo: `map`
-// only reads .apimap, `run` executes requests and pulls the run side in. They were `mcp-map` and a
-// `--mcp` FLAG — one subcommand and one flag for the same kind of thing, which is unreadable. Both
-// old spellings still work: `--mcp` is in the published README and in people's MCP configs.
+// only reads .apimap, `run` executes requests and pulls the run side in.
+// cm:why They were `mcp-map` and a `--mcp` FLAG — one subcommand and one flag for the same kind of
+// thing, which is unreadable.
+// cm:why Both old spellings still work: `--mcp` is in the published README and in people's MCP
+// configs.
 // cm:why `run` is an ABSOLUTE path while `map` is relative: the two servers now live in two
 // packages, and the dispatcher below resolves a relative value against this package's src/.
 const MCP_SERVERS = { map: 'mcp/mapServer.ts', run: join(runnerRoot, 'src', 'mcp', 'server.ts') };
@@ -141,7 +142,8 @@ if (args[0] === 'mcp') {
 
 // cm:guard An unrecognised first word must NOT fall through to the serve path: `apiflow map-audit`
 // (a name the README's own table advertises) used to start a canvas on :3000 and report success.
-// Same fault class as the `--version` one fixed in d5ce40f, which was fixed for that one token only.
+// cm:guard Same fault class as the `--version` one fixed in d5ce40f, which was fixed for that one
+// token only.
 if (subcommand === undefined && args[0] !== undefined && !args[0].startsWith('-')) {
   console.error(`apiflow: unknown command "${args[0]}"`);
   console.error(`Commands: ${[...Object.keys(SUBCOMMANDS), 'mcp'].sort().join(' · ')}`);
@@ -152,9 +154,8 @@ if (subcommand === undefined && args[0] !== undefined && !args[0].startsWith('-'
 if (subcommand) {
   const script = isAbsolute(subcommand) ? subcommand : join(root, 'src', subcommand);
   const [cmd, argv] = tsxRunner(script, forwarded);
-  // cm:guard Keeps the caller's cwd: tsx resolves its tsconfig and node_modules from the script
-  // path, but every relative argument a user types (`--out=maps`, `scan-fe .`) resolves from cwd, so
-  // handing the child `root` made those land inside the apiflow install instead.
+  // cm:guard Keeps the caller's cwd. tsx resolves its tsconfig from the script path, but every
+  // relative argument a user types resolves from cwd — `root` put them in the install directory.
   const child = spawn(cmd, argv, { stdio: 'inherit' });
   child.on('exit', (code) => process.exit(code ?? 0));
   // cm:guard Forwards the signal: `apiflow ui` is long-running, and without this, killing this

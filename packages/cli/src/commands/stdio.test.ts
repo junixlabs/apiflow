@@ -6,9 +6,11 @@ import { join } from 'path';
 import { createApiMap, endpointId, finalizeApiMap, serializeMap } from '@junixlabs/apiflow-map';
 
 // cm:why Runs the real CLI through a real closed pipe — a unit test on the handler passes while
-// `apiflow impact map | head` still prints a stack trace. Two details make it actually reproduce:
-// the output must exceed the pipe buffer (~64KB) or every write lands before `head` exits, and the
-// verdict must come from PIPESTATUS[0]; `$?` after a pipeline is head's status and is always 0.
+// `apiflow impact map | head` still prints a stack trace.
+// cm:why Two details make it reproduce: the output must exceed the pipe buffer (~64KB), or every
+// write lands before `head` exits.
+// cm:why And the verdict must come from PIPESTATUS[0] — `$?` after a pipeline is head's status,
+// which is always 0.
 describe('a closed pipe is not a crash', () => {
   it('exits 0 and stays silent when the reader goes away mid-listing', () => {
     const dir = mkdtempSync(join(tmpdir(), 'apiflow-epipe-'));

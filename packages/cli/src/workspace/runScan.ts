@@ -15,9 +15,10 @@ export interface ScanEvent {
 // inside the project being looked at, and a cwd-relative path makes the scan button fail there.
 const CLI = join(dirname(fileURLToPath(import.meta.url)), '..', '..', 'bin', 'cli.js');
 
-// cm:why Spawns the CLI instead of calling the scanner in-process, against the first draft of the
-// plan: the scanners are synchronous and CPU-bound for ~40s on a real repo, so running them here
-// freezes the event loop — no other request is served and the progress stream cannot even flush.
+// cm:why Spawns the CLI instead of calling the scanner in-process, against the first draft of the plan:
+// the scanners are synchronous and CPU-bound for ~40s on a real repo.
+// cm:why Running them here freezes the event loop — no other request is served and the progress
+// stream cannot even flush.
 export function scanInBackground(
   id: string,
   kind: 'fe' | 'be',

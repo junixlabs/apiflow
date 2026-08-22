@@ -15,9 +15,10 @@ export interface ImportedMap {
   calls: number;
 }
 
-// cm:why The whole point of a content-derived, timestamp-free .apimap is that it survives leaving the
-// machine that made it. A BE that lives on another device is scanned there and the FILE travels —
-// there is nothing to host, because `link` joins the two halves by endpoint id, not by network.
+// cm:why The whole point of a content-derived, timestamp-free .apimap is that it survives leaving
+// the machine that made it.
+// cm:why A BE that lives on another device is scanned there and the FILE travels — there is nothing
+// to host, because `link` joins the two halves by endpoint id, not by network.
 // cm:guard Refuses a map of the wrong half. Dropping an fe map into the be slot makes the
 // reconciliation compare a side against itself and report every endpoint as agreeing.
 export function readImportable(kind: Side, file: string): { map: ApiMapFile; from: string } {

@@ -285,9 +285,9 @@ describe('a layout route hands its calls down to its children', () => {
   });
 });
 
-// cm:why Two readers see the same endpoint and know different things: a route manifest knows the path
-// and the declared gate, the mount site knows the handler — and the handler is what carries the
-// schemas. Keeping whichever ran first left 72 of 106 endpoints with no handler and no fields.
+// cm:why Two readers see the same endpoint and know different things: a route manifest has the path
+// and the gate, the mount site has the handler — and the handler carries the schemas.
+// cm:why Keeping whichever ran first left 72 of 106 endpoints with no handler and no fields.
 describe('one endpoint seen by two readers keeps both halves', () => {
   const build = (order: 'manifest-first' | 'mount-first') => {
     const map = createApiMap('merge', 'github.com/acme/api', 'test/1');

@@ -13,7 +13,7 @@ export interface MapSeries {
 
 // cm:guard Cached by absolute path forever, with no invalidation, and that is SAFE only because a
 // history file is named by the hash of its own content — the same path can never hold new bytes.
-// cm:edge contract -> packages/cli/src/workspace/store.ts writeMap() — it is what names history by content hash.
+// cm:edge contract -> packages/cli/src/workspace/store.ts#writeMap — it is what names history by content hash.
 interface Counts {
   endpoints: number;
   screens: number;
@@ -43,9 +43,9 @@ export interface EndpointHistory {
   first: Record<string, number>;
 }
 
-// cm:why Sends only the endpoints that appeared LATER than the first stored scan. Every other
-// endpoint has been there the whole time, and shipping 1092 identical "since scan 1" entries to the
-// browser costs 60KB to say nothing.
+// cm:why Sends only the endpoints that appeared LATER than the first stored scan.
+// cm:why Every other endpoint has been there the whole time, and shipping 1092 identical "since
+// scan 1" entries to the browser costs 60KB to say nothing.
 // cm:guard Dates come from the file's mtime, never from inside the map: a .apimap carries no
 // timestamp on purpose, so that re-scanning an unchanged repo produces identical bytes.
 export function endpointHistory(id: string, kind: MapKind, limit = 12): EndpointHistory | null {

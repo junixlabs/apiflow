@@ -9,8 +9,9 @@ const hostOf = (value: string): string => {
 };
 
 // cm:why A write route accepts a filesystem path, which reverses the read-only rule the GET routes
-// live under, so it needs its own fence. Without this, any page in the same browser could POST to
-// 127.0.0.1 and register the user's home directory as a project, then have it scanned.
+// live under, so it needs its own fence.
+// cm:why Without this, any page in the same browser could POST to 127.0.0.1 and register the user's
+// home directory as a project, then have it scanned.
 // cm:guard Checks the HOST header, not just Origin: a name that resolves to 127.0.0.1 (DNS
 // rebinding) makes an attacker's page same-origin with this server, and then Origin agrees with it.
 export function localWritesOnly(req: Request, res: Response, next: NextFunction): void {

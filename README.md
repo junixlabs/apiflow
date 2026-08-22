@@ -204,6 +204,7 @@ git clone https://github.com/junixlabs/apiflow.git && cd apiflow && npm install
 npm test          # 417 tests, including the docs/guide transcripts
 npm run lint
 npm run boundary  # the four structural rules
+npm run codemap   # the comment convention, at zero errors
 npm run build
 ```
 

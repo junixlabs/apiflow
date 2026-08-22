@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { maskComments, maskTemplateText } from './mask';
 
-// cm:why One masker for every reader. The rule was written twice, and the second copy had no newline
-// guard: a regex character class containing a quote put it in a string state that swallowed the rest
-// of the file, so three phantom endpoints reached a published map out of the scanner's own comments.
+// cm:why One masker for every reader. The rule was written twice and the second copy had no newline
+// guard: a character class containing a quote entered a string state that ate the rest of the file.
+// cm:why Three phantom endpoints reached a published map out of the scanner's own comments.
 describe('maskComments', () => {
   it('keeps masking comments after a regex that contains a quote character', () => {
     const src = ["const QUOTE = /['\"`]/;", "// app.get('/x', h) registers a route"].join('\n');

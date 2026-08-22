@@ -13,9 +13,10 @@ import { tolerateClosedPipe } from './stdio';
 import { isNestedCheckout } from './scanScope';
 import { isGeneratedSource } from '@junixlabs/apiflow-scan';
 
-// cm:edge contract -> packages/cli/src/commands/check.ts readerChanged() — this string is the READER's version, and
-// check reads it to tell "the code moved" apart from "the reader improved". Bump it in the same commit
-// as any change to what the BE reader produces for unchanged input.
+// cm:edge contract -> packages/cli/src/commands/check.ts#readerChanged — this string is the
+// READER's version, and check reads it to tell "the code moved" apart from "the reader improved".
+// cm:why Bump it in the same commit as any change to what the BE reader produces for unchanged
+// input.
 export const GENERATOR = 'apiflow scan-be/4';
 const MANIFESTS = ['artisan', 'composer.json', 'package.json', 'go.mod', 'pyproject.toml', 'requirements.txt'];
 const SKIP_DIRS = new Set([
@@ -148,9 +149,10 @@ export function scanBackend(root: string, name: string): BeScanResult {
 
   for (const raw of routes) {
     const hit = resolveHandlerSchemas(raw, classes);
-    // cm:edge lockstep -> packages/scan/src/beScanner.ts handlerDefs() — the mount records the handler symbol
-    // and this is where that symbol is turned into the two schema names. A mount that stops recording
-    // the symbol makes every node route schema-less again, silently.
+    // cm:edge lockstep -> packages/scan/src/beScanner.ts#handlerDefs — the mount records the
+    // handler symbol and this is where that symbol is turned into the two schema names.
+    // cm:why A mount that stops recording the symbol makes every node route schema-less again,
+    // silently.
     const viaHandler = hit.handler === undefined ? undefined : handlers.get(hit.handler);
     const request = lookup(hit.requestSchema ?? viaHandler?.requestSchema);
     const response = lookup(hit.responseSchema ?? viaHandler?.responseSchema);
@@ -188,10 +190,9 @@ export function scanBackend(root: string, name: string): BeScanResult {
 
       // cm:why An endpoint whose two shapes are unknown is exactly what the probe stage exists to
       // fill — recording it here is what makes the probe list finite instead of "every route".
-      // cm:guard One entry per ENDPOINT, not per route hit. The same route is legitimately seen more
-      // than once — a manifest entry plus its mount site, or a resource macro expanding into a file
-      // already scanned — and 106 endpoints were reporting 317 schema gaps, which reads as three
-      // times the work outstanding.
+      // cm:guard One entry per ENDPOINT, not per route hit. The same route is legitimately seen twice:
+      // a manifest entry plus its mount site, or a resource macro expanding into a scanned file.
+      // cm:guard Without this, 106 endpoints reported 317 schema gaps — three times the real work.
       if (!request && !response && hit.method !== 'UNKNOWN') {
         const reason = `${hit.method} ${path} — no request or response schema found in code`;
         if (!schemaGaps.has(reason)) {

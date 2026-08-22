@@ -20,9 +20,9 @@ export interface Target {
   id?: string;
 }
 
-// cm:why Resolution order is project id → explicit file → the only project in the workspace. An agent
-// asking "which screens break" almost never knows a map path, and guessing one for it would answer
-// from whichever file happened to be newest.
+// cm:why Resolution order is project id → explicit file → the only project in the workspace.
+// cm:why An agent asking "which screens break" almost never knows a map path, and guessing one for
+// it would answer from whichever file happened to be newest.
 export function resolveTarget(project?: string, mapFile?: string): Target {
   if (mapFile !== undefined) {
     const path = resolve(mapFile);

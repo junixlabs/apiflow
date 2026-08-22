@@ -1,8 +1,8 @@
 import type { ApiViewFile } from '../types';
 
-// cm:why The File System Access API is not in the TS lib this project builds against, so the two
-// entry points it uses are declared here instead of being cast to `any` — narrow enough that a typo
-// in an option name still fails to compile.
+// cm:why The File System Access API is not in the TS lib this project builds against, so the two entry
+// points it uses are declared here instead of being cast to `any`.
+// cm:why Narrow enough that a typo in an option name still fails to compile.
 interface FilePickerOptions {
   suggestedName?: string;
   types?: Array<{ description: string; accept: Record<string, string[]> }>;

@@ -193,7 +193,7 @@ function overview(payload: AppPayload, list: Alert[]): string {
   const callTotal = calls.exact + calls.inferred + calls.guess;
 
   return `<section class="pane" id="pane-overview">
-  <!-- cm:edge contract -> packages/cli/src/view/panes.ts kpiStrip() — it fills this and the twin on the endpoints
+  <!-- cm:edge contract -> packages/cli/src/view/panes.ts#kpiStrip — it fills this and the twin on the endpoints
        pane. One renderer for both, so the two bands cannot report different numbers. -->
   <div class="kpistrip" id="ov-kpis"></div>
 
@@ -253,9 +253,9 @@ export function renderApp(payload: AppPayload): string {
   const list = computeAlerts(payload.map);
   const counts = alertCounts(list);
   const reliability = [...endpointReliability(payload.map)].map(([id, r]) => [id, r.exact, r.inferred, r.guess] as const);
-  // cm:guard Titled by the PROJECT when one backs the page, not by the map: the rail on the hub calls
-  // it `webapp`, and landing on a page headed `webapp-ui+webapp-api` reads as a different thing.
-  // The map's own name still shows up in the generator line under the roots.
+  // cm:guard Titled by the PROJECT when one backs the page, not by the map: the hub rail calls it
+  // `webapp`, and landing on a page headed `webapp-ui+webapp-api` reads as a different thing.
+  // cm:guard The map's own name still shows up in the generator line under the roots.
   const name = payload.projectName ?? payload.map.metadata.name;
 
   return `<!doctype html>

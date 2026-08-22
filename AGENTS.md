@@ -15,6 +15,10 @@ This file **points**; it holds no rules. Rules live where they can be enforced.
   imports no node builtin, `map` never imports `scan`, the engine never imports the runner, and
   `mcp/mapTools.ts` must depend on `commands/` — the CLI is the reference implementation and MCP
   borrows its resolution rather than growing its own.
+- **Comments are gated.** `npm run codemap` (`cm verify`) runs in CI and is at **zero errors**. An
+  annotation is ONE line plus at most ONE continuation; a third line is prose again and fails. Long
+  rationale becomes several annotations, or a module header at the top of the file. Ordinary comments
+  are frozen legacy only — 299 remain, and the count may go down, never up.
 - Research already done (do not repeat it) → [`docs/research/product-shape.md`](./docs/research/product-shape.md).
 - Context on the four sibling products → `~/tools/repo-gates/NORTH-STAR.md`.
 - Open work (issue tracker) → Forge, project `apiflow`, projectId `36a0dce3-8469-41df-995b-197f28af9127`.

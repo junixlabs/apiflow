@@ -62,9 +62,8 @@ export interface FieldNode {
   declared?: boolean;
   observed?: boolean;
   declaredAs?: string;
-  // cm:edge contract -> packages/scan/src/shape.ts isDictionary() — set only on a `{key}` path, and it is the
-  // number of keys that were collapsed into it. Present means "a keyed collection this wide", not
-  // "a field".
+  // cm:edge contract -> packages/scan/src/shape.ts#isDictionary — set only on a `{key}` path, and it
+  // holds how many keys collapsed into it: "a keyed collection this wide", not "a field".
   keys?: number;
   source?: SourceRef;
 }
@@ -83,9 +82,8 @@ export interface CallEdge {
   via: string;
   confidence: Confidence;
   source: SourceRef;
-  // cm:why The PATH, not just its length: "3 hop" cannot be read, while
-  // `api client -> useUpdateUser -> UserEditForm -> /user/:id` is the answer someone can act on.
-  // Optional so a map written before this field stays valid at version 1.
+  // cm:why The PATH, not its length: "3 hop" cannot be read, while
+  // `api client -> useUpdateUser -> UserEditForm -> /user/:id` can. Optional, so older maps stay v1.
   chain?: ChainNode[];
 }
 
@@ -215,13 +213,10 @@ export function createApiMap(name: string, root: string, generator: string): Api
   };
 }
 
-// cm:why Two readers legitimately see the same endpoint and know different things about it: a route
-// manifest knows the path and the declared gate, the mount site knows the handler — and the handler is
-// what carries the request/response schema. Keeping whichever ran first threw the other half away, so
-// 72 of 106 endpoints came out with a handler of `-` and no fields at all.
-// cm:guard `auth` resolves true > false > undefined. If two readers disagree, the artefact claims the
-// endpoint IS gated: this number is the "no auth gate found" alarm, and inventing an open endpoint is
-// the one error on it that gets acted on.
+// cm:why Two readers know different halves: a route manifest has the path and the gate, the mount
+// site has the handler — and the handler carries the schema. Keeping the first left 72 of 106 bare.
+// cm:guard `auth` resolves true > false > undefined. On disagreement the artefact claims the endpoint
+// IS gated: this is the "no auth gate found" alarm, and an invented open endpoint is the acted-on error.
 function mergeEndpoint(into: EndpointNode, from: EndpointNode): EndpointNode {
   const gated = into.auth === true || from.auth === true ? true : into.auth ?? from.auth;
   return {
@@ -277,12 +272,12 @@ export function finalizeApiMap(map: ApiMapFile): ApiMapFile {
   };
 }
 
-// cm:why Two different gaps were being counted as one number and labelled with the wording of the
-// first. On a real Laravel API 881 of 900 "unresolved" entries were endpoints whose PATH is known and
-// whose schema was not found — printed as "calls whose path could not be resolved", which is simply
-// untrue. The bucket stays one list (the format is version 1), the counting does not.
-// cm:edge lockstep -> packages/cli/src/view/hub.ts · packages/cli/src/view/app.ts · packages/cli/src/mcp/mapTools.ts — every place that
-// prints an unresolved COUNT must print these two separately or say which one it means.
+// cm:why Two gaps counted as one number and labelled as the first: on a real Laravel API, 881 of 900
+// "unresolved" were known paths with no schema found. One list (format is v1), two counts.
+// cm:edge lockstep -> packages/cli/src/view/hub.ts — anything printing an unresolved COUNT prints the
+// two separately or says which one it means.
+// cm:edge lockstep -> packages/cli/src/view/app.ts — same count, same rule.
+// cm:edge lockstep -> packages/cli/src/mcp/mapTools.ts — same count, same rule.
 export function unresolvedKinds(map: ApiMapFile): { paths: number; schemas: number } {
   let schemas = 0;
   for (const u of map.unresolved) if (/no request or response schema/.test(u.reason)) schemas++;
@@ -291,11 +286,11 @@ export function unresolvedKinds(map: ApiMapFile): { paths: number; schemas: numb
 
 export type Side = 'fe' | 'be';
 
-// cm:why Which half a map is comes from the generator string, not from the file name: the same map
-// is read from ~/.apiflow, from a --out path and from a file copied off another machine, and only
-// one of those three carries a name anyone chose.
-// cm:edge contract -> packages/cli/src/commands/scanFe.ts · packages/cli/src/commands/scanBe.ts — they write `apiflow scan-fe/N` and
-// `apiflow scan-be/N`; a generator string that stops matching makes every map sideless.
+// cm:why Which half a map is comes from the generator string, not the file name: the same map is read
+// from ~/.apiflow, from --out and from another machine, and only one of those carries a chosen name.
+// cm:edge contract -> packages/cli/src/commands/scanFe.ts — writes `apiflow scan-fe/N`; a generator
+// string that stops matching makes every map sideless.
+// cm:edge contract -> packages/cli/src/commands/scanBe.ts — writes `apiflow scan-be/N`, same rule.
 export function sideOf(map: ApiMapFile): Side | null {
   if (map.metadata.generator.includes('scan-fe')) return 'fe';
   if (map.metadata.generator.includes('scan-be')) return 'be';
@@ -307,15 +302,14 @@ export interface ImpactAnswer {
   screens: Array<{ screen: ScreenNode; confidence: Confidence; source: SourceRef; chain?: ChainNode[]; callSites: number; inheritedFrom?: string; hops?: number }>;
 }
 
-// cm:why One number decides whether the reconciliation is worth showing at all. Measured on a real
-// Hono API (2026-08-20): the reader understood 2 of 103 routes because every mount site is
-// `.get(declared(SPEC), h)` with no literal path, and the map then reported 88 endpoints the API
-// "does not declare" — a defect invented out of a gap in the reader. Not a tuned threshold: if the
-// accusation would cover MORE endpoints than the API declares in total, the untrustworthy half is
-// the reader, so those endpoints are unpaired (not compared), not FE-only (compared and wrong).
-// cm:edge lockstep -> packages/cli/src/workspace/summary.ts · packages/cli/src/workspace/alerts.ts · packages/cli/src/view/panes.ts reconOf
-// — all four decide the same four buckets; the browser pane re-implements this because it cannot
-// import node code, so a change here is a change in four places.
+// cm:why One number decides whether the reconciliation is worth showing. On a real Hono API
+// (2026-08-20) the reader understood 2 of 103 routes, so the map falsely accused 88 endpoints.
+// cm:why Not a tuned threshold: if the accusation would cover MORE endpoints than the API declares,
+// the untrustworthy half is the reader — so those are unpaired (not compared), not FE-only (wrong).
+// cm:edge lockstep -> packages/map/src/summary.ts — decides the same four buckets.
+// cm:edge lockstep -> packages/map/src/alerts.ts — decides the same four buckets.
+// cm:edge lockstep -> packages/cli/src/view/panes.ts#reconOf — re-implements this because a browser
+// pane cannot import node code, so a change here is a change in four places.
 export function bePartial(map: ApiMapFile): boolean {
   const called = new Set(map.calls.map((c) => c.endpointId));
   let declared = 0;
@@ -327,24 +321,19 @@ export function bePartial(map: ApiMapFile): boolean {
   return declared > 0 && undeclaredCalled > declared;
 }
 
-// cm:guard One entry per SCREEN, never per call: the answer's headline is "N screen(s) break", so a
-// screen that calls the endpoint from two places used to be counted twice and read as twice the blast
-// radius — measured on a real app, 10 reported screens were 3 distinct ones. `callSites` keeps the
-// second call site visible instead of dropping it.
-// cm:why Keeps the STRONGEST confidence of the group. The screen breaks by its best evidence: one
-// exact call site is proof, and letting a guess sibling downgrade it would understate what is known.
-// cm:why Read off the file name, not a stored flag, so a map written before this still answers
-// correctly without a re-scan. `route`/`layout` WRAP their children; `index`/`page` are leaves that
-// merely share the directory's route string, and treating one as a parent would make an index route
-// the ancestor of its own siblings.
+// cm:guard One entry per SCREEN, never per call: the headline is "N screen(s) break", so calling from
+// two places read as twice the blast radius — 10 reported screens were 3. `callSites` keeps the rest.
+// cm:why Keeps the STRONGEST confidence of the group: one exact call site is proof, and a guess
+// sibling downgrading it would understate what is known.
+// cm:why Read off the file name, not a stored flag, so older maps answer without a re-scan.
+// `route`/`layout` wrap children; `index`/`page` are leaves that merely share the route string.
 const LAYOUT_FILE = /(?:^|\/)(?:route|layout|_layout|\+layout)\.(?:tsx?|jsx?|vue|svelte|astro)$/;
 
 const isDescendantRoute = (child: string, parent: string): boolean =>
   child !== parent && child.startsWith(parent === '/' ? '/' : `${parent}/`);
 
-// cm:guard A layout's call belongs to every screen rendered inside it. Without this, `GET /auth/me`
-// — called in the `beforeLoad` of `/_authenticated` and gating 25 of 27 screens — reported ONE
-// screen, and an impact answer that under-reports is the one kind that is unsafe to act on.
+// cm:guard A layout's call belongs to every screen inside it. Without this `GET /auth/me`, gating 25
+// of 27 screens, reported ONE — and an under-reporting impact answer is the unsafe kind.
 function layoutDescendants(map: ApiMapFile): Map<string, ScreenNode[]> {
   const routed = map.screens.filter((s) => s.route !== undefined);
   const out = new Map<string, ScreenNode[]>();
@@ -582,9 +571,8 @@ export function endpointsForScreen(map: ApiMapFile, screenId: string): ScreenDep
     if (endpoint === undefined) continue;
     out.push({ endpoint, confidence: call.confidence, source: call.source, viaHops: screen?.viaHops });
   }
-  // cm:edge lockstep -> packages/map/src/apimap.ts#screensAffectedByEndpoint — the two answers must agree: an endpoint a layout
-  // calls has to appear in its children's dependency list too, or `impact` and `screen_deps` disagree
-  // about the same pair.
+  // cm:edge lockstep -> packages/map/src/apimap.ts#screensAffectedByEndpoint — an endpoint a layout
+  // calls must appear in its children's list too, or `impact` and `screen_deps` disagree on one pair.
   if (screen?.route !== undefined) {
     const own = new Set(out.map((d) => d.endpoint.id));
     for (const [parentId, kids] of layoutDescendants(map)) {
@@ -614,9 +602,8 @@ type ChainKey = string;
 
 const chainKey = (n: ChainNode): ChainKey => `${n.file}|${n.symbol}|${String(n.line)}|${n.role}`;
 
-// cm:why Interned at WRITE time and expanded at READ time, so nothing between the two ever sees an
-// index. Node chains repeat their file paths 52% of the time on a real map (webapp-ui) — inlining
-// them cost 159% file growth, interning brings it to 70%.
+// cm:why Interned at WRITE time, expanded at READ time, so nothing between sees an index. Chains
+// repeat file paths 52% of the time on a real map: inlining cost 159% growth, interning 70%.
 // cm:edge lockstep -> packages/map/src/apimap.ts#expandChains — the pair must round-trip, and a test asserts it does.
 export function serializeMap(map: ApiMapFile): string {
   const table: ChainNode[] = [];

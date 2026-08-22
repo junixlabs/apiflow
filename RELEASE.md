@@ -4,8 +4,8 @@ Not release notes. This is the checklist, and it is short so that it is actually
 
 ## Before tagging
 
-1. `npm test` · `npx tsc -b` · `npm run lint` · `npm run boundary` — all four, all green. CI runs them
-   on every push, so a red one here means you already knew.
+1. `npm test` · `npx tsc -b` · `npm run lint` · `npm run boundary` · `npm run codemap` — all five,
+   all green. CI runs them on every push, so a red one here means you already knew.
 2. `CHANGELOG.md` has an entry that says what changed **and what it cost**. The existing entries are
    the standard: measured numbers, the fault that was found, no varnish.
 3. **If this version contains a DECISION rather than a feature, it must also have a `NORTH-STAR.md` §9

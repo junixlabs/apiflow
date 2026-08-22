@@ -8,14 +8,15 @@ const MAX_DEPTH = 6;
 const MAX_KEYS = 200;
 
 // cm:why A DICTIONARY is not a shape. `GET /api/v1/languages` returns the i18n table, and its 100
-// `data.en.validation.*` keys are translation ids — data, not fields. Recording them as fields put 263
-// of one endpoint's "fields" into a map where the whole API had 354, and an endpoint that gains a
-// translation string would read as an endpoint that gained a field.
-// cm:guard The threshold is measured, and it is deliberately CONSERVATIVE: across two Zod-read APIs
-// (1,126 endpoints of ground truth) the widest genuine record has 15 children, and every genuine
-// record node in the probed bodies has at most 11 AND mixed value types. The dictionaries found were
-// 100, 65, 47, 34 and 25 keys, all single-typed. Under-collapsing leaves noise; over-collapsing
-// DELETES real field names, so when the two conditions disagree the field names survive.
+// `data.en.validation.*` keys are translation ids — data, not fields.
+// cm:why Recording them as fields put 263 of one endpoint's "fields" into a map whose whole API had
+// 354, so an endpoint gaining a translation string would read as one that gained a field.
+// cm:guard The threshold is measured and deliberately CONSERVATIVE: across two Zod-read APIs (1,126
+// endpoints of ground truth) the widest genuine record has 15 children.
+// cm:guard Every genuine record node in the probed bodies has at most 11 AND mixed value types; the
+// dictionaries found were 100, 65, 47, 34 and 25 keys, all single-typed.
+// cm:guard Under-collapsing leaves noise; over-collapsing DELETES real field names, so when the two
+// conditions disagree the field names survive.
 const DICT_MIN_KEYS = 20;
 const DICT_SAMPLE = 5;
 
@@ -32,8 +33,9 @@ function typeOf(value: unknown): ShapeType {
 }
 
 // cm:why Many sibling keys that all hold the SAME shape are a keyed collection, not a record — the
-// keys are values. Collapsing them is the array rule applied to an object: `{key}` is to a dictionary
-// what dropping the index is to a list.
+// keys are values.
+// cm:why Collapsing them is the array rule applied to an object: `{key}` is to a dictionary what
+// dropping the index is to a list.
 export function isDictionary(entries: Array<[string, unknown]>): boolean {
   if (entries.length < DICT_MIN_KEYS) return false;
   const shapes = new Set(entries.map(([, value]) => typeOf(value)));
@@ -59,7 +61,7 @@ export function shapeOf(body: unknown, prefix = '', depth = 0, out: ShapeField[]
       // cm:why The COUNT is kept. "a dictionary of 100 strings" is a fact about the response; dropping
       // it would make a collapse indistinguishable from an endpoint that returns one field.
       upsert(out, { path, type: valueType, keys: entries.length });
-      // cm:edge protocol -> the array branch above — sample several values into the ONE collapsed path
+      // cm:why Mirrors the array branch above — sample several values into the ONE collapsed path
       // for the same reason a list samples 20 items: one member is not evidence of the member shape.
       if (valueType === 'object' || valueType === 'array') {
         for (const [, value] of entries.slice(0, DICT_SAMPLE)) shapeOf(value, path, depth + 1, out);
