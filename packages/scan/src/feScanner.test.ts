@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { blankComments, enclosingSymbols, findCallSites, firstArgument, isScannableFile, isServerFile, memberAt, objectMembers, resolveUrl, routeFromFilePath, scanFile, stripCallSegments, symbolAt } from './feScanner';
+import { blankComments, definitionHeads, enclosingSymbols, findCallSites, firstArgument, isScannableFile, isServerFile, memberAt, objectMembers, resolveUrl, routeFromFilePath, scanFile, stripCallSegments, symbolAt } from './feScanner';
 
 describe('firstArgument', () => {
   const at = (src: string) => src.indexOf('(');
@@ -104,6 +104,47 @@ describe('findCallSites', () => {
     const byVia = new Map(sites.map((s) => [s.via, s.definitelyHttp]));
     expect(byVia.get('api')).toBe(true);
     expect(byVia.get('cache')).toBe(false);
+  });
+
+  it('does not read a wrapper own signature as a call to itself', () => {
+    const src = 'export async function fetchUser(id: string) {\n  return fetch(`/users/${id}`);\n}';
+    const sites = findCallSites(src, ['fetchUser']);
+    expect(sites.map((s) => s.via)).toEqual(['fetch']);
+  });
+
+  it('still counts a real call to the wrapper below its definition', () => {
+    const src = 'export async function fetchUser(id: string) {\n  return fetch(`/users/${id}`);\n}\nfetchUser(id);';
+    const sites = findCallSites(src, ['fetchUser']);
+    expect(sites.filter((s) => s.via === 'fetchUser').map((s) => s.line)).toEqual([4]);
+  });
+
+  it('does not let a primitive-named function report its own definition', () => {
+    const src = 'export function request(url: string) {\n  return fetch(url);\n}';
+    expect(findCallSites(src).map((s) => s.via)).toEqual(['fetch']);
+  });
+
+  it('keeps a call whose paren is followed by a block that is not its body', () => {
+    const src = "if (ready) {\n  fetch('/a');\n}";
+    expect(findCallSites(src).map((s) => s.via)).toEqual(['fetch']);
+  });
+});
+
+describe('definitionHeads', () => {
+  it('accepts a body brace past a return type and rejects a plain call', () => {
+    const src = 'function load(id: string): Promise<User> {\n  return fetchUser(id);\n}';
+    expect(definitionHeads(src).map((d) => d.name)).toEqual(['load']);
+  });
+
+  it('accepts an overload signature that has no body', () => {
+    const src = 'export function send(path: string): void;\nexport function send(path: string) {\n  fetch(path);\n}';
+    const heads = definitionHeads(src);
+    expect(heads.map((d) => d.name)).toEqual(['send', 'send']);
+    expect(heads[0].openBrace).toBe(-1);
+    expect(heads[1].openBrace).toBeGreaterThan(0);
+  });
+
+  it('never claims a control-flow keyword', () => {
+    expect(definitionHeads('for (const x of xs) {\n  use(x);\n}').map((d) => d.name)).toEqual([]);
   });
 });
 

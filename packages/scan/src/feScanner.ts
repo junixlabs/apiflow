@@ -301,6 +301,60 @@ export function registersRoute(content: string, argIdx: number): boolean {
   return topLevelArgs(callExpression(content, argIdx)).slice(1).some(handlerShaped);
 }
 
+// cm:guard Paren-balanced, not `\([^)]*\)`: a default parameter like
+// `read: (r: Response) => T = parse` closes early and the whole method stops being seen.
+const DEFINITION_HEAD =
+  /(?:^|[\s;}])(?:export\s+)?(?:public\s+|private\s+|protected\s+)?(?:static\s+)?(?:async\s+)?(?:function\s+)?([A-Za-z_$][\w$]*)\s*(?:<[^>(){}]*>)?\s*\(/g;
+
+// cm:guard `if (…) {`, `for (…) {`, `catch (…) {` all match the definition shape, and a keyword
+// admitted here would take a real call site's open paren away from findCallSites.
+const NOT_A_DEFINITION = new Set(['if', 'for', 'while', 'switch', 'catch', 'return', 'function', 'do', 'with']);
+
+export function matchingClose(content: string, open: number, openChar: string, closeChar: string): number {
+  let depth = 0;
+  for (let i = open; i < content.length; i++) {
+    if (content[i] === openChar) depth++;
+    else if (content[i] === closeChar && --depth === 0) return i;
+  }
+  return -1;
+}
+
+export interface DefinitionHead {
+  name: string;
+  openParen: number;
+  closeParen: number;
+  openBrace: number;
+  closeBrace: number;
+}
+
+// cm:why A function's own signature is an occurrence of its name followed by `(`, so a scanner that
+// stops at that paren reads the definition as a call no fix could ever resolve.
+// cm:edge contract -> packages/scan/src/wrappers.ts — findHttpWrappers walks the same heads to
+// decide what a wrapper is, so one shape must answer both questions or the two disagree.
+export function definitionHeads(content: string): DefinitionHead[] {
+  const out: DefinitionHead[] = [];
+  for (const m of content.matchAll(DEFINITION_HEAD)) {
+    if (NOT_A_DEFINITION.has(m[1])) continue;
+    const openParen = m.index + m[0].length - 1;
+    const closeParen = matchingClose(content, openParen, '(', ')');
+    if (closeParen === -1) continue;
+    const body = /^\s*(?::\s*[^{;=]+)?\{/.exec(content.slice(closeParen + 1, closeParen + 400));
+    // cm:guard The body brace is the discriminator: `fetchUser(id);` is a call and only a real `{`
+    // after the signature — past an optional return type — makes the same text a definition.
+    // cm:guard An overload signature carries no body, so the `function` keyword stands in for it.
+    if (!body && !/\bfunction\b/.test(m[0])) continue;
+    const openBrace = body ? closeParen + body[0].length : -1;
+    out.push({
+      name: m[1],
+      openParen,
+      closeParen,
+      openBrace,
+      closeBrace: openBrace === -1 ? -1 : matchingClose(content, openBrace, '{', '}'),
+    });
+  }
+  return out;
+}
+
 const MEMBER_CALL = new RegExp(`\\b([A-Za-z_$][\\w$]*)\\s*\\.\\s*(${VERBS.join('|')})\\b`, 'g');
 const PLAIN_CALL = /\b(fetch|\$fetch|ofetch|useFetch|useSWR|request|axios)\b/g;
 
@@ -357,8 +411,12 @@ function methodFromContext(window: string): MapMethod | null {
 
 export function findCallSites(content: string, wrappers: readonly string[] = []): CallSite[] {
   const sites: CallSite[] = [];
+  // cm:guard Filtered here, not per pattern: `request` reaches this list from PLAIN_CALL and
+  // `fetchUser` from the wrapper set, and both spell their own definition the same way.
+  const definitions = new Set(definitionHeads(content).map((d) => d.openParen));
   const lineOf = (idx: number) => content.slice(0, idx).split('\n').length;
   const push = (s: CallSite) => {
+    if (definitions.has(s.argIdx)) return;
     if (!sites.some((x) => x.argIdx === s.argIdx)) sites.push(s);
   };
 

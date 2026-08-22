@@ -196,10 +196,13 @@ left, under the §3 axis.
    **0 errors**; 157 of 160 legacy prose comments are cleaned and the remaining 3 are frozen, not
    invisible. The gate went on only after the number reached zero — a red gate teaches people to ignore
    gates.
-6. **Fix what the fixture found.** `docs/guide/02` is an `upcoming` page describing a real scanner
-   defect: a client wrapper's own definition line is read as a call site, padding `unresolved` with
-   entries that can never be resolved — inside the one number the map promises never to fold into
-   another. The page flips itself to `shipped` when fixed.
+6. ✅ **What the fixture found is fixed.** A client wrapper's own definition line was read as a call
+   site, so `fixtures/demo-app/web` reported **5** `unresolved` for **3** real call sites — three of
+   them permanently unresolvable, inside the one number the map promises never to fold into another.
+   The discriminator is the body brace after the signature, and one shape now answers both questions:
+   the call-site scanner and the wrapper walk read the same definition heads. Fixture `unresolved`
+   **5 → 2**, `Calls` unchanged at 3, and the two that remain are real gaps. `docs/guide/02` flipped
+   itself to `shipped` — the gate went red the moment the fix worked, which is what it was for.
 7. **Decide what §5 measures.** The current north-star metric — "the number of times a person answers
    the impact question with apiflow" — is not instrumented and cannot be. The measurable candidates are
    Nx-shaped: how many times `check` blocked a stale map, how many `mcp map` calls a week from the

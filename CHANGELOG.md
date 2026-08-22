@@ -4,6 +4,28 @@ All notable changes to apiflow are documented here.
 
 ---
 
+## [Unreleased]
+
+### Fixed — a wrapper's definition line is no longer a call to itself
+
+`scan-fe` read a client wrapper's own signature as one more occurrence of `name(`, so
+`export async function fetchUser(id: string) {` landed in `unresolved` with the parameter list read as
+a url expression. On `fixtures/demo-app/web` that was **3 of the 5** entries reported against **3**
+real call sites, and no fix could ever have resolved them — permanent noise inside the one number
+`apiflow check` watches for drift.
+
+A definition and a call are spelled identically up to the open paren; what separates them is a real
+body `{` after the closing one, past an optional return type. `findCallSites` now drops any site whose
+paren belongs to such a head — on every path, not only the wrapper path, so `function request(url) {`
+cannot report itself either — and `findHttpWrappers` walks the same heads, so the two halves cannot
+drift into disagreeing about what a definition is.
+
+**What it cost.** Fixture `unresolved` **5 → 2** with `Calls` unchanged at **3**. Overshooting to 0
+would have been the same failure inverted: the two survivors are real gaps — an identifier passed
+where a literal path would be needed — and they must stay visible.
+`docs/guide/02-a-wrapper-definition-is-not-a-call.md` was an `upcoming` page asserting the defect was
+still there; it is `shipped` now, and its transcript is the gate.
+
 ## [1.2.0] — 2026-08-23
 
 The request runner is no longer part of this package.

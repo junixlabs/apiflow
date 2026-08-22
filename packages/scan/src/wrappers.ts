@@ -1,4 +1,4 @@
-import { blankComments } from './feScanner';
+import { blankComments, definitionHeads, matchingClose } from './feScanner';
 
 // cm:guard Never a bare `get`/`post`: `cache.get(id)` and `map.get(key)` would make every helper
 // that touches a Map look like an http transport, and the wrapper set then swallows the app.
@@ -8,22 +8,6 @@ const PRIMITIVE = [
   'ofetch',
   '(?:this|api|http|client|axios|instance|transport)\\s*\\.\\s*(?:get|post|put|patch|delete|request|send)',
 ];
-
-// cm:guard Paren-balanced, not `\([^)]*\)`: a default parameter like
-// `read: (r: Response) => T = parse` closes early and the whole method stops being seen.
-const METHOD_HEAD =
-  /(?:^|[\s;}])(?:export\s+)?(?:public\s+|private\s+|protected\s+)?(?:static\s+)?(?:async\s+)?(?:function\s+)?([A-Za-z_$][\w$]*)\s*(?:<[^>(){}]*>)?\s*\(/g;
-
-const RESERVED = new Set(['if', 'for', 'while', 'switch', 'catch', 'return', 'function', 'do', 'with', 'constructor']);
-
-function matchingClose(content: string, open: number, openChar: string, closeChar: string): number {
-  let depth = 0;
-  for (let i = open; i < content.length; i++) {
-    if (content[i] === openChar) depth++;
-    else if (content[i] === closeChar && --depth === 0) return i;
-  }
-  return -1;
-}
 
 function firstParameter(params: string): string | null {
   const name = /^([A-Za-z_$][\w$]*)/.exec(params.split(',')[0].trim());
@@ -52,22 +36,20 @@ interface Definition {
 
 function definitionsIn(content: string): Definition[] {
   const out: Definition[] = [];
-  for (const m of content.matchAll(METHOD_HEAD)) {
-    if (RESERVED.has(m[1])) continue;
-    const openParen = m.index + m[0].length - 1;
-    const closeParen = matchingClose(content, openParen, '(', ')');
-    if (closeParen === -1) continue;
-    const after = /^\s*(?::\s*[^{;=]+)?\{/.exec(content.slice(closeParen + 1, closeParen + 400));
-    if (!after) continue;
-    const openBrace = closeParen + after[0].length;
-    const closeBrace = matchingClose(content, openBrace, '{', '}');
-    const parameter = firstParameter(content.slice(openParen + 1, closeParen));
+  for (const head of definitionHeads(content)) {
+    // cm:guard `constructor` is a definition but never a transport name: admitting it puts
+    // `constructor` in the wrapper set, and every class in the codebase then has a call site.
+    if (head.name === 'constructor') continue;
+    // cm:guard An overload signature reaches here with openBrace -1: it forwards nothing, and
+    // slicing a body from -1 would hand the fixpoint the tail of the file to walk instead.
+    if (head.openBrace === -1) continue;
+    const parameter = firstParameter(content.slice(head.openParen + 1, head.closeParen));
     if (!parameter) continue;
     out.push({
-      name: m[1],
+      name: head.name,
       parameter,
-      body: content.slice(openBrace, closeBrace === -1 ? undefined : closeBrace),
-      bodyStart: openBrace,
+      body: content.slice(head.openBrace, head.closeBrace === -1 ? undefined : head.closeBrace),
+      bodyStart: head.openBrace,
       source: content,
     });
   }
