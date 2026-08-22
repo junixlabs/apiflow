@@ -822,7 +822,7 @@ function scanGeneric(file: string, content: string): BeFileScan {
 }
 
 export function scanBackendFile(file: string, rawContent: string, stack: Stack): BeFileScan {
-  // cm:edge lockstep -> src/core/mask.ts — the JS/TS readers mask template TEXT as well as comments,
+  // cm:edge lockstep -> packages/scan/src/mask.ts — the JS/TS readers mask template TEXT as well as comments,
   // because a route declaration never lives inside a template literal while route-shaped JSON in a
   // doc string does: the probe harness's own example was published as an endpoint of this repo.
   // cm:guard JS/TS ONLY. A backtick in Go is a RAW STRING, and struct tags live in one — masking it

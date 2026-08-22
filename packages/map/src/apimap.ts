@@ -62,7 +62,7 @@ export interface FieldNode {
   declared?: boolean;
   observed?: boolean;
   declaredAs?: string;
-  // cm:edge contract -> src/core/shape.ts isDictionary() — set only on a `{key}` path, and it is the
+  // cm:edge contract -> packages/scan/src/shape.ts isDictionary() — set only on a `{key}` path, and it is the
   // number of keys that were collapsed into it. Present means "a keyed collection this wide", not
   // "a field".
   keys?: number;
@@ -281,7 +281,7 @@ export function finalizeApiMap(map: ApiMapFile): ApiMapFile {
 // first. On a real Laravel API 881 of 900 "unresolved" entries were endpoints whose PATH is known and
 // whose schema was not found — printed as "calls whose path could not be resolved", which is simply
 // untrue. The bucket stays one list (the format is version 1), the counting does not.
-// cm:edge lockstep -> src/view/hub.ts · src/view/app.ts · src/mcp/mapTools.ts — every place that
+// cm:edge lockstep -> packages/cli/src/view/hub.ts · packages/cli/src/view/app.ts · packages/cli/src/mcp/mapTools.ts — every place that
 // prints an unresolved COUNT must print these two separately or say which one it means.
 export function unresolvedKinds(map: ApiMapFile): { paths: number; schemas: number } {
   let schemas = 0;
@@ -294,7 +294,7 @@ export type Side = 'fe' | 'be';
 // cm:why Which half a map is comes from the generator string, not from the file name: the same map
 // is read from ~/.apiflow, from a --out path and from a file copied off another machine, and only
 // one of those three carries a name anyone chose.
-// cm:edge contract -> src/cli/scanFe.ts · src/cli/scanBe.ts — they write `apiflow scan-fe/N` and
+// cm:edge contract -> packages/cli/src/commands/scanFe.ts · packages/cli/src/commands/scanBe.ts — they write `apiflow scan-fe/N` and
 // `apiflow scan-be/N`; a generator string that stops matching makes every map sideless.
 export function sideOf(map: ApiMapFile): Side | null {
   if (map.metadata.generator.includes('scan-fe')) return 'fe';
@@ -313,7 +313,7 @@ export interface ImpactAnswer {
 // "does not declare" — a defect invented out of a gap in the reader. Not a tuned threshold: if the
 // accusation would cover MORE endpoints than the API declares in total, the untrustworthy half is
 // the reader, so those endpoints are unpaired (not compared), not FE-only (compared and wrong).
-// cm:edge lockstep -> src/workspace/summary.ts · src/workspace/alerts.ts · src/view/panes.ts reconOf
+// cm:edge lockstep -> packages/cli/src/workspace/summary.ts · packages/cli/src/workspace/alerts.ts · packages/cli/src/view/panes.ts reconOf
 // — all four decide the same four buckets; the browser pane re-implements this because it cannot
 // import node code, so a change here is a change in four places.
 export function bePartial(map: ApiMapFile): boolean {
@@ -582,7 +582,7 @@ export function endpointsForScreen(map: ApiMapFile, screenId: string): ScreenDep
     if (endpoint === undefined) continue;
     out.push({ endpoint, confidence: call.confidence, source: call.source, viaHops: screen?.viaHops });
   }
-  // cm:edge lockstep -> screensAffectedByEndpoint — the two answers must agree: an endpoint a layout
+  // cm:edge lockstep -> packages/map/src/apimap.ts#screensAffectedByEndpoint — the two answers must agree: an endpoint a layout
   // calls has to appear in its children's dependency list too, or `impact` and `screen_deps` disagree
   // about the same pair.
   if (screen?.route !== undefined) {
@@ -617,7 +617,7 @@ const chainKey = (n: ChainNode): ChainKey => `${n.file}|${n.symbol}|${String(n.l
 // cm:why Interned at WRITE time and expanded at READ time, so nothing between the two ever sees an
 // index. Node chains repeat their file paths 52% of the time on a real map (adminhub-ui) — inlining
 // them cost 159% file growth, interning brings it to 70%.
-// cm:edge lockstep -> expandChains — the pair must round-trip, and a test asserts it does.
+// cm:edge lockstep -> packages/map/src/apimap.ts#expandChains — the pair must round-trip, and a test asserts it does.
 export function serializeMap(map: ApiMapFile): string {
   const table: ChainNode[] = [];
   const index = new Map<ChainKey, number>();

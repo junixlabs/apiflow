@@ -44,7 +44,7 @@ export function writeMap(id: string, kind: MapKind, map: ApiMapFile): { file: st
 
 // cm:guard The order log is the only record of WHEN each scan ran — the file names are content
 // hashes, so sorting them puts a revert before the change it reverted and reads the diff backwards.
-// cm:edge contract -> src/server/index.ts — diffFor() takes the last two entries as before/after.
+// cm:edge contract -> packages/cli/src/server/index.ts — diffFor() takes the last two entries as before/after.
 function recordOrder(dir: string, kind: MapKind, name: string): void {
   const log = join(dir, 'history', 'order');
   if (!existsSync(log)) {

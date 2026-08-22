@@ -52,7 +52,7 @@ export function parseModule(content: string): ParsedModule {
   const imports: ImportBinding[] = [];
   const exports = new Set<string>();
   const reexports: string[] = [];
-  // cm:edge lockstep -> maskComments — every scan below reads `code`, never `content`: a commented-out
+  // cm:edge lockstep -> packages/scan/src/mask.ts#maskComments — every scan below reads `code`, never `content`: a commented-out
   // import used to create a real dependency edge, and prose naming a symbol used to create a usage.
   const code = maskComments(content);
   const lineOf = (idx: number) => code.slice(0, idx).split('\n').length;

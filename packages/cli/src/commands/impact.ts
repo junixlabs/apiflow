@@ -211,7 +211,7 @@ function main(): void {
   const asJson = args.includes('--json');
   const emit = (payload: ImpactJson): void => {
     process.stdout.write(`${JSON.stringify(payload, null, 2)}\n`);
-    // cm:edge protocol -> skills/apiflow-impact/skill.md — stdout stays valid JSON even when nothing
+    // cm:edge protocol -> packages/cli/skills/apiflow-impact/skill.md — stdout stays valid JSON even when nothing
     // matched, and the verdict rides on the exit code (0 found · 2 nothing found). A hook that has to
     // parse prose to learn "no match" is a hook that reports a miss as an answer.
     process.exit(payload.found ? 0 : 2);

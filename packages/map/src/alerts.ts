@@ -21,7 +21,7 @@ const RANK: Record<Confidence, number> = { exact: 0, inferred: 1, guess: 2 };
 
 // cm:why An alert is what the tool UNDERSTOOD and finds dangerous; Unresolved is what it could not
 // understand at all. Two different actions, so they are never counted together.
-// cm:edge contract -> src/view/hub.ts — the count shown next to "Alerts" comes from alertCounts here.
+// cm:edge contract -> packages/cli/src/view/hub.ts — the count shown next to "Alerts" comes from alertCounts here.
 export function alerts(map: ApiMapFile): Alert[] {
   const hasBe = map.endpoints.some((e) => e.source !== undefined);
   const hasFe = map.calls.length > 0;

@@ -80,7 +80,7 @@ export function normalizeRemote(url: string): string {
   return parts.join('/').toLowerCase();
 }
 
-// cm:edge contract -> src/workspace/hubData.ts staleRoot — the hub decides "this map was scanned
+// cm:edge contract -> packages/cli/src/workspace/hubData.ts staleRoot — the hub decides "this map was scanned
 // somewhere else" by comparing this exact string against the registry path run through this same
 // function, so the two must never diverge.
 export function scanOrigin(absDir: string): string {

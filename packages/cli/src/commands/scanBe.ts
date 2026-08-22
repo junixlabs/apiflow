@@ -13,7 +13,7 @@ import { tolerateClosedPipe } from './stdio';
 import { isNestedCheckout } from './scanScope';
 import { isGeneratedSource } from '@junixlabs/apiflow-scan';
 
-// cm:edge contract -> src/cli/check.ts readerChanged() — this string is the READER's version, and
+// cm:edge contract -> packages/cli/src/commands/check.ts readerChanged() — this string is the READER's version, and
 // check reads it to tell "the code moved" apart from "the reader improved". Bump it in the same commit
 // as any change to what the BE reader produces for unchanged input.
 export const GENERATOR = 'apiflow scan-be/4';
@@ -148,7 +148,7 @@ export function scanBackend(root: string, name: string): BeScanResult {
 
   for (const raw of routes) {
     const hit = resolveHandlerSchemas(raw, classes);
-    // cm:edge lockstep -> src/core/beScanner.ts handlerDefs() — the mount records the handler symbol
+    // cm:edge lockstep -> packages/scan/src/beScanner.ts handlerDefs() — the mount records the handler symbol
     // and this is where that symbol is turned into the two schema names. A mount that stops recording
     // the symbol makes every node route schema-less again, silently.
     const viaHandler = hit.handler === undefined ? undefined : handlers.get(hit.handler);
@@ -224,7 +224,7 @@ function safeRead(path: string): string {
   }
 }
 
-// cm:edge contract -> skills/be-map-extractor/skill.md — the skill reads these headings to decide
+// cm:edge contract -> packages/cli/skills/be-map-extractor/skill.md — the skill reads these headings to decide
 // which endpoints still need a probe run; renaming them breaks its step 4.
 export function renderBeReport(result: BeScanResult, outPath: string): string {
   const { map } = result;

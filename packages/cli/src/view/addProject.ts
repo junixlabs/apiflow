@@ -56,7 +56,7 @@ export const ADD_DIALOG = `<dialog id="add-dlg" class="dlg">
 
 // cm:guard No backticks and no ${} below — this is embedded inside a String.raw literal, so either
 // one ends the literal early and the page ships a syntax error instead of a script.
-// cm:edge contract -> src/server/index.ts — POST /api/projects and /api/projects/:id/scan, including
+// cm:edge contract -> packages/cli/src/server/index.ts — POST /api/projects and /api/projects/:id/scan, including
 // the `message` field this renders verbatim and the SSE shape it reads line by line.
 export const ADD_SCRIPT = String.raw`
 const $id = (id) => document.getElementById(id);
@@ -166,7 +166,7 @@ document.addEventListener('click', (ev) => {
         window.alert(result.data.message || 'could not drop it');
         return;
       }
-      // cm:edge contract -> src/view/hub.ts HUB_SCRIPT — the hub keeps the rail row and the detail
+      // cm:edge contract -> packages/cli/src/view/hub.ts HUB_SCRIPT — the hub keeps the rail row and the detail
       // pane as two separate elements, so it does the removing; this file must not know that layout.
       document.dispatchEvent(new CustomEvent('apiflow:project-removed', { detail: { id: id } }));
     })

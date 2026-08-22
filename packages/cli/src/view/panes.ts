@@ -403,7 +403,7 @@ for (const a of ALERTS) {
   alertsByEndpoint.get(a.endpointId).push(a);
 }
 
-// cm:edge contract -> src/workspace/summary.ts — same four states as endpointState there. A one-sided
+// cm:edge contract -> packages/cli/src/workspace/summary.ts — same four states as endpointState there. A one-sided
 // scan makes every endpoint look feOnly; painting that red invents a defect out of a missing half.
 function reconOf(e) {
   if (e.source === undefined) return HAS_BE ? 'feonly' : 'unpaired';
@@ -1514,7 +1514,7 @@ el('un-q')?.addEventListener('input', () => { state.alPage = 1; });
 bind('un-q', 'unQ');
 bind('cv-q', 'cvQ');
 
-// cm:edge contract -> src/view/addProject.ts — the scan buttons, the add dialog and the SSE reader
+// cm:edge contract -> packages/cli/src/view/addProject.ts — the scan buttons, the add dialog and the SSE reader
 // all live there now, shared with the hub. This pane only needs to know which project it shows.
 const PROJECT = JSON.parse(el0('project'));
 

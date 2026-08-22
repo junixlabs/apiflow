@@ -1,4 +1,4 @@
-// cm:edge lockstep -> src/view/hub.ts, src/cli/view.ts — one token set for every page apiflow
+// cm:edge lockstep -> packages/cli/src/view/hub.ts, packages/cli/src/commands/view.ts — one token set for every page apiflow
 // renders; a second copy is how the hub and the map view start looking like different products.
 // cm:guard One string, interpolated into BOTH dark selectors — the media query for a viewer who
 // never chose, and [data-theme=dark] for one who did. Two hand-written copies drift, and the drift
@@ -119,14 +119,14 @@ export const MARK = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"
 // network reference to anything auditing this page for outbound requests.
 export const FAVICON = 'data:image/svg+xml,%3Csvg xmlns=%22http%3A//www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22%3E %3Cg stroke=%22%230360FB%22 stroke-width=%221.5%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E %3Cpath d=%22M6.6 4.6 H8.4 L12.8 11.05%22/%3E %3Cpath d=%22M19.3 4.7 L12.8 11.05%22/%3E %3Cpath d=%22M4.9 12.7 L12.8 11.05%22/%3E %3Cpath d=%22M12.95 18.1 L12.8 11.05%22/%3E %3Cpath d=%22M12.8 11.05 H17.6 L19.6 16.2%22/%3E %3C/g%3E %3Cg fill=%22%230360FB%22%3E %3Ccircle cx=%2212.8%22 cy=%2211.05%22 r=%223%22/%3E %3Ccircle cx=%225.5%22 cy=%224.6%22 r=%221.45%22/%3E %3Ccircle cx=%2220.1%22 cy=%223.9%22 r=%221.45%22/%3E %3Ccircle cx=%223.9%22 cy=%2212.9%22 r=%221.45%22/%3E %3Ccircle cx=%2213%22 cy=%2219.3%22 r=%221.45%22/%3E %3Ccircle cx=%2220.1%22 cy=%2217.5%22 r=%221.45%22/%3E %3C/g%3E %3C/svg%3E';
 
-// cm:edge contract -> src/view/theme.ts STYLE — --brand is a token defined there, in both palettes.
+// cm:edge contract -> packages/cli/src/view/theme.ts STYLE — --brand is a token defined there, in both palettes.
 export const BRAND_STYLE = `
 .brandbar { display:flex; align-items:center; gap:10px; margin:0 0 4px; }
 .brandbar .mark { width:30px; height:30px; color:var(--brand); flex:none; }
 .brandbar h1 { margin:0; }
 `;
 
-// cm:edge lockstep -> src/view/app.ts, src/view/hub.ts — both pages ship this control, so the styles
+// cm:edge lockstep -> packages/cli/src/view/app.ts, packages/cli/src/view/hub.ts — both pages ship this control, so the styles
 // and the behaviour live here rather than in either page's own stylesheet.
 export const THEME_STYLE = `
 .thbtn { text-align:left; font:500 11.5px/1.3 inherit; color:var(--muted);

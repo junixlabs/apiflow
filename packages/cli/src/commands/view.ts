@@ -8,7 +8,7 @@ import { tolerateClosedPipe } from './stdio';
 // cm:why Renders the SAME app as `apiflow ui`, only with `live: false`. Two renderers over one
 // .apimap drifted within a week: the served page grew a coverage map and an impact graph that the
 // written file never got, and nothing failed to say so.
-// cm:edge lockstep -> src/view/app.ts — every live-only control hangs off `live`/`projectId` there,
+// cm:edge lockstep -> packages/cli/src/view/app.ts — every live-only control hangs off `live`/`projectId` there,
 // so a control added without that guard ships into this offline file too.
 function main(): void {
   tolerateClosedPipe();

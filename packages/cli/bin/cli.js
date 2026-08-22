@@ -101,7 +101,7 @@ const projectArg = args.find(a => a.startsWith('--project='));
 const projectDir = projectArg ? projectArg.split('=')[1] : null;
 const port = parseInt(args.find(a => a.startsWith('--port='))?.split('=')[1] || '3000', 10);
 
-// cm:edge protocol -> src/cli/scanFe.ts — subcommands are matched before the flag parsing below,
+// cm:edge protocol -> packages/cli/src/commands/scanFe.ts — subcommands are matched before the flag parsing below,
 // so `apiflow scan-fe <dir>` never falls through to the serve path and never needs dist/.
 // cm:guard Paths are relative to this package's src/, not to src/commands/: the map MCP server lives
 // outside commands/, and spelling it as a ../ escape from commands/ is how a package layout change

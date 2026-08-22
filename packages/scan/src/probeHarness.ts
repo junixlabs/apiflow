@@ -11,7 +11,7 @@ export interface ProbeSample {
   // cm:why `path` is the TEMPLATE — it is the join key back onto the endpoint, so it must keep its
   // `{param}`. `url` is what was actually sent. Without it a sample of `/api/v1/orders/{param}` cannot
   // be reproduced: nobody can tell which id answered, so a 200 is a claim rather than evidence.
-  // cm:edge contract -> src/cli/probe.ts runLive() — set from the filled target, never hand-written.
+  // cm:edge contract -> packages/cli/src/commands/probe.ts runLive() — set from the filled target, never hand-written.
   url?: string;
 }
 

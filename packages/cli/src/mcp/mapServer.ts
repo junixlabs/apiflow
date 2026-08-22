@@ -12,7 +12,7 @@ import {
   screenDepsText,
 } from './mapTools';
 
-// cm:edge contract -> src/mcp/server.ts — two separate servers on purpose: that one is the request
+// cm:edge contract -> packages/runner/src/mcp/server.ts — two separate servers on purpose: that one is the request
 // RUNNER (flows, envs, execute) and pulls the run half of the repo in. This one only reads .apimap,
 // so it stays on the map side of the boundary in .dependency-cruiser.cjs.
 const server = new McpServer({ name: 'apiflow-map', version: '1.1.0' });

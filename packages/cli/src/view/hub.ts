@@ -44,7 +44,7 @@ export interface HubOptions {
   live: boolean;
 }
 
-// cm:edge lockstep -> src/view/appStyle.ts — the shell, the rail, the head, the tiles, the panels and
+// cm:edge lockstep -> packages/cli/src/view/appStyle.ts — the shell, the rail, the head, the tiles, the panels and
 // the watch list all come from there so both pages are one design. Only what is unique to the list of
 // projects lives here; anything added below that a project page would also want belongs there instead.
 const HUB_STYLE = `
@@ -174,7 +174,7 @@ export const HUB_SCRIPT = String.raw`
   };
   window.addEventListener('hashchange', fromHash);
 
-  // cm:edge contract -> src/view/addProject.ts — it fires this after DELETE /api/projects/:id
+  // cm:edge contract -> packages/cli/src/view/addProject.ts — it fires this after DELETE /api/projects/:id
   // succeeds, because only this script knows the row and the pane are two separate elements.
   document.addEventListener('apiflow:project-removed', (ev) => {
     const id = ev.detail.id;
@@ -237,7 +237,7 @@ const newestAge = (project: HubProject, now: number): string => {
   return newest === 0 ? 'not scanned' : relativeAge(new Date(newest).toISOString(), now);
 };
 
-// cm:edge lockstep -> src/view/app.ts overview() — the same four buckets, the same class names, so the
+// cm:edge lockstep -> packages/cli/src/view/app.ts overview() — the same four buckets, the same class names, so the
 // bar on a project card and the bar on that project's own page cannot end up telling different stories.
 const SEGMENTS = [
   { key: 'both' as const, css: 'd-both', label: 'seen from both sides' },
@@ -272,7 +272,7 @@ function recon(map: HubMap): string {
 
 // cm:guard Says what is MISSING before it says what is wrong: on a one-sided scan the honest label
 // is "BE not scanned", and printing a comparison finding there invents a defect out of a gap.
-// cm:edge lockstep -> src/view/app.ts overview() — same `watch` rows, so a finding looks the same
+// cm:edge lockstep -> packages/cli/src/view/app.ts overview() — same `watch` rows, so a finding looks the same
 // here and on the project page it links into.
 function watch(map: HubMap, href: string | null): string {
   const rows: string[] = [];
@@ -302,7 +302,7 @@ const revOf = (project: HubProject, kind: 'fe' | 'be'): string => {
     : `<span class="rev">${escapeHtml(label)}</span>`;
 };
 
-// cm:edge lockstep -> src/view/panes.ts kpiStrip() — same three lines in the same order, because the
+// cm:edge lockstep -> packages/cli/src/view/panes.ts kpiStrip() — same three lines in the same order, because the
 // strip on a project page and the strip here sit one click apart and must not be different heights.
 const kpi = (lab: string, value: number, sub: string, alarm = false): string =>
   `<div class="k1${alarm && value > 0 ? ' alarm' : ''}"><div class="lab">${lab}</div>`

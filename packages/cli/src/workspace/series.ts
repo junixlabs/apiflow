@@ -13,7 +13,7 @@ export interface MapSeries {
 
 // cm:guard Cached by absolute path forever, with no invalidation, and that is SAFE only because a
 // history file is named by the hash of its own content — the same path can never hold new bytes.
-// cm:edge contract -> src/workspace/store.ts writeMap() — it is what names history by content hash.
+// cm:edge contract -> packages/cli/src/workspace/store.ts writeMap() — it is what names history by content hash.
 interface Counts {
   endpoints: number;
   screens: number;

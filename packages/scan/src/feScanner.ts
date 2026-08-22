@@ -3,7 +3,7 @@ import type { CallEdge, Confidence, FieldNode, MapMethod, ReadEdge, ScreenNode, 
 import { endpointId, fieldId, normalizePath, screenId, stripInterpolations, toMapMethod } from '@junixlabs/apiflow-map';
 import type { EndpointNode } from '@junixlabs/apiflow-map';
 
-// cm:edge contract -> skills/fe-map-extractor/skill.md — the skill writes this shape as hints.json
+// cm:edge contract -> packages/cli/skills/fe-map-extractor/skill.md — the skill writes this shape as hints.json
 // and never edits the .apimap directly, so every id stays derived by code and the scan deterministic.
 export interface ScanHints {
   resolve?: Array<{ file: string; line: number; url: string; method?: MapMethod; note?: string }>;
@@ -237,7 +237,7 @@ export function resolveUrl(expr: string): ResolvedUrl | { unresolved: string } {
 
 // cm:guard Blanks comment bodies in place, preserving every offset and newline — findCallSites
 // reports byte offsets and line numbers that must still point at the original source.
-// cm:edge lockstep -> src/core/mask.ts — kept as a name the BE scanner already imports; the rule
+// cm:edge lockstep -> packages/scan/src/mask.ts — kept as a name the BE scanner already imports; the rule
 // itself lives in one place now.
 export { maskComments as blankComments };
 

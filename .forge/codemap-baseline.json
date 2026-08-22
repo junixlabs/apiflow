@@ -1,19 +1,287 @@
 {
-  "bin/cli.js": [
-    "3ecf57f0010103be",
+  ".dependency-cruiser.cjs": [
+    "1387af5d01058ad1",
+    "5ab2126e0102a039",
+    "b:034709c80156dbe5"
+  ],
+  "packages/cli/bin/cli.js": [
+    "046c9c580105c6da",
+    "105b76e801054aa4",
+    "30d1f34001001144",
     "443cf5c80101c18c",
-    "976e499601009303",
+    "445c278201043ecb",
+    "62387634010b7eb2",
+    "77f931b80106a706",
     "a02f8b2801007cfe",
     "a7bba2c8010046cb",
+    "a85c985001043ee7",
     "ade4095001002187",
-    "b:3ecf57f0010103be",
+    "b1b7b2e00103296e",
+    "b:015b6dc00131d0e3",
+    "b:247c609b0181f19b",
+    "b:41eea79e0183a573",
     "b:443cf5c80101c18c",
-    "b:976e499601009303",
+    "b:4a6bb04e01f2959c",
+    "b:5474972b0139428f",
+    "b:7c14bb2801395a67",
+    "b:982892a80143d202",
     "b:a02f8b2801007cfe",
     "b:a7bba2c8010046cb",
-    "b:ade4095001002187"
+    "b:ade4095001002187",
+    "b:ee58691901be7012",
+    "d5160e00010087fc",
+    "e45992f40106dd3e",
+    "effdaad0010823af"
   ],
-  "proxy/index.ts": [
+  "packages/cli/src/commands/check.test.ts": [
+    "5fccb30c0103945a",
+    "b:06114140014205de"
+  ],
+  "packages/cli/src/commands/check.ts": [
+    "20eeff6a01036746",
+    "a0e6ce7001033907",
+    "b8a1ba90010693af",
+    "b:a5a275180137449d",
+    "b:beee91f8013ba84a",
+    "b:ca00cfd80130d939",
+    "b:f9fd7e58012f5f4d",
+    "c2df2eb80105b32c"
+  ],
+  "packages/cli/src/commands/impact.ts": [
+    "0607fa680102df3c",
+    "5c247e120101ea72",
+    "6ba8232e0102a914",
+    "7051d8c4010bf933",
+    "b:2c611820012a8137",
+    "b:5f290b76018eeab0",
+    "b:92e7d6a801b53a63",
+    "b:9d2e9c1a013d6b0f",
+    "ee8916900103e9fb"
+  ],
+  "packages/cli/src/commands/portableMap.test.ts": [
+    "b:202aed2a01467143",
+    "c04699fa01039365"
+  ],
+  "packages/cli/src/commands/probe.ts": [
+    "27f451e20106cbe1",
+    "29700f6801011ccf",
+    "2f8d14580106f5f4",
+    "4b82bae10106c555",
+    "50f6f324010c513a",
+    "524782d401060cd8",
+    "9bf1592201010047",
+    "af6490ce01006050",
+    "b:23e377e6015aca16",
+    "b:48747a00028a451d",
+    "b:61335e8b013ca0a0",
+    "b:8be5b298014a47b3",
+    "b:a4af97de0225b4b0",
+    "b:b78caf1201809b51",
+    "b:ef821324011d50db",
+    "d1e07f1401001f74",
+    "e899d93e01006790",
+    "efd00d380100c749",
+    "f5bc18c8010e5ac0"
+  ],
+  "packages/cli/src/commands/probeScreen.test.ts": [
+    "b:bcdd6b76016dafe3",
+    "bbd86ca8010d034b"
+  ],
+  "packages/cli/src/commands/project.ts": [
+    "4cc987780102269f",
+    "b:96e02d4201289558",
+    "b:d52a1590014936c0",
+    "f38db26c010483f9"
+  ],
+  "packages/cli/src/commands/scanBe.ts": [
+    "03333fe00102d28d",
+    "a0df965001077f7f",
+    "b:16bf4d5801398dbd",
+    "b:9186b280013f0fec",
+    "b:cfbf7dc801fdbc0e",
+    "e32a84ee0103130b",
+    "eb5dacb001009282"
+  ],
+  "packages/cli/src/commands/scanScope.ts": [
+    "48d17054010614c3",
+    "4fef37c80100e09f",
+    "6b2c2f440107d889",
+    "b:905dbbe902826be5"
+  ],
+  "packages/cli/src/commands/stdio.test.ts": [
+    "b:87f2c4da01697c88",
+    "cdf00c480105c58b",
+    "e7f44b8c01066adc"
+  ],
+  "packages/cli/src/commands/stdio.ts": [
+    "7e19033a010450a7",
+    "b:0581ac2401b6d3a3"
+  ],
+  "packages/cli/src/commands/version.test.ts": [
+    "4b483d3001036799",
+    "b:a2dcb80801319aec"
+  ],
+  "packages/cli/src/commands/view.ts": [
+    "7f621ede0101fa93",
+    "b:084f0da801a44b92"
+  ],
+  "packages/cli/src/mcp/mapServer.ts": [
+    "b:5bfa2ff0013e32ec",
+    "ebd87ab80103a9cb"
+  ],
+  "packages/cli/src/mcp/mapTools.ts": [
+    "44b0737601014958",
+    "b:f81c0b620134ca62"
+  ],
+  "packages/cli/src/server/guard.ts": [
+    "260e16ba0104f699",
+    "b:d8924416019198f1"
+  ],
+  "packages/cli/src/server/index.ts": [
+    "55cc3cc0010111ca",
+    "876a03800103246b",
+    "b:119dc9ea0130735a",
+    "b:48e8ea1a01852007",
+    "b:dfb66a4c0180da61",
+    "b:f8bdd5b0012362fc",
+    "e83b3ff801031c1e",
+    "f6e288c001024b17"
+  ],
+  "packages/cli/src/server/server.test.ts": [
+    "363afde601015227",
+    "511b1bb201065bc0",
+    "b:2a5f7c280124cf57",
+    "b:9ec97b1a015090ee",
+    "b:a55ba818014f64e2",
+    "c97106c001069aa5"
+  ],
+  "packages/cli/src/view/app.test.ts": [
+    "48999fca01017fe5",
+    "b:735ca7ba013bf410"
+  ],
+  "packages/cli/src/view/app.ts": [
+    "0a3f69780103c5fa",
+    "b:3850fcc80132abe9"
+  ],
+  "packages/cli/src/view/hub.ts": [
+    "4d34729801001853",
+    "b:119bee1801259a93",
+    "b:6d5a7fe2011c2a2c",
+    "b:e08b2d50014c4361",
+    "d01ad23801074686",
+    "f15abd6201015615"
+  ],
+  "packages/cli/src/view/scripts.test.ts": [
+    "63d7df22010a355a",
+    "b:e4692c76015827f6"
+  ],
+  "packages/cli/src/view/theme.ts": [
+    "33c82e3601023de0",
+    "735d0ee00103ce16",
+    "b:75b45d2801533be9",
+    "b:b838fc68012f57d9",
+    "b:d8b0c06801c45980",
+    "c420df3801075000"
+  ],
+  "packages/cli/src/workspace/hubData.ts": [
+    "2d2341a601059681",
+    "81891e7401057048",
+    "b:1ade951202fc79cc"
+  ],
+  "packages/cli/src/workspace/importMap.ts": [
+    "476d45d001063098",
+    "b:b6a347e901ae241d"
+  ],
+  "packages/cli/src/workspace/registry.ts": [
+    "20f5a192010607e5",
+    "a6b4128001026ce8",
+    "b:2fe8dc260141ee75",
+    "b:fe3f8928015e6668"
+  ],
+  "packages/cli/src/workspace/runScan.ts": [
+    "82cc559801097150",
+    "b:c3cf0e6001546676"
+  ],
+  "packages/cli/src/workspace/scanOrigin.ts": [
+    "0c41e8080100cb87",
+    "11c005780100cc22",
+    "16fd0b14010629e9",
+    "1d8e5f7001012f0e",
+    "2dfd87fa010c0efc",
+    "372abd2401014ad6",
+    "b:2a37cd080133423d",
+    "b:96ef618601f4130c",
+    "b:996929900129c886",
+    "b:a9b99340029d145e",
+    "b:b2d0767e0131e277",
+    "ba52fc580105779c",
+    "c5980818010d1155",
+    "cf8079800101e505",
+    "efc2b5df0104f413"
+  ],
+  "packages/cli/src/workspace/series.ts": [
+    "1089e5080100d104",
+    "b:071de1620170e4c9"
+  ],
+  "packages/cli/src/workspace/workspace.test.ts": [
+    "b:cc7028f8014f558d",
+    "c3953cfc01005a3c",
+    "c907cb1e01071c8e"
+  ],
+  "packages/map/src/apimap.test.ts": [
+    "00fe29400105d630",
+    "b:8edf0244014c65f7"
+  ],
+  "packages/map/src/apimap.ts": [
+    "24499678010789e3",
+    "2cb4da0e0101b015",
+    "37924344010692cb",
+    "49fe08ee01035f52",
+    "5ceb835301060381",
+    "5dc6bc800101fc18",
+    "65ea4798010198dd",
+    "6d44875801011275",
+    "6dfbfc8a0102a80b",
+    "7434c402010011ec",
+    "858c41860105f639",
+    "a24746c0010592e5",
+    "a97aa6240106c9f1",
+    "acccda900100d134",
+    "b66ff3e801004b63",
+    "b:03e80ad6019965f9",
+    "b:04260a6003251041",
+    "b:3d74c2da0254222a",
+    "b:4567129801bd1cc7",
+    "b:5152382401331cad",
+    "b:616b9aa60386ba70",
+    "b:6e0ece2a0218ce24",
+    "b:7fb672000125ee99",
+    "b:b487c264012466c8",
+    "b:e41559b001583bde",
+    "bdd994430108d4f2",
+    "df8708b00104cdde",
+    "ed310f6a01037d24",
+    "f2d0499f010a28ed",
+    "faef886001071379"
+  ],
+  "packages/map/src/diff.ts": [
+    "422023f001002c98",
+    "b:9b59e88a014b983e",
+    "d27872280106c830"
+  ],
+  "packages/map/src/index.ts": [
+    "b:9746d4fe01507d46",
+    "e094f5d20107260a"
+  ],
+  "packages/map/src/shape.ts": [
+    "b:bc7f31ce017a47bb",
+    "e8ccafd20101f89e"
+  ],
+  "packages/map/src/summary.ts": [
+    "006e9c7801031758",
+    "b:f1379bb001b1cd1a"
+  ],
+  "packages/runner/proxy/index.ts": [
     "031d2ba801064c10",
     "26f346600100663c",
     "28ac19c80100240d",
@@ -48,44 +316,46 @@
     "fd76b858010026ac",
     "fea8a16801006093"
   ],
-  "src/App.tsx": [
+  "packages/runner/src/App.tsx": [
     "2c3e6a820108e93b",
     "2e0d7d610102f229",
     "5641fb980100422c",
     "619c481c0102370d",
+    "72b5093e01055b58",
     "951672200100db21",
     "a2122a54010061e0",
     "a607a4b001008393",
     "af77d5440100520d",
+    "b:0c470246013512c7",
     "b:2c3e6a820108e93b",
     "b:2e0d7d610102f229",
     "b:5641fb980100422c",
     "b:619c481c0102370d",
     "b:951672200100db21",
     "b:a2122a54010061e0",
-    "b:af77d5440100520d",
-    "b:d9f97a1401019d2f",
-    "d9f97a1401019d2f"
+    "b:af77d5440100520d"
   ],
-  "src/components/canvas/AnnotationNode.tsx": [
+  "packages/runner/src/components/canvas/AnnotationNode.tsx": [
     "4922dbc80102c754",
     "b:4922dbc80102c754"
   ],
-  "src/components/canvas/ApiNode.tsx": [
+  "packages/runner/src/components/canvas/ApiNode.tsx": [
     "036b7cb4010164f4",
     "5bf7e45001000c05",
     "bc04fe30010256f7"
   ],
-  "src/components/canvas/ConnectionLine.tsx": [
+  "packages/runner/src/components/canvas/ConnectionLine.tsx": [
     "1a625c9001056d1f",
     "b:1a625c9001056d1f"
   ],
-  "src/components/canvas/FlowCanvas.tsx": [
+  "packages/runner/src/components/canvas/FlowCanvas.tsx": [
+    "746058900105e8a4",
     "a4be51cc0100af64",
     "b:a4be51cc0100af64",
+    "b:ada6fa220133c3e9",
     "ee8f054801000a68"
   ],
-  "src/components/dashboard/Dashboard.tsx": [
+  "packages/runner/src/components/dashboard/Dashboard.tsx": [
     "19b31e1f010005a9",
     "2d7ded5801014ad5",
     "3e7d4d09010109d3",
@@ -115,7 +385,7 @@
     "eab0ff60010026c9",
     "ff0fa5c001001807"
   ],
-  "src/components/environment/EnvironmentPanel.tsx": [
+  "packages/runner/src/components/environment/EnvironmentPanel.tsx": [
     "3bde63360100558e",
     "4e14748e0100a2be",
     "893fd1e4010013fd",
@@ -126,7 +396,7 @@
     "ba7d4fd0010009fd",
     "e768554401023c01"
   ],
-  "src/components/inspector/AssertionsSection.tsx": [
+  "packages/runner/src/components/inspector/AssertionsSection.tsx": [
     "126bb31c01002bb3",
     "7799250701002b41",
     "9ec74d78010017ef",
@@ -137,14 +407,14 @@
     "de9449bc01002676",
     "fced57f2010038ab"
   ],
-  "src/components/inspector/ConditionConfigTab.tsx": [
+  "packages/runner/src/components/inspector/ConditionConfigTab.tsx": [
     "2c06842c0100167a",
     "3bf24e8c010010ef",
     "79a769f401000777",
     "b42a9f7001001aae",
     "ebe3550001002aa4"
   ],
-  "src/components/inspector/ConfigTab.tsx": [
+  "packages/runner/src/components/inspector/ConfigTab.tsx": [
     "05b97e880100f981",
     "0b5a9b90010005ba",
     "160a37cf01007614",
@@ -181,25 +451,27 @@
     "ecc2e55801000a52",
     "ee8f054801000a68"
   ],
-  "src/components/inspector/DiffViewer.tsx": [
+  "packages/runner/src/components/inspector/DiffTab.tsx": [
+    "b7c707c201055c4a",
+    "b:cc6ae19201cfc25f"
+  ],
+  "packages/runner/src/components/inspector/DiffViewer.tsx": [
     "5686097f01001eea",
     "5e91d694010040bc",
     "5ee96ce001001260",
     "f5e2a5a001004f84"
   ],
-  "src/components/inspector/InspectorPanel.tsx": [
+  "packages/runner/src/components/inspector/InspectorPanel.tsx": [
     "0e776d3e01007918",
-    "123e8a3601004da9",
     "564c495c01001baf",
-    "7831033401002607",
     "aec551a4010034ff",
     "b:0e776d3e01007918",
-    "b:123e8a3601004da9",
-    "b:7831033401002607",
+    "b:d6c59f02012dbdbc",
     "ba7d4fd0010009fd",
+    "c527945801029f0a",
     "ee8f054801000a68"
   ],
-  "src/components/inspector/KeyValueEditor.tsx": [
+  "packages/runner/src/components/inspector/KeyValueEditor.tsx": [
     "21c780b8010096a1",
     "27ee97400101e67c",
     "4e60172601018ffc",
@@ -211,25 +483,18 @@
     "b:fc8fe37801013992",
     "fc8fe37801013992"
   ],
-  "src/components/inspector/LoopConfigTab.tsx": [
-    "6f4c64b00100057e",
-    "79a769f401000777",
-    "ce7f885401001690",
-    "e77f939401002d2a",
-    "e82a416001001666"
-  ],
-  "src/components/inspector/RequestTab.tsx": [
+  "packages/runner/src/components/inspector/RequestTab.tsx": [
     "aae2eb60010005c3",
     "b3407497010056e9",
     "c3df4581010017e9"
   ],
-  "src/components/inspector/ResponseTab.tsx": [
+  "packages/runner/src/components/inspector/ResponseTab.tsx": [
     "5200554501002c5d",
     "d2572d6801002422",
     "e951a8840100acb9",
     "ee8f054801000a68"
   ],
-  "src/components/json-viewer/JsonTreeView.tsx": [
+  "packages/runner/src/components/json-viewer/JsonTreeView.tsx": [
     "23e2874001005ea1",
     "639f072c01006bb9",
     "6d70f0f4010159ef",
@@ -246,7 +511,7 @@
     "e2b676a001000d87",
     "ee8f054801000a68"
   ],
-  "src/components/library/EndpointLibraryPanel.tsx": [
+  "packages/runner/src/components/library/EndpointLibraryPanel.tsx": [
     "17454a7901000d68",
     "539d6ba901001756",
     "58b24a9c01002fa4",
@@ -254,7 +519,7 @@
     "b:58b24a9c01002fa4",
     "ba7d4fd0010009fd"
   ],
-  "src/components/library/FlowLibrary.tsx": [
+  "packages/runner/src/components/library/FlowLibrary.tsx": [
     "014f69040100786d",
     "511a472c0101172f",
     "604ae73901005861",
@@ -276,10 +541,10 @@
     "cbf07d24010069bb",
     "f18f2abb01001f66"
   ],
-  "src/components/shared/ShortcutHint.tsx": [
+  "packages/runner/src/components/shared/ShortcutHint.tsx": [
     "8683592001001ad3"
   ],
-  "src/components/toolbar/ImportCollectionModal.tsx": [
+  "packages/runner/src/components/toolbar/ImportCollectionModal.tsx": [
     "2bee50d40102a039",
     "3a78acf80100a450",
     "6923967801004ecc",
@@ -287,12 +552,12 @@
     "b:3a78acf80100a450",
     "b:6923967801004ecc"
   ],
-  "src/components/toolbar/ImportCurlModal.tsx": [
+  "packages/runner/src/components/toolbar/ImportCurlModal.tsx": [
     "0d78c8ec0100a2d9",
     "b:0d78c8ec0100a2d9",
     "f17edd040100479e"
   ],
-  "src/components/toolbar/Toolbar.tsx": [
+  "packages/runner/src/components/toolbar/Toolbar.tsx": [
     "46f0f1e8010017c8",
     "4c76f2e8010013e9",
     "4d52797001000e4c",
@@ -305,7 +570,7 @@
     "cf9ea18b010015d6",
     "cfbae1f10100124d"
   ],
-  "src/core/curlParser.ts": [
+  "packages/runner/src/core/curlParser.ts": [
     "1b421444010031ba",
     "3153ca18010b643b",
     "3ad589e401003e39",
@@ -325,7 +590,7 @@
     "b:eb3e8bcc0100a2d8",
     "eb3e8bcc0100a2d8"
   ],
-  "src/core/executor.ts": [
+  "packages/runner/src/core/executor.ts": [
     "027e5d950100d6c3",
     "1240667401003c50",
     "23f539fe01025bec",
@@ -334,7 +599,6 @@
     "9f4785300100e5db",
     "a330656c0100462f",
     "a6ced050010062f8",
-    "a9741ac30102f1f2",
     "ad30a130010112f4",
     "b356d82c010103d9",
     "b:027e5d950100d6c3",
@@ -345,7 +609,6 @@
     "b:9f4785300100e5db",
     "b:a330656c0100462f",
     "b:a6ced050010062f8",
-    "b:a9741ac30102f1f2",
     "b:ad30a130010112f4",
     "b:b356d82c010103d9",
     "b:e0c25c0f01009642",
@@ -353,7 +616,7 @@
     "e0c25c0f01009642",
     "f38ed104010381e9"
   ],
-  "src/core/httpClient.ts": [
+  "packages/runner/src/core/httpClient.ts": [
     "1978d6cc010105bc",
     "41b46a6c0102e7ef",
     "494ee4640102069c",
@@ -365,15 +628,15 @@
     "b:51e3af8c01007811",
     "b:9165c76c01005c93"
   ],
-  "src/core/openApiParser.ts": [
+  "packages/runner/src/core/openApiParser.ts": [
     "6727754001006c97",
     "b:6727754001006c97"
   ],
-  "src/core/postmanParser.ts": [
+  "packages/runner/src/core/postmanParser.ts": [
     "6077c8200101f1d9",
     "b:6077c8200101f1d9"
   ],
-  "src/core/types.ts": [
+  "packages/runner/src/core/types.ts": [
     "02f6546401002a7d",
     "1505ea4c01007671",
     "28f459780100204e",
@@ -384,30 +647,26 @@
     "a6f39bd101005d73",
     "abafdd60010007a3",
     "b00d47080101d93c",
-    "b0f0b7e8010020ce",
     "b:02f6546401002a7d",
     "b:28f459780100204e",
     "b:625b4c40010032a9",
     "b:9d149ed301023203",
     "b:b00d47080101d93c",
-    "b:de8c8eb7010012b4",
     "b:ef44b3c20100cf2b",
     "b:f1fd1928010017ec",
     "b:f323453001022e15",
     "b:f9ac334401002a50",
     "c08333d9010124d2",
-    "cd84e32a010014cc",
     "d60ca60e0100dc08",
     "d927da1c0100d848",
     "db9a293801007422",
-    "de8c8eb7010012b4",
     "e06a0ce301000a8a",
     "ef44b3c20100cf2b",
     "f1fd1928010017ec",
     "f323453001022e15",
     "f9ac334401002a50"
   ],
-  "src/engine/executor.ts": [
+  "packages/runner/src/engine/executor.ts": [
     "2716c50b0100fe71",
     "7a091ef0010007e0",
     "b:2716c50b0100fe71",
@@ -415,13 +674,12 @@
     "b:bd9808740100304f",
     "bd9808740100304f"
   ],
-  "src/hooks/useKeyboardShortcuts.ts": [
+  "packages/runner/src/hooks/useKeyboardShortcuts.ts": [
     "12af730c0109ef88",
     "b:51e32d8001147540",
     "c51902ee01038243"
   ],
-  "src/hooks/useVariableAutocomplete.ts": [
-    "0fe5613b010220b1",
+  "packages/runner/src/hooks/useVariableAutocomplete.ts": [
     "22d3586001018708",
     "3fb815380108c983",
     "4ad867680102157f",
@@ -431,7 +689,6 @@
     "942e7fa4010214e9",
     "a8eb5fcc01004476",
     "af2c1fdd01002604",
-    "b:0fe5613b010220b1",
     "b:22d3586001018708",
     "b:659d0e000104298f",
     "b:8ca1463c010104b4",
@@ -445,7 +702,7 @@
     "c1e0658801010846",
     "d70accbe0101eef4"
   ],
-  "src/mcp/server.ts": [
+  "packages/runner/src/mcp/server.ts": [
     "02d83d080100494c",
     "324e9e9201008c61",
     "3cdd68f801003517",
@@ -479,7 +736,7 @@
     "f10e450101005b17",
     "fba699c001003215"
   ],
-  "src/mcp/state.ts": [
+  "packages/runner/src/mcp/state.ts": [
     "5b28b7d401008e69",
     "5e62177c010245c6",
     "61302c2901001af8",
@@ -499,16 +756,16 @@
     "e95d61dc01014a77",
     "f18f2abb01001f66"
   ],
-  "src/store/executionStore.ts": [
+  "packages/runner/src/store/executionStore.ts": [
     "b:deb080eb01002495",
     "deb080eb01002495"
   ],
-  "src/store/libraryStore.ts": [
+  "packages/runner/src/store/libraryStore.ts": [
     "5d76095d01010e2d",
     "b:5d76095d01010e2d",
     "ee8f054801000a68"
   ],
-  "src/store/projectStore.ts": [
+  "packages/runner/src/store/projectStore.ts": [
     "1fba61840100a75b",
     "7c95678401010de2",
     "9d8b644101012e62",
@@ -519,12 +776,12 @@
     "d932aecc01000d7e",
     "ee8f054801000a68"
   ],
-  "src/store/themeStore.ts": [
+  "packages/runner/src/store/themeStore.ts": [
     "b3b884d80100914f",
     "b:b3b884d80100914f",
     "ee8f054801000a68"
   ],
-  "src/types/index.ts": [
+  "packages/runner/src/types/index.ts": [
     "0d985d3001014998",
     "4654712001003702",
     "884c21a801007467",
@@ -536,7 +793,7 @@
     "b:c74bb59c01022d52",
     "c74bb59c01022d52"
   ],
-  "src/utils/apiClient.ts": [
+  "packages/runner/src/utils/apiClient.ts": [
     "31814a8c01002107",
     "6cdb97ed01000819",
     "96c51c7c0100376c",
@@ -556,26 +813,116 @@
     "d114374001000a4e",
     "de9648c801000a0d"
   ],
-  "src/utils/autoSave.ts": [
+  "packages/runner/src/utils/autoSave.ts": [
     "8d12994001004ffa",
     "ee8f054801000a68"
   ],
-  "src/utils/canvasExport.ts": [
+  "packages/runner/src/utils/canvasExport.ts": [
     "198098d20101a7fa",
     "b:198098d20101a7fa"
   ],
-  "src/utils/fileIO.ts": [
+  "packages/runner/src/utils/fileIO.ts": [
     "413456b001008a60",
     "b:413456b001008a60",
+    "b:9827c6e0013b42d2",
     "b:c758567c0100a4b7",
-    "c758567c0100a4b7"
+    "c758567c0100a4b7",
+    "d899b82001013c1d"
   ],
-  "src/utils/postmanExporter.ts": [
+  "packages/runner/src/utils/postmanExporter.ts": [
     "2b6d829401004f47",
     "b:2b6d829401004f47"
   ],
-  "vite.config.ts": [
+  "packages/runner/vite.config.ts": [
     "b:db80e10d01006d63",
     "db80e10d01006d63"
+  ],
+  "packages/scan/src/backend.test.ts": [
+    "62d52cde0105aede",
+    "b9783fa0010255cc",
+    "b:23c254b801316e42",
+    "b:cc53d9e8012c348b",
+    "b:fb074aba0136c6a0",
+    "d39d612201023250"
+  ],
+  "packages/scan/src/beScanner.ts": [
+    "1a90b518010251ae",
+    "1e6ca7640102876d",
+    "21a8a95401044a5f",
+    "3780ed710106c710",
+    "3b8fecbc0106cf3a",
+    "3d54ad180105ff73",
+    "4f536fc00107518c",
+    "6b2d6cae0105f4e3",
+    "9c8dfe200103afec",
+    "b:3aa65d120139bc09",
+    "b:421f77b601391e48",
+    "b:4aa295b801536dd0",
+    "b:5cfc867c0132b2ad",
+    "b:655e2fd801ca895c",
+    "b:835192500148ad60",
+    "b:88bea06001633342",
+    "b:b6cebaee0152d132",
+    "b:c4888c7001354445",
+    "b:d6c56f12014c78aa",
+    "b:e563d22e014a477a",
+    "b:ee7087320154d3c6",
+    "bf5637a001051880",
+    "dc0d75380101b42f",
+    "ec7b0f3001019799",
+    "f28ada5801065bde",
+    "f591ba5c01046a40",
+    "ffaa109f01046dad"
+  ],
+  "packages/scan/src/callerGraph.test.ts": [
+    "82afddd80106b971",
+    "b:4b886a06013c34c6"
+  ],
+  "packages/scan/src/callerGraph.ts": [
+    "2c293c8a010b4701",
+    "2df52eb00105eb88",
+    "3420f5bc0105f169",
+    "3ea6a80601033cc9",
+    "835f18960100a742",
+    "b:0113c890013b5a28",
+    "b:5e8506ea02739909",
+    "b:e3afa78a01231ef5"
+  ],
+  "packages/scan/src/generated.ts": [
+    "4496e0540103d042",
+    "454b1fe40105e9ad",
+    "564c21c8010661d8",
+    "b64535d801063a6c",
+    "b:d8f4b89202fd0d92"
+  ],
+  "packages/scan/src/index.ts": [
+    "b:03959510012c58ea",
+    "fddb915a01022283"
+  ],
+  "packages/scan/src/mask.test.ts": [
+    "a94c8a0e0106f15c",
+    "b:d47d7060013e8080"
+  ],
+  "packages/scan/src/mask.ts": [
+    "00207ace0103660e",
+    "3ef26bf0010594b5",
+    "432def6801005cb8",
+    "8b7ffe50010e1164",
+    "b:f8a67798030ef51c",
+    "b:fe35cf1a01c033d0"
+  ],
+  "packages/scan/src/probeHarness.ts": [
+    "b:5f320a18019ecc6e",
+    "efcf0e780105a31d"
+  ],
+  "packages/scan/src/shape.ts": [
+    "070f06e10106cfa1",
+    "1639703a0105694e",
+    "666a9c34010646f8",
+    "7944a3600100f63d",
+    "b:362aed5802e7bc98",
+    "b:7a6c13b80131d945",
+    "dcb4ad9e0102fdd1",
+    "fa5d15380106013f"
   ]
 }

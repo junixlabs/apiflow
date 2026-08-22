@@ -61,7 +61,7 @@ describe('routeFromFilePath', () => {
   });
 
   it('returns nothing outside a routing directory', () => {
-    expect(routeFromFilePath('src/components/Table.tsx')).toBeUndefined();
+    expect(routeFromFilePath('packages/runner/src/components/Table.tsx')).toBeUndefined();
   });
 });
 
@@ -278,7 +278,7 @@ describe('reads through a project wrapper', () => {
 }`;
 
   it('sees past a type annotation on the parse hop', () => {
-    const scan = scanFile('src/store/sync.ts', SYNC, { wrappers: ['authFetch'] });
+    const scan = scanFile('packages/runner/src/store/sync.ts', SYNC, { wrappers: ['authFetch'] });
     expect(scan.fields.map((f) => f.path).sort()).toEqual(['orgs', 'projects']);
   });
 

@@ -15,7 +15,7 @@ import { tolerateClosedPipe } from './stdio';
 import { isNestedCheckout } from './scanScope';
 import { isGeneratedSource } from '@junixlabs/apiflow-scan';
 
-// cm:edge contract -> src/cli/check.ts readerChanged() — the READER's version, bumped in the same
+// cm:edge contract -> packages/cli/src/commands/check.ts readerChanged() — the READER's version, bumped in the same
 // commit as any change to what the FE reader produces for unchanged input.
 export const GENERATOR = 'apiflow scan-fe/4';
 
@@ -166,7 +166,7 @@ export function scanDirectory(root: string, name: string, hints?: ScanHints): Ap
     } catch {
       continue;
     }
-    // cm:edge ordering -> src/core/generated.ts — dropped from `sources`, not inside scanFile(), so a
+    // cm:edge ordering -> packages/scan/src/generated.ts — dropped from `sources`, not inside scanFile(), so a
     // bundle never reaches the caller graph either. Both passes read this one map.
     if (isGeneratedSource(rel, content)) {
       lastScanStats.generatedSkipped.push(rel);
@@ -202,7 +202,7 @@ export interface HopStats {
 
 export let lastHopStats: HopStats = { reattributed: 0, stillModuleLevel: 0, saturated: 0 };
 
-// cm:edge protocol -> src/core/callerGraph.ts — runs AFTER every file is scanned, because a call in
+// cm:edge protocol -> packages/scan/src/callerGraph.ts — runs AFTER every file is scanned, because a call in
 // an api module can only be attributed once the whole import graph exists.
 export function resolveCallerHops(map: ApiMapFile, sources: Map<string, string>, root: string): ApiMapFile {
   const files = new Set(sources.keys());
@@ -317,7 +317,7 @@ function countBy(items: Array<{ confidence: Confidence }>): Record<Confidence, n
   return out;
 }
 
-// cm:edge contract -> skills/fe-map-extractor/skill.md — the skill parses this report shape and
+// cm:edge contract -> packages/cli/skills/fe-map-extractor/skill.md — the skill parses this report shape and
 // resolves what landed in Unresolved; changing the headings breaks its step 3.
 export function renderReport(map: ApiMapFile, outPath: string): string {
   const c = countBy(map.calls);

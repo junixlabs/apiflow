@@ -112,7 +112,7 @@ function header(payload: AppPayload, name: string): string {
   // `apiflow view` produces, and a form posting to a server that is not running is a dead button.
   const sides = payload.sides ?? [];
   const root = (kind: 'fe' | 'be') => sides.find((s) => s.kind === kind)?.root ?? '';
-  // cm:edge contract -> src/view/addProject.ts — it reads these data-* attributes to prefill the
+  // cm:edge contract -> packages/cli/src/view/addProject.ts — it reads these data-* attributes to prefill the
   // dialog in edit mode, so a renamed attribute here silently opens an empty form.
   const editBtn = payload.projectId === undefined ? '' : `<button class="btn" data-edit="${escapeHtml(payload.projectId)}"
         data-name="${escapeHtml(payload.projectName ?? payload.map.metadata.name)}"
@@ -193,7 +193,7 @@ function overview(payload: AppPayload, list: Alert[]): string {
   const callTotal = calls.exact + calls.inferred + calls.guess;
 
   return `<section class="pane" id="pane-overview">
-  <!-- cm:edge contract -> src/view/panes.ts kpiStrip() — it fills this and the twin on the endpoints
+  <!-- cm:edge contract -> packages/cli/src/view/panes.ts kpiStrip() — it fills this and the twin on the endpoints
        pane. One renderer for both, so the two bands cannot report different numbers. -->
   <div class="kpistrip" id="ov-kpis"></div>
 

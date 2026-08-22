@@ -4,7 +4,7 @@
 // catch it: it sits in `public/`, not `dist/`. Shape can. Measured across four real repos, the
 // widest AUTHORED file averages 152 bytes per line (an inline SVG); the two generated ones average
 // 3,490 and 5,268. The threshold sits in that gap, nowhere near either edge.
-// cm:edge lockstep -> src/cli/scanFe.ts · src/cli/scanBe.ts — both readers must drop the same files,
+// cm:edge lockstep -> packages/cli/src/commands/scanFe.ts · packages/cli/src/commands/scanBe.ts — both readers must drop the same files,
 // or one side of a project reports a bundle's phantom endpoints and the other does not.
 const BUNDLE_NAME = /\.(min|bundle|chunk)\.[jt]sx?$/;
 const GENERATED_MEAN_LINE = 400;

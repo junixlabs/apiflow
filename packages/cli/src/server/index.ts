@@ -34,7 +34,7 @@ function diffFor(id: string, kind: MapKind): MapDiff | undefined {
 
 // cm:guard Every READ route resolves an id through the registry and never takes a path from the
 // request. The one route that does take paths is POST /api/projects, and it sits behind
-// localWritesOnly for exactly that reason — see src/server/guard.ts.
+// localWritesOnly for exactly that reason — see packages/cli/src/server/guard.ts.
 export function buildApp(): Express {
   const app = express();
   app.use(express.json({ limit: '16kb' }));
@@ -91,7 +91,7 @@ export function buildApp(): Express {
   // cm:why Rejects a name apiflow cannot use BEFORE touching the disk, and says what to type
   // instead: `slug()` silently returns '' for a name with no latin letters, and the registry's own
   // message ("invalid id") does not tell the person which field to fix.
-  // cm:edge contract -> src/view/panes.ts submitAdd() — it renders `message` verbatim to the user.
+  // cm:edge contract -> packages/cli/src/view/panes.ts submitAdd() — it renders `message` verbatim to the user.
   app.post('/api/projects', localWritesOnly, (req, res) => {
     const body = (req.body ?? {}) as Record<string, unknown>;
     const text = (key: string): string | undefined => {
@@ -160,7 +160,7 @@ export function buildApp(): Express {
   // cm:why Distinguishes "field absent" from "field empty": absent leaves a root alone, empty clears
   // it. A form posts every field it has, so without that distinction editing the FE path would wipe
   // the BE path of every project whose form did not happen to show it.
-  // cm:edge contract -> src/workspace/registry.ts updateProject() — null there means clear.
+  // cm:edge contract -> packages/cli/src/workspace/registry.ts updateProject() — null there means clear.
   app.patch('/api/projects/:id', localWritesOnly, (req: Request<{ id: string }>, res) => {
     const body = (req.body ?? {}) as Record<string, unknown>;
     const field = (key: string): string | null | undefined => {

@@ -3,7 +3,7 @@
 // character class containing a quote (`/['"`]/`) put it in a string state that swallowed the REST OF
 // THE FILE. Three phantom endpoints reached a published map that way, read out of the scanner's own
 // comments. Two implementations of one rule is how one of them stays broken.
-// cm:edge lockstep -> src/core/feScanner.ts · src/core/beScanner.ts · src/core/callerGraph.ts — every
+// cm:edge lockstep -> packages/scan/src/feScanner.ts · packages/scan/src/beScanner.ts · packages/scan/src/callerGraph.ts — every
 // reader masks through this module; a reader that scans raw source reads prose as code.
 
 // cm:guard Masks comments IN PLACE — same length, newlines kept — because every line number and

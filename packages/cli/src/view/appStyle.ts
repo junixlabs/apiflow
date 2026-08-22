@@ -1,5 +1,5 @@
-// cm:edge lockstep -> src/view/theme.ts — tokens live there; this file only lays out the app shell.
-// cm:edge contract -> src/view/hub.ts — the hub renders itself into this same shell (.app-shell,
+// cm:edge lockstep -> packages/cli/src/view/theme.ts — tokens live there; this file only lays out the app shell.
+// cm:edge contract -> packages/cli/src/view/hub.ts — the hub renders itself into this same shell (.app-shell,
 // .rail, .main, .phead, .panel, .kpistrip, .watch), so a rule renamed here restyles two pages.
 // cm:guard Nav item rules are scoped to `.rail nav a`, never `.rail a`: the brand is a link too, and
 // the unscoped selector handed it the padding of a nav item — 16px of drift between the two pages.

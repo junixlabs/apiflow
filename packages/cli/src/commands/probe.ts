@@ -50,7 +50,7 @@ export function matchesOnly(method: string, path: string, patterns: string[]): b
 // surface still can't leave them out by pattern — and the one time this was a manual "remember not
 // to", the full walk was launched straight at them. A subtractive filter is the guard that does not
 // depend on remembering.
-// cm:edge protocol -> matchesOnly() — skip is applied AFTER only: an endpoint must pass the include
+// cm:edge protocol -> packages/cli/src/commands/probe.ts#matchesOnly — skip is applied AFTER only: an endpoint must pass the include
 // (if any) AND clear every skip pattern. Skip wins ties, because the safe default when the two
 // filters disagree is "do not send".
 export function passesScope(method: string, path: string, only: string[], skip: string[]): boolean {
