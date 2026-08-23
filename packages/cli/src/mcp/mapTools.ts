@@ -168,6 +168,11 @@ export function mapCheckText(target: Target, side?: 'fe' | 'be'): string {
   // cm:edge lockstep -> packages/map/src/diff.ts#diverged — every counter divergence weighs is
   // printed here. One left out is a drift verdict over a panel where nothing moved.
   lines.push(`screens ${result.diff.screens.before} → ${result.diff.screens.after} · calls ${result.diff.calls.before} → ${result.diff.calls.after} · fields ${result.diff.fields.before} → ${result.diff.fields.after} · reads ${result.diff.reads.before} → ${result.diff.reads.after} · unresolved ${result.diff.unresolved.before} → ${result.diff.unresolved.after}`);
+  // cm:edge lockstep -> packages/cli/src/commands/check.ts#renderCheck — the CLI prints this same
+  // caveat, and a drift verdict over flat counters is unreadable without it on either surface.
+  if (!result.structural) {
+    lines.push('Same counts, different bytes — usually code that moved, taking every file:line with it.');
+  }
   lines.push('Refresh with: apiflow project scan <id>');
   return lines.join('\n');
 }

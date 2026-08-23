@@ -244,11 +244,11 @@ left, under the §3 axis.
   and `reads` — precisely "which field vanished" and "which screen reads something not in the
   contract". And `headlineFor` compared endpoint *counts*, so a build that swapped one route for
   another printed `No meaningful change.` above the list of the two routes.
-  What the parse fix is **not** is §7's "schema-generated type layer". That row opens when a
-  hand-written type and the format disagree, or when the first externally-supplied `.apimap` arrives —
-  and a contract map written for a repo that does not exist yet is not yet either. Asserting that six
-  declared arrays are arrays is the cheap half; generating the types from a schema is the row, and it
-  stays shut.
+  What the parse fix is **not** is §7's "schema-generated type layer". The row is a *generated type
+  layer*, and this is six `Array.isArray` calls in `parseMap` — the cheap half, and the half that was
+  missing while `ApiMapFile` promised all six collections and `parseMap` checked only `version`. The
+  row stays shut. Note the arrival clause of that condition was already met and not by this change:
+  `apiflow project import --fe=<file.apimap>` has parsed a user-supplied map since before it.
   **This still does not open §7's hosted map.** The condition there is a real CI pushing a map, and
   the repo this command was built for has not been written yet. A tool the finish line needs is not
   the finish line, and ISS-9 stays open.

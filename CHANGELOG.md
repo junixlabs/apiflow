@@ -31,7 +31,9 @@ out with the two sides passed in by the caller — "the map" and "the code" for 
 for `diff`. Two presentations of one `MapDiff` would be two answers to one question, and nothing
 would tell a reader which was the real one. The two renderings that are not text — the MCP `check`
 tool and the browser delta pane — stay separate because their medium is, but they now carry the same
-counters, so a drift verdict can no longer sit above a panel where nothing moved.
+counters. The MCP tool also gained the caveat the CLI already printed for the commonest drift there
+is: same counts, different bytes, usually code that moved and took every `file:line` with it. It was
+reporting drift over five flat numbers with nothing to explain them.
 
 ### Fixed — `MapDiff` counted four of six collections, and the headline could not see a swap
 
@@ -41,7 +43,11 @@ first transcript.
 `parseMap` validated `version` and nothing else, so a map that omitted an empty array — the ordinary
 way to hand-write one — reached the queries and died on `.length` deep inside them. Through `diff`
 that surfaced as an exit **1**, the "diverged" code, blaming the build for a malformed contract. Every
-collection is now asserted at parse time and names the key it is missing.
+collection is now asserted at parse time and names the key it is missing. `check` also catches the
+parse itself and exits **2**, its documented "cannot check" code — it was exiting 1, "drifted", as a
+raw Node stack trace. Knowingly left: `impact`, `link` and `view` still die the same way on a
+malformed map. None of them documents an exit-code contract, so none turns the crash into a false
+verdict the way `check` and `diff` did, and widening the fix to them is not this change's job.
 
 `MapDiff` reported endpoints, calls, screens and unresolved. It did **not** report `fields` or
 `reads` — the two collections carrying "which field vanished" and "which screen started reading

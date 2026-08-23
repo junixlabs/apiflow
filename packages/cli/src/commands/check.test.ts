@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
+import { execFileSync } from 'child_process';
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
-import { join } from 'path';
+import { dirname, join, resolve } from 'path';
+import { fileURLToPath } from 'url';
 import { createApiMap, endpointId, fieldId, finalizeApiMap } from '@junixlabs/apiflow-map';
 import { checkAgainst, readerChanged, renderCheck, rescan } from './check';
 import { sideOf } from '@junixlabs/apiflow-map';
@@ -21,6 +23,30 @@ function repo(): string {
 }
 
 describe('apiflow check', () => {
+  // cm:guard Exit 1 means "the map drifted". A malformed map reported as 1 makes CI blame the code
+  // for a broken file, which is what a raw stack trace out of parseMap used to do.
+  it('exits 2, not 1, on a map it cannot read', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'apiflow-check-bad-'));
+    try {
+      const bad = join(dir, 'bad.apimap');
+      writeFileSync(bad, '{"version":1,"metadata":{"name":"x","root":"y","generator":"apiflow scan-be/4"},"screens":[],"endpoints":[],"fields":[],"calls":[],"unresolved":[]}');
+      const cli = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..', 'bin', 'cli.js');
+      let status = 0;
+      let out = '';
+      try {
+        execFileSync(process.execPath, [cli, 'check', bad], { encoding: 'utf8' });
+      } catch (e) {
+        const err = e as { status?: number; stdout?: string; stderr?: string };
+        status = err.status ?? -1;
+        out = `${err.stdout ?? ''}${err.stderr ?? ''}`;
+      }
+      expect(status).toBe(2);
+      expect(out).toContain('missing "reads"');
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
   it('passes when the map still describes the code', () => {
     const root = repo();
     try {

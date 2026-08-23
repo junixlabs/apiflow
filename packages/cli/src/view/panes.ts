@@ -1193,6 +1193,10 @@ function renderScreens() {
 }
 `;
 
+// cm:edge lockstep -> packages/map/src/diff.ts#diverged — the delta pane's Overview rows below are
+// one per counter `diverged` weighs; one missing shows flat bars under a verdict that says otherwise.
+// cm:guard Annotations must sit ABOVE this String.raw, not inside it — codemap does not read a
+// comment in a string literal, so one written in there is inert and `cm impact` never names this file.
 export const PANES_SCRIPT_3 = String.raw`
 // cm:why Grouped by REASON, not listed flat: 9 311 unresolved calls as one list is unreadable, while
 // "url is a variable: 4,812" tells you which single fix would move the coverage number most.
@@ -1346,8 +1350,6 @@ function renderCompare() {
 
   const p1 = h('div', 'panel');
   p1.appendChild(h('h3', null, 'Overview'));
-  // cm:edge lockstep -> packages/map/src/diff.ts#diverged — every counter divergence weighs has a
-  // row. One missing leaves the pane showing flat bars under a verdict that says something moved.
   const rows1 = [
     ['screens', d.screens.before, d.screens.after, false],
     ['calls', d.calls.before, d.calls.after, false],
