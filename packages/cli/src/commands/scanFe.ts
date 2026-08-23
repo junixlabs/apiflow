@@ -156,6 +156,8 @@ const BACKLOG_SHAPES = 5;
 
 // cm:why Top FIVE, and the cap states what it hid. A ranking that quietly showed only its head would
 // read as the whole backlog — the failure the flat 50-line list above it already has.
+// cm:why The cap cannot fire on today's producers — five reasons can reach an FE report and three a BE
+// one — so it is insurance against a sixth, not a path this tool exercises.
 // cm:guard The entry total is the header's own count, and every line below partitions it — that is how
 // the rule on unresolvedKinds (a bare unresolved COUNT must say which kind) is met here.
 // cm:edge contract -> packages/cli/src/commands/scanBe.ts — the BE report renders this same block, so

@@ -23,15 +23,15 @@ const FAN_OUT = 'reachable from ';
 
 // cm:guard Every rule must leave the five FIXED reason strings byte-identical — they are the majority
 // of the producers, and a rule that touches one invents a shape nobody wrote.
-// cm:guard Cut at the FIRST separator, and take everything before it as the path: a route path may
-// contain a space (`/user profile`), and matching the path as one token leaked it into the ranking.
+// cm:guard Cut at the LAST separator, and take everything before it as the path: a route path may
+// contain a space AND the separator itself (`/user — profile`), while no cause behind the verb gate can.
 // cm:edge contract -> packages/cli/src/commands/scanBe.ts — writes `<METHOD> <path> — <cause>`; a
 // producer that stops spelling it that way silently splits one shape into N again.
 // cm:edge contract -> packages/scan/src/feScanner.ts — writes `<cause>: <60 chars of source>`, same rule.
 // cm:edge contract -> packages/cli/src/commands/scanFe.ts — writes `reachable from <N>+ screens…`, same rule.
 export function unresolvedShape(reason: string): string {
   let shape = reason;
-  const sep = shape.indexOf(SEP);
+  const sep = shape.lastIndexOf(SEP);
   const verb = sep === -1 ? '' : shape.slice(0, shape.indexOf(' '));
   if (sep > 0 && VERBS.has(verb)) shape = shape.slice(sep + SEP.length);
   // cm:why First `: `, not the last — feScanner slices 60 characters of raw source, so a signature

@@ -59,6 +59,12 @@ describe('unresolvedShape', () => {
     );
   });
 
+  it('strips a path that contains the separator itself', () => {
+    expect(unresolvedShape('GET /user — profile — no request or response schema found in code')).toBe(
+      'no request or response schema found in code'
+    );
+  });
+
   it('collapses digits only for the producer that interpolates a count', () => {
     expect(unresolvedShape('GET /v1/reports 2024 — no request or response schema found in code')).not.toContain('N');
     expect(unresolvedShape('url is a variable or expression: page2')).toBe('url is a variable or expression');

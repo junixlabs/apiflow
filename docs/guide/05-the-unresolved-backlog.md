@@ -56,8 +56,8 @@ second one is a roadmap you would not have guessed.
 ## What a shape is, and what it deliberately is not
 
 Normalization is three narrow rules, one per producer that interpolates — cut everything before the
-first ` — ` when the line opens with an HTTP verb, cut at the first `: `, and collapse digit runs to
-`N` when the line opens with `reachable from `. It is **not** a general "erase anything
+**last** ` — ` when the line opens with an HTTP verb, cut at the **first** `: `, and collapse digit runs
+to `N` when the line opens with `reachable from `. It is **not** a general "erase anything
 variable-looking" pass, and each rule is gated on something only its own producer writes. Both halves
 of that matter: a wider rule folds two different causes into one line, and an *ungated* rule fires on
 a reason it was not written for — the digit rule, before it was gated, turned the surviving path
@@ -67,9 +67,11 @@ fixed strings pass through byte-identical, which is asserted per string.
 
 A useful consequence: **a shape carries no URL and no payload.** The variable half of the sentence —
 the path, the source expression — is exactly what normalization removes. A ranking is a thing you can
-paste into an issue from a codebase you cannot show anyone, which is why the path cut is anchored to
-the separator rather than matching the path as one token: a route may legitimately contain a space
-(`/user profile`), and a strip that missed it echoed the path back into the ranking line.
+paste into an issue from a codebase you cannot show anyone. That is why each cut is anchored where the
+interpolated half **cannot** reach rather than where it usually ends. A route path may legitimately
+contain a space *and* the separator (`/user — profile`), while no cause behind the verb gate contains
+either — so the path cut takes the last separator, and the expression cut takes the first colon,
+because it is the expression that may carry more of them.
 
 ## Nothing entered the map
 
