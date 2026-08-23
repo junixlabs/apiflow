@@ -652,8 +652,23 @@ export function expandChains(raw: unknown): ApiMapFile {
   return { ...withoutTable, calls } as ApiMapFile;
 }
 
+const COLLECTIONS = ['screens', 'endpoints', 'fields', 'calls', 'reads', 'unresolved'] as const;
+
+// cm:guard Every collection is asserted present, not just `version`. A map that arrives from outside
+// this repo — hand-written, or written by another tool — omits an empty array as a matter of course.
+// cm:why Left to the reader, the omission surfaces as `TypeError: cannot read length of undefined`
+// from whichever query touched it first, which reads as a bug in apiflow rather than in the file.
+function assertCollections(map: ApiMapFile): void {
+  for (const name of COLLECTIONS) {
+    if (!Array.isArray(map[name])) throw new Error(`.apimap is missing "${name}": it must be an array, even when empty`);
+  }
+}
+
 export function parseMap(text: string): ApiMapFile {
-  const map = expandChains(JSON.parse(text));
-  if (map.version !== 1) throw new Error(`unsupported .apimap version: ${String(map.version)}`);
+  const raw = JSON.parse(text) as ApiMapFile;
+  if (raw.version !== 1) throw new Error(`unsupported .apimap version: ${String(raw.version)}`);
+  assertCollections(raw);
+  const map = expandChains(raw);
+  assertCollections(map);
   return map;
 }

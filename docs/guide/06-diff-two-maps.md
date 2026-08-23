@@ -21,6 +21,10 @@ Sketch the API you are about to build as an `.apimap` and mark the generator as 
 $ printf '%s' '{"version":1,"metadata":{"name":"users-api","root":"github.com/junixlabs/apiflow//fixtures/demo-app/api","generator":"hand-written/1"},"screens":[],"endpoints":[{"id":"ep_get-users","method":"GET","path":"/users"},{"id":"ep_get-users-param","method":"GET","path":"/users/{param}"},{"id":"ep_post-users","method":"POST","path":"/users"}],"fields":[],"calls":[],"reads":[],"unresolved":[]}' > $TMP/design.apimap
 ```
 
+All six collections — `screens`, `endpoints`, `fields`, `calls`, `reads`, `unresolved` — have to be
+there, even when empty. Leaving one out is refused by name at parse time rather than surfacing later
+as a crash inside a query.
+
 `check` will not look at it, and says so rather than guessing:
 
 ```console?prompt=%24+

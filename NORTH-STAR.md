@@ -233,13 +233,22 @@ left, under the §3 axis.
   once the thing is built. There is no other command that can make that comparison: `check` re-scans
   a side, and it refuses a map whose generator it does not know, which is every hand-written one.
   The "second reporter" objection is answered by construction rather than argued with. `renderMapDiff`
-  is `check`'s own panel, lifted with the two sides named by the caller — there is one renderer, and
-  one exported `diverged()` predicate, not a copy of each per command.
-  Two defects fell out of pointing the new command at its own first transcript, and both were silent
-  passes: `MapDiff` counted four of the format's six collections, omitting `fields` and `reads` —
-  precisely "which field vanished" and "which screen reads something not in the contract" — and
-  `headlineFor` compared endpoint *counts*, so a build that swapped one route for another printed
-  `No meaningful change.` above the list of the two routes.
+  is `check`'s own panel, lifted with the two sides named by the caller, and `diverged()` is one
+  exported predicate — one text panel and one definition of divergence, not a copy of each per
+  command. The MCP tool and the browser pane keep their own renderings, because their medium is not
+  text, but they read the same counters.
+  Three defects fell out of pointing the new command at its own first transcript, all silent passes.
+  `parseMap` checked `version` and nothing else, so a map that omitted an empty array — the ordinary
+  way to hand-write one — crashed inside a query and exited **1**, the "diverged" code, blaming the
+  build for a bad contract. `MapDiff` counted four of the format's six collections, omitting `fields`
+  and `reads` — precisely "which field vanished" and "which screen reads something not in the
+  contract". And `headlineFor` compared endpoint *counts*, so a build that swapped one route for
+  another printed `No meaningful change.` above the list of the two routes.
+  What the parse fix is **not** is §7's "schema-generated type layer". That row opens when a
+  hand-written type and the format disagree, or when the first externally-supplied `.apimap` arrives —
+  and a contract map written for a repo that does not exist yet is not yet either. Asserting that six
+  declared arrays are arrays is the cheap half; generating the types from a schema is the row, and it
+  stays shut.
   **This still does not open §7's hosted map.** The condition there is a real CI pushing a map, and
   the repo this command was built for has not been written yet. A tool the finish line needs is not
   the finish line, and ISS-9 stays open.

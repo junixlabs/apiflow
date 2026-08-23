@@ -73,6 +73,13 @@ describe('apiflow diff', () => {
     expect(result.diff.headline).toBe('The same number of endpoints, but not the same endpoints.');
   });
 
+  // cm:guard The swap headline is a fallback, never a preemption: the rule above it is the louder
+  // fact, and a reader who loses "fewer of them have a declared shape" has lost the actionable half.
+  it('keeps the shape headline when a swap happens alongside it', () => {
+    const result = diffAgainst(handWritten(['/tasks'], true), handWritten(['/projects'], false));
+    expect(result.diff.headline).toBe('Not the same endpoints, and fewer of them have a declared shape.');
+  });
+
   it('reports the counted surface as matching when only the bytes moved', () => {
     const before = handWritten(['/tasks'], false);
     const after = createApiMap('planner', 'github.com/acme/planner', 'apiflow scan-be/4');
@@ -114,6 +121,34 @@ describe('apiflow diff', () => {
         expect(run([a, join(dir, 'missing.apimap')]).status).toBe(2);
         writeFileSync(join(dir, 'junk.apimap'), 'not json');
         expect(run([a, join(dir, 'junk.apimap')]).status).toBe(2);
+      } finally {
+        rmSync(dir, { recursive: true, force: true });
+      }
+    });
+
+    // cm:why A hand-written map is the input this command was built for, and omitting an empty
+    // array is the ordinary way to write one — it reached diffMaps and died on `.length`.
+    // cm:guard That crash exited 1, the "diverged" code, so CI blamed the build for a bad contract.
+    it('exits 2 on a map that omits an empty collection, naming the key', () => {
+      const dir = mkdtempSync(join(tmpdir(), 'apiflow-diff-'));
+      try {
+        const a = write(handWritten(['/tasks'], false), dir, 'a.apimap');
+        const partial = join(dir, 'partial.apimap');
+        writeFileSync(
+          partial,
+          JSON.stringify({
+            version: 1,
+            metadata: { name: 'planner', root: 'github.com/acme/planner', generator: 'hand-written/1' },
+            screens: [],
+            endpoints: [{ id: 'ep_get-tasks', method: 'GET', path: '/tasks' }],
+            fields: [],
+            calls: [],
+            unresolved: [],
+          }),
+        );
+        const outcome = run([a, partial]);
+        expect(outcome.status).toBe(2);
+        expect(outcome.out).toContain('missing "reads"');
       } finally {
         rmSync(dir, { recursive: true, force: true });
       }

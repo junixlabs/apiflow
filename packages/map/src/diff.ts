@@ -50,14 +50,17 @@ const share = (n: number, total: number) => (total === 0 ? 0 : (n / total) * 100
 // cm:why The headline is computed, not left to the reader: a dashboard is read as "bigger number =
 // better", so a scan that saw more while knowing less has to say so in words before showing the count.
 export function headlineFor(before: ApiMapFile, after: ApiMapFile): string {
-  // cm:guard Every count below can be flat while the endpoint LIST changed — a build that dropped
-  // one route and added another. Answered first, or the headline reports a swap as nothing.
-  const keysOf = (m: ApiMapFile) => new Set(m.endpoints.map((e) => key(e.method, e.path)));
-  const beforeKeys = keysOf(before);
-  const afterKeys = keysOf(after);
-  if (beforeKeys.size === afterKeys.size && [...afterKeys].some((k) => !beforeKeys.has(k))) {
-    return 'The same number of endpoints, but not the same endpoints.';
-  }
+  // cm:guard Consulted ONLY where the answer would otherwise be "No meaningful change." — every
+  // count here can be flat while the endpoint LIST changed, and that is the case it rescues.
+  // cm:guard Never ahead of the other rules: a swap that also collapsed the confidence must still
+  // report the collapse, which is the louder fact and the one a reader acts on.
+  const swapped = (): boolean => {
+    const keysOf = (m: ApiMapFile) => new Set(m.endpoints.map((e) => key(e.method, e.path)));
+    const beforeKeys = keysOf(before);
+    const afterKeys = keysOf(after);
+    return beforeKeys.size === afterKeys.size && [...afterKeys].some((k) => !beforeKeys.has(k));
+  };
+  const flat = (): string => (swapped() ? 'The same number of endpoints, but not the same endpoints.' : 'No meaningful change.');
   const b = split(before);
   const a = split(after);
   const bt = before.calls.length;
@@ -73,9 +76,12 @@ export function headlineFor(before: ApiMapFile, after: ApiMapFile): string {
     if (cov > 0 && trust > 1) return 'More endpoints and more of them have a declared shape.';
     if (cov > 0) return 'More endpoints read.';
     if (cov < 0) return 'Fewer endpoints read.';
-    if (trust > 1) return 'Same endpoints, more of them have a declared shape.';
-    if (trust < -1) return 'Same endpoints, fewer of them have a declared shape.';
-    return 'No meaningful change.';
+    // cm:guard These two are the only headlines that ASSERT the endpoints are the same, so a swap
+    // has to change the words, not merely be reported alongside them.
+    const shape = (dir: string) => (swapped() ? `Not the same endpoints, and ${dir} of them` : `Same endpoints, ${dir} of them`);
+    if (trust > 1) return `${shape('more')} have a declared shape.`;
+    if (trust < -1) return `${shape('fewer')} have a declared shape.`;
+    return flat();
   }
   const coverage = at - bt;
   const trust = share(a.exact + a.inferred, at) - share(b.exact + b.inferred, bt);
@@ -87,7 +93,7 @@ export function headlineFor(before: ApiMapFile, after: ApiMapFile): string {
   if (coverage > 0) return 'Wider coverage, certainty about the same.';
   if (coverage < 0 && trust > 1) return 'Narrower coverage, what is left is firmer.';
   if (coverage < 0) return 'Narrower coverage.';
-  if (Math.abs(trust) <= 1) return 'No meaningful change.';
+  if (Math.abs(trust) <= 1) return flat();
   return trust < 0 ? 'Weaker certainty.' : 'More certainty.';
 }
 

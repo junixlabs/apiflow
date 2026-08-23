@@ -1346,9 +1346,13 @@ function renderCompare() {
 
   const p1 = h('div', 'panel');
   p1.appendChild(h('h3', null, 'Overview'));
+  // cm:edge lockstep -> packages/map/src/diff.ts#diverged — every counter divergence weighs has a
+  // row. One missing leaves the pane showing flat bars under a verdict that says something moved.
   const rows1 = [
     ['screens', d.screens.before, d.screens.after, false],
     ['calls', d.calls.before, d.calls.after, false],
+    ['fields', d.fields.before, d.fields.after, false],
+    ['reads', d.reads.before, d.reads.after, false],
     ['unresolved', d.unresolved.before, d.unresolved.after, true],
   ];
   const epLine = h('div', 'barow');
