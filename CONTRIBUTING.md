@@ -9,21 +9,46 @@ node packages/cli/bin/cli.js --help     # runs from a clone, no build step
 for, §7 is what will not be built yet and under what condition each prohibition opens. A proposal
 that cannot be traced back to §2 is refused.
 
-## The five gates
+## The six gates
 
-All five run in CI on every push, and a green local run is the same run.
+All six run in CI on every push, and a green local run is the same run.
 
 ```bash
-npm test          # unit tests + the docs transcripts
+npm test           # unit tests + the docs transcripts + the fixture-map gate's own tamper test
 npm run lint
-npm run boundary  # the five structural rules in .dependency-cruiser.cjs
-npm run codemap   # the comment convention, at zero errors
+npm run boundary   # the five structural rules in .dependency-cruiser.cjs
+npm run codemap    # the comment convention, at zero errors
 npm run build
+npm run map:check  # the committed fixture maps still match the fixture source
 ```
 
 `npm run boundary` is not style. `packages/map` may import no node builtin, `map` may never import
 `scan`, neither may reach back into `cli`, and `mcp/mapTools.ts` must depend on `commands/` — the CLI
 is the reference implementation and MCP borrows its resolution rather than growing its own.
+
+`npm run map:check` is the one gate made of the product. `fixtures/demo-app/maps/` holds three
+committed maps — the FE half, the BE half, and the linked join — and the gate re-derives all three
+from the fixture source and fails on any byte difference. The halves are judged by `apiflow check`
+itself, so the gate a user is told to put in their CI is the same gate this repo runs on every push.
+The linked map is compared differently, because `apiflow check` refuses a linked map by design: there
+is no single side to re-scan, so the gate re-runs `apiflow link` over the two committed halves and
+compares bytes. Between them the whole chain is covered — `check` holds each half against the source,
+the re-link holds the join against the halves.
+
+**When it goes red, the fix is to refresh and commit:**
+
+```bash
+npm run map:refresh   # then commit the maps; the diff IS the change in scanner output
+```
+
+Never by dropping a map from the gate. These three files are the repo's only assertion that one
+source produces one set of bytes, which is the premise under sharing a map with no server, reviewing
+one in a pull request, and `check` gating somebody else's CI. A red gate on a scanner change is the
+gate working: read the diff, and if the new bytes are the better answer, commit them in the same
+change that produced them.
+
+The maps live outside both scan roots and outside `.apiview/` — that path is gitignored on purpose,
+and apiflow writing nothing into the tree it scans is a property worth more than the convenience.
 
 ## Releasing — three packages, one artifact
 

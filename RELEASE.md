@@ -4,9 +4,10 @@ Not release notes. This is the checklist, and it is short so that it is actually
 
 ## Before tagging
 
-1. `npm test` · `npx tsc -b` · `npm run lint` · `npm run boundary` · `npm run codemap` — all five,
-   all green. CI runs them on every push, so a red one here means you already knew.
-   Then `npm run verify:pack`, which the five do not cover: it packs `packages/cli` and asserts the
+1. `npm test` · `npx tsc -b` · `npm run lint` · `npm run boundary` · `npm run codemap` ·
+   `npm run map:check` — all six, all green. CI runs them on every push, so a red one here means you
+   already knew.
+   Then `npm run verify:pack`, which the six do not cover: it packs `packages/cli` and asserts the
    tarball is self-contained and carries no `.forge/` or `CLAUDE.md`.
 2. `CHANGELOG.md` has an entry that says what changed **and what it cost**. The existing entries are
    the standard: measured numbers, the fault that was found, no varnish.
@@ -28,7 +29,7 @@ Not release notes. This is the checklist, and it is short so that it is actually
 git tag vX.Y.Z && git push origin vX.Y.Z
 ```
 
-`.github/workflows/publish.yml` runs the five gates again, then `verify:pack`, then publishes **that
+`.github/workflows/publish.yml` runs the six gates again, then `verify:pack`, then publishes **that
 tarball by path** — never a bare `npm publish`, which at the repo root packs `.forge/` and `CLAUDE.md`
 into a public tarball. `ci.yml` is the
 one that runs on ordinary pushes; publishing is gated separately so a tag cannot skip the gates.

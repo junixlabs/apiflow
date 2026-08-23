@@ -25,6 +25,7 @@ jobs:
       - run: npm test
       - run: npm run boundary
       - run: npm run codemap
+      - run: npm run map:check
       - run: npm run verify:pack
       # cm:guard Publish from packages/cli, NEVER from the repo root: at the root `npm publish` packs
       # 170 files including .forge/ and CLAUDE.md into a public tarball, and only `private` refuses it.

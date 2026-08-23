@@ -186,12 +186,20 @@ left, under the §3 axis.
 3. ✅ **Documentation that cannot go stale.** `docs/guide/` is replayed by `tests/guide.test.ts`;
    `shipped` must pass, `upcoming` must fail, `reference` must say why it cannot be replayed.
    `docs/proposals/`, `docs/architecture/` and `docs/decisions/` deleted.
-4. **A map a team and an agent share — the part that does not need a server.** `.apimap` is already
-   byte-identical and machine-path-free, `impact --json` and `check` already exist. What is left is
-   the loop that closes deterministically: **apiflow's own map committed to this repo and gated by
-   `apiflow check` in its own CI.** This was previously filed as waiting on a hosting decision. It is
-   not: two people scanning one commit get identical bytes, so sharing needs no server, and hosting is
-   a separate and later question (§7).
+4. ✅ **The determinism claim is gated instead of asserted.** `.apimap` was described as
+   byte-identical and machine-path-free with nothing in CI checking it — the same fault as a document
+   that says the wrong thing. Now `fixtures/demo-app/maps/` holds three committed maps (FE half, BE
+   half, the linked join) and `npm run map:check` re-derives all three on every push, using
+   **`apiflow check` itself** for the halves. A scanner change that moves the bytes turns CI red and
+   names the line; the sanctioned fix is `npm run map:refresh` and a commit, never muting the gate.
+   Two corrections to the earlier wording of this item. It said "apiflow's own map", which was never
+   possible: apiflow is a CLI with no screen to scan and no HTTP endpoint to serve, so the fixture is
+   the only place in the repo holding both halves, and that is where the loop closes. And it is the
+   *linked* map that `apiflow check` cannot gate — `sideOf()` is null for `apiflow link/1`, so there
+   is no side to re-scan — which is why that one is gated by re-linking the two halves and comparing
+   bytes. **This does not satisfy the §7 hosting condition.** The fixture is this repo's own, not a
+   real CI pushing a map, and reading it as one would be claiming the project's largest risk is
+   retired while the consumer count is still zero — §6 exactly.
 5. ✅ **The comment-grammar debt is paid and the gate is on.** `npm run codemap` runs in CI and reports
    **0 errors**; 157 of 160 legacy prose comments are cleaned and the remaining 3 are frozen, not
    invisible. The gate went on only after the number reached zero — a red gate teaches people to ignore
@@ -217,6 +225,23 @@ left, under the §3 axis.
 
 ## 9. Decision log
 
+- **2026-08-23** — **The determinism loop closes on the fixture, and that is not a consumer.** §8.4
+  asked for "apiflow's own map committed and gated in its own CI" for eight days. It cannot be built:
+  apiflow is a CLI, so it has no screen for `scan-fe` to find and no HTTP route for `scan-be` to read,
+  and a map of it would be two empty arrays gating nothing. `fixtures/demo-app/` is the only place in
+  the repo with both halves, so that is where three maps are committed and where `npm run map:check`
+  re-derives them on every push. Measured before: 5 fixture source files tracked, 0 `.apimap`, and
+  five gates none of which asserted that one source produces one set of bytes — the claim was in this
+  file and nowhere else.
+  Two things this decision deliberately does **not** do. It does not open §7's hosted map: the
+  condition is "a real CI is already pushing a map", and a repo's own fixture is not a user. Reading
+  it as one would announce that the project's largest risk — an engine with no consumer — is retired
+  while the consumer count is still zero, which is the §6 trap written down. And it does not add an
+  `apiflow diff` command to report the divergence, though `diffMaps` has existed in `packages/map`
+  since before this: `check` already renders it for the halves, and inventing a second reporter here
+  would be code for a consumer that does not exist yet.
+  The cost: a sixth gate, and the fixture source can no longer be edited without refreshing three
+  files. That is the intended cost — the fixture's map used to be free to be wrong.
 - **2026-08-23** — **The request runner is its own repo; this one is the engine only.** It was 9,873
   lines: 5,094 of React canvas with zero tests, against 1,729 lines of tested headless core. Split to
   `junixlabs/apiflow-runner` rather than retired, because the core is real — four working parsers, an

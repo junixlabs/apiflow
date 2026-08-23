@@ -1,0 +1,70 @@
+{
+  "version": 1,
+  "metadata": {
+    "name": "api",
+    "root": "github.com/junixlabs/apiflow//fixtures/demo-app/api",
+    "generator": "apiflow scan-be/4"
+  },
+  "screens": [],
+  "endpoints": [
+    {
+      "id": "ep_delete-users-param",
+      "method": "DELETE",
+      "path": "/users/{param}",
+      "source": {
+        "file": "src/routes/users.ts",
+        "line": 7
+      },
+      "auth": false
+    },
+    {
+      "id": "ep_get-users",
+      "method": "GET",
+      "path": "/users",
+      "source": {
+        "file": "src/routes/users.ts",
+        "line": 5
+      },
+      "auth": false
+    },
+    {
+      "id": "ep_get-users-param",
+      "method": "GET",
+      "path": "/users/{param}",
+      "source": {
+        "file": "src/routes/users.ts",
+        "line": 6
+      },
+      "auth": false
+    }
+  ],
+  "fields": [],
+  "calls": [],
+  "reads": [],
+  "unresolved": [
+    {
+      "source": {
+        "file": "src/routes/users.ts",
+        "line": 5
+      },
+      "reason": "GET /users — no request or response schema found in code",
+      "snippet": "(no named handler)"
+    },
+    {
+      "source": {
+        "file": "src/routes/users.ts",
+        "line": 6
+      },
+      "reason": "GET /users/{param} — no request or response schema found in code",
+      "snippet": "(no named handler)"
+    },
+    {
+      "source": {
+        "file": "src/routes/users.ts",
+        "line": 7
+      },
+      "reason": "DELETE /users/{param} — no request or response schema found in code",
+      "snippet": "(no named handler)"
+    }
+  ]
+}

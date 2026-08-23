@@ -1,0 +1,151 @@
+{
+  "version": 1,
+  "metadata": {
+    "name": "web",
+    "root": "github.com/junixlabs/apiflow//fixtures/demo-app/web",
+    "generator": "apiflow scan-fe/4"
+  },
+  "screens": [
+    {
+      "id": "sc_src-api-users-ts-removeuser",
+      "label": "removeUser",
+      "source": {
+        "file": "src/api/users.ts",
+        "line": 1
+      },
+      "symbol": "removeUser"
+    },
+    {
+      "id": "sc_users",
+      "label": "/users",
+      "route": "/users",
+      "source": {
+        "file": "src/pages/users/index.tsx",
+        "line": 4
+      },
+      "viaHops": 1
+    },
+    {
+      "id": "sc_users-param",
+      "label": "/users/{param}",
+      "route": "/users/{param}",
+      "source": {
+        "file": "src/pages/users/[id].tsx",
+        "line": 4
+      },
+      "viaHops": 2
+    }
+  ],
+  "endpoints": [
+    {
+      "id": "ep_delete-users-param",
+      "method": "DELETE",
+      "path": "/users/{param}",
+      "baseUrlVar": "BASE"
+    },
+    {
+      "id": "ep_get-api-users",
+      "method": "GET",
+      "path": "/api/users"
+    },
+    {
+      "id": "ep_get-users-param",
+      "method": "GET",
+      "path": "/users/{param}",
+      "baseUrlVar": "BASE"
+    }
+  ],
+  "fields": [],
+  "calls": [
+    {
+      "screenId": "sc_src-api-users-ts-removeuser",
+      "endpointId": "ep_delete-users-param",
+      "via": "fetch",
+      "confidence": "inferred",
+      "source": {
+        "file": "src/api/users.ts",
+        "line": 14
+      }
+    },
+    {
+      "screenId": "sc_users-param",
+      "endpointId": "ep_get-users-param",
+      "via": "fetch",
+      "confidence": "guess",
+      "source": {
+        "file": "src/api/users.ts",
+        "line": 4
+      },
+      "chain": [
+        0,
+        1,
+        2
+      ]
+    },
+    {
+      "screenId": "sc_users",
+      "endpointId": "ep_get-api-users",
+      "via": "fetch",
+      "confidence": "inferred",
+      "source": {
+        "file": "src/api/users.ts",
+        "line": 9
+      },
+      "chain": [
+        3,
+        4
+      ]
+    }
+  ],
+  "reads": [],
+  "unresolved": [
+    {
+      "source": {
+        "file": "src/hooks/useUser.ts",
+        "line": 4
+      },
+      "reason": "url is a variable or expression: id",
+      "snippet": "return fetchUser(id);"
+    },
+    {
+      "source": {
+        "file": "src/pages/users/[id].tsx",
+        "line": 4
+      },
+      "reason": "url is a variable or expression: id",
+      "snippet": "const user = useUser(id);"
+    }
+  ],
+  "chainNodes": [
+    {
+      "file": "src/api/users.ts",
+      "symbol": "fetchUser",
+      "line": 3,
+      "role": "client"
+    },
+    {
+      "file": "src/hooks/useUser.ts",
+      "symbol": "useUser",
+      "line": 4,
+      "role": "hook"
+    },
+    {
+      "file": "src/pages/users/[id].tsx",
+      "symbol": "UserPage",
+      "line": 4,
+      "role": "screen"
+    },
+    {
+      "file": "src/api/users.ts",
+      "symbol": "listUsers",
+      "line": 8,
+      "role": "client"
+    },
+    {
+      "file": "src/pages/users/index.tsx",
+      "symbol": "UserListPage",
+      "line": 4,
+      "role": "screen"
+    }
+  ]
+}

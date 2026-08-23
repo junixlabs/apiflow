@@ -45,6 +45,29 @@ the failure the flat 50-entry cap above it already has.
 
 `docs/guide/05-the-unresolved-backlog.md` is the replayed transcript.
 
+### Added — the fixture's map is committed, and CI re-derives it
+
+`fixtures/demo-app/maps/` now holds three maps under version control — the FE half, the BE half and
+the linked join — and a sixth gate, `npm run map:check`, rebuilds all three from the fixture source on
+every push. The halves are judged by **`apiflow check` itself**, so the command a user is told to put
+in their CI is the command this repo runs on its own. The linked map is gated by re-running
+`apiflow link` over the two committed halves and comparing bytes, because `check` refuses a linked map
+by design: `sideOf()` is null for generator `apiflow link/1`, so there is no side to re-scan.
+
+What this closes: `.apimap` being byte-identical from one source is the premise under sharing a map
+with no server, reviewing one in a pull request, and `check` gating somebody else's CI — and until now
+it was **claimed in `NORTH-STAR.md` and checked nowhere**. Measured before the change: 5 tracked
+fixture source files, 0 tracked `.apimap`, five gates, none asserting determinism of the file.
+
+Verified by tampering, not by assertion: rewriting one string in `packages/scan/src/feScanner.ts`
+turned the gate red with `First difference at line 107 of 152` and both versions of that line printed.
+`tests/fixture-map.test.ts` keeps that property — it corrupts a copy of each golden and asserts the
+gate exits 1, so the gate cannot quietly stop gating. The fix when it goes red is
+`npm run map:refresh` and a commit; the diff is the change in scanner output.
+
+The maps sit outside both scan roots and outside `.apiview/`, which stays gitignored: apiflow writing
+nothing into the tree it scans is worth more than the convenience of putting them there.
+
 ### Fixed — the guide's landing page can no longer disagree with a page
 
 `docs/guide/index.md` still showed page 02's pill as `upcoming` after the page had shipped. The pill is
