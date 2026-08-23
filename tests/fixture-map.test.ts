@@ -110,7 +110,7 @@ describe('the fixture maps are gated, not just committed', () => {
         }
         const { code, out } = runGate(dir);
         expect(code, out).toBe(1);
-        expect(out).toContain('not in the repo');
+        expect(out).toContain('could not be read');
         expect(out).not.toContain('at Object.readFileSync');
         expect(out).toContain('npm run map:refresh');
       } finally {

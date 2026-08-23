@@ -66,10 +66,10 @@ golden **minified in place passed it** — measured, and the reason that compare
 
 Verified by tampering, not by assertion: rewriting one string in `packages/scan/src/feScanner.ts`
 turned the gate red with `First difference at line 107 of 152` and both versions of that line printed.
-`tests/fixture-map.test.ts` keeps that property — six cases, each corrupting a copy of a golden a
-different way (drift, reformatting, a tampered link, deletion, unparseable) and asserting exit 1 — so
-the gate cannot quietly stop gating. The fix when it goes red is `npm run map:refresh` and a commit;
-the diff is the change in scanner output.
+`tests/fixture-map.test.ts` keeps that property — one case asserting the committed maps pass, and five
+corrupting a copy of a golden a different way (drift, reformatting, a tampered link, deletion,
+unparseable) and asserting exit 1 — so the gate cannot quietly stop gating. The fix when it goes red
+is `npm run map:refresh` and a commit; the diff is the change in scanner output.
 
 One limit, in `CONTRIBUTING.md` rather than worked around: the gate needs a clone whose `origin`
 normalizes to `github.com/junixlabs/apiflow`, because `check` exits 2 when the map's repo identity
@@ -86,6 +86,16 @@ the only place a page's status is written twice, so it is the only place one can
 replayed it. `tests/guide.test.ts` now asserts every guide page has a card whose pill matches its
 frontmatter — the same discipline the statuses themselves already have: a test result, not a label
 somebody remembered to change.
+
+### Fixed — `scan-be --out` wrote the format in its own spelling
+
+`scanBe.ts` wrote its map with a bare `JSON.stringify(map, null, 2)` while `check --write`,
+`link --out` and `scan-fe --out` all go through `serializeMap`. Byte-identical for every BE map
+producible today, because `serializeMap`'s chain table is emitted only when a map has `calls` and a BE
+map has none — which is exactly why it survived: the day a BE map carries a call chain, a map written
+by `scan-be` fails its own `apiflow check`, and no refresh can fix it because the two commands
+disagree about the file. Found while building the gate above, which holds one command's output against
+the other's and would have been the thing that could not be made green.
 
 ### Fixed — a wrapper's definition line is no longer a call to itself
 

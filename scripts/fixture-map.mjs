@@ -1,5 +1,5 @@
 import { spawnSync } from 'node:child_process';
-import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -41,6 +41,14 @@ function apiflow(argv) {
 function mapName(path) {
   try {
     return JSON.parse(readFileSync(path, 'utf8')).metadata.name;
+  } catch {
+    return null;
+  }
+}
+
+function readIfPossible(path) {
+  try {
+    return readFileSync(path, 'utf8');
   } catch {
     return null;
   }
@@ -125,15 +133,17 @@ if (write) {
   const fresh = join(scratch, LINKED);
   const run = apiflow(['link', fe, be, `--out=${fresh}`]);
   console.log('');
-  // cm:guard Reports a deleted map instead of throwing on the read: dropping a map from the gate is
-  // the one action CONTRIBUTING forbids by name, so it must not be the case that prints a stack trace.
-  const stored = existsSync(linked) ? readFileSync(linked, 'utf8') : null;
+  // cm:guard Reports an unreadable map instead of throwing on the read: dropping a map from the gate
+  // is the one action CONTRIBUTING forbids by name, so it must not answer with a stack trace.
+  // cm:guard Catches rather than testing existence — a directory and a mode-000 file both exist and
+  // both throw, and the earlier existsSync spelling let those two through to an uncaught error.
+  const stored = readIfPossible(linked);
   if (run.status !== 0) {
     process.stderr.write(run.stderr ?? '');
     failures.push(`${relative(root, linked)} — apiflow link exited ${String(run.status)}`);
   } else if (stored === null) {
-    console.log('**Verdict**: this map is not in the repo. It is not optional — see the note below.');
-    failures.push(`${relative(root, linked)} — missing`);
+    console.log('**Verdict**: this map could not be read. It is not optional — see the note below.');
+    failures.push(`${relative(root, linked)} — missing or unreadable`);
   } else {
     const rebuilt = readFileSync(fresh, 'utf8');
     if (stored === rebuilt) {

@@ -2,7 +2,7 @@ import { readFileSync, mkdirSync, writeFileSync, statSync, existsSync, realpathS
 import { join, relative, resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import type { ApiMapFile, FieldNode } from '@junixlabs/apiflow-map';
-import { createApiMap, endpointId, fieldId, finalizeApiMap, normalizePath } from '@junixlabs/apiflow-map';
+import { createApiMap, endpointId, fieldId, finalizeApiMap, normalizePath, serializeMap } from '@junixlabs/apiflow-map';
 import { scanOrigin } from '../workspace/scanOrigin';
 import type { ClassIndex, SchemaDef, Stack } from '@junixlabs/apiflow-scan';
 import { detectStack, indexClasses, isBackendFile, laravelRouteFilePrefixes, resolveHandlerSchemas, scanBackendFile } from '@junixlabs/apiflow-scan';
@@ -280,13 +280,17 @@ function main(): void {
   const name = flag('name') ?? (root.split('/').pop() || 'backend');
   const result = scanBackend(root, name);
 
+  // cm:guard Serialized by `serializeMap`, never by a bare JSON.stringify: `check --write` and
+  // `link --out` both use it, so a second speller here means two spellings of one file format.
+  // cm:why Identical output for every BE map today — no `calls`, so no chain table — which is exactly
+  // why it went unnoticed: the day a BE map carries one, a scanned map would fail its own `check`.
   if (args.includes('--json')) {
-    process.stdout.write(JSON.stringify(result.map, null, 2));
+    process.stdout.write(serializeMap(result.map));
     return;
   }
   const outPath = resolve(flag('out') ?? join(root, '.apiview', 'map', `${name}.apimap`));
   mkdirSync(dirname(outPath), { recursive: true });
-  writeFileSync(outPath, `${JSON.stringify(result.map, null, 2)}\n`);
+  writeFileSync(outPath, serializeMap(result.map));
   console.log(renderBeReport(result, outPath));
 }
 
