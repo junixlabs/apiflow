@@ -243,8 +243,10 @@ left, under the §3 axis.
   in the contract". `headlineFor` compared endpoint *counts*, so a build that swapped one route for
   another printed `No meaningful change.` above the list of the two routes. `parseMap` checked
   `version` and nothing else, so a map omitting an empty array crashed inside a query and exited a code
-  the command spends on an answer *about* the map — every command that reads a map path now refuses
-  through one loader, each with the code that means "no verdict" in its own protocol. The MCP `check`
+  the command spends on an answer *about* the map — the six commands that read a map path now refuse
+  through one loader, each with the code that means "no verdict" in its own protocol. `project import`
+  and `project add --be-map` still parse directly; they were already failing cleanly, so there was no
+  false verdict there to fix. The MCP `check`
   tool reported drift over five flat counters with nothing to explain them. And two `cm:` annotations
   had stopped being true, one of them inert inside a `String.raw` where codemap cannot read it — under
   a convention that bans ordinary comments so the survivors can be trusted, that is a defect.

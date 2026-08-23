@@ -39,8 +39,9 @@ reporting drift over five flat numbers with nothing to explain them.
 
 Two of them came from pointing `diff` at its own first transcript: the counters and the headline. The
 other three came from independent review of that work — the parse gap, the MCP tool's unexplained
-verdict, and two `cm:` annotations that had stopped being true. None of the five says anything when
-it fires.
+verdict, and two `cm:` annotations that had stopped being true. None of the five says anything when it
+fires. The MCP one is described under `apiflow diff` above, with the renderer it belongs to; the other
+four are below.
 
 `parseMap` validated `version` and nothing else, so a map that omitted an empty array — the ordinary
 way to hand-write one — reached the queries and died on `.length` deep inside them. Through `diff`
