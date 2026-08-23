@@ -87,7 +87,7 @@ replayed it. `tests/guide.test.ts` now asserts every guide page has a card whose
 frontmatter — the same discipline the statuses themselves already have: a test result, not a label
 somebody remembered to change.
 
-### Fixed — `scan-be --out` wrote the format in its own spelling
+### Fixed — `scan-be` wrote the format in its own spelling
 
 `scanBe.ts` wrote its map with a bare `JSON.stringify(map, null, 2)` while `check --write`,
 `link --out` and `scan-fe --out` all go through `serializeMap`. Byte-identical for every BE map
@@ -96,6 +96,10 @@ map has none — which is exactly why it survived: the day a BE map carries a ca
 by `scan-be` fails its own `apiflow check`, and no refresh can fix it because the two commands
 disagree about the file. Found while building the gate above, which holds one command's output against
 the other's and would have been the thing that could not be made green.
+
+`--out` bytes did not move — the committed goldens are unchanged, and one of them was generated before
+this fix. The one observable change is `scan-be --json`, which now ends in a newline, matching
+`scan-fe --json`, which has gone through `serializeMap` all along.
 
 ### Fixed — a wrapper's definition line is no longer a call to itself
 
