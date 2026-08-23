@@ -1196,6 +1196,8 @@ function renderScreens() {
 export const PANES_SCRIPT_3 = String.raw`
 // cm:why Grouped by REASON, not listed flat: 9 311 unresolved calls as one list is unreadable, while
 // "url is a variable: 4,812" tells you which single fix would move the coverage number most.
+// cm:edge contract -> packages/map/src/backlog.ts#unresolvedShape — the CLI groups the same entries
+// there; this is untyped browser JS and cannot import it, so the two must keep grouping alike.
 function reasonKey(reason) {
   if (/no request or response schema/.test(reason)) return 'no request/response schema found in the code';
   if (/entirely interpolated/.test(reason)) return 'the url is entirely interpolated';

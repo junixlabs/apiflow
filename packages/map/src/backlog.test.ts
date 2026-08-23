@@ -50,6 +50,20 @@ describe('unresolvedShape', () => {
     );
   });
 
+  it('strips a path that contains a space, which one token cannot match', () => {
+    expect(unresolvedShape('GET /user profile — no request or response schema found in code')).toBe(
+      'no request or response schema found in code'
+    );
+    expect(unresolvedShape('POST /v1/reports 2024 — no request or response schema found in code')).toBe(
+      'no request or response schema found in code'
+    );
+  });
+
+  it('collapses digits only for the producer that interpolates a count', () => {
+    expect(unresolvedShape('GET /v1/reports 2024 — no request or response schema found in code')).not.toContain('N');
+    expect(unresolvedShape('url is a variable or expression: page2')).toBe('url is a variable or expression');
+  });
+
   it('leaves every fixed reason byte-identical', () => {
     for (const reason of FIXED) expect(unresolvedShape(reason)).toBe(reason);
   });

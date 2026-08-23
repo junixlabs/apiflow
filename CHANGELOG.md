@@ -20,12 +20,17 @@ source, and a saturated attribution carries its fan-out count. On `fixtures/demo
 lines, 3 strings, **1** shape. On the Hono API this repo measured — 2 routes understood out of 103 —
 it is ~101 lines and still **1** shape, which the flat list cannot show at all.
 
-Normalization is three narrow rules, one per interpolating producer: strip a leading `<VERB> <path> — `,
-cut at the **first** `: ` (feScanner slices 60 raw characters, so `…expression: id: string` arrives
-with a second colon and a trailing cut would keep half of it), and collapse digit runs to `N`. It is
-deliberately not a general "erase anything variable-looking" pass — a wider rule folds two different
-causes into one line, and a ranking that points at a shape nobody wrote is worse than no ranking. The
-five `reason` strings that are already fixed pass through byte-identical, asserted per string.
+Normalization is three narrow rules, one per interpolating producer, and each is **gated on something
+only its own producer writes**: cut everything before the first ` — ` when the line opens with an HTTP
+verb (anchored to the separator, not matching the path as one token — a route may contain a space, and
+`/user profile` then leaked back into the ranking); cut at the **first** `: ` (feScanner slices 60 raw
+characters, so `…expression: id: string` arrives with a second colon and a trailing cut would keep half
+of it); collapse digit runs to `N` only when the line opens with `reachable from `. Both halves of that
+discipline earn their keep: a wider rule folds two different causes into one line, and an ungated rule
+fires on a reason it was not written for — ungated, the digit rule turned a surviving `/v1/reports 2024`
+into `/vN/reports N`, a string nothing in the tool emits. A ranking that points at a shape nobody wrote
+is worse than no ranking. The five `reason` strings that are already fixed pass through byte-identical,
+asserted per string.
 
 Two consequences worth stating. A shape carries **no URL and no payload** — the variable half of the
 sentence is exactly what normalization removes — so a ranking is pasteable from a codebase you cannot
