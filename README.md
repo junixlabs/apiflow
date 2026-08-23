@@ -79,6 +79,7 @@ ours.
 | `link <fe> <be>` | join the two halves: a field sent but never read, declared but never sent, an endpoint nobody calls |
 | `impact <map>` | which screens break — `--endpoint` / `--field` / `--screen`, `--json` |
 | `check <map>` | is the map still true — CI gate, exit 0 clean · 1 drifted · 2 cannot check |
+| `diff <a> <b>` | two map files, no source and any generator — did the build match the map it was designed from? exit 0 match · 1 diverged · 2 no verdict |
 | `ui` · `hub` · `view` | browser UI (live, static workspace, single map) |
 | `mcp map` | MCP server for an agent: 7 read-only tools over the map |
 

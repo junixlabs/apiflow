@@ -5,7 +5,8 @@ import type { ApiMapFile } from '@junixlabs/apiflow-map';
 import type { Side } from '@junixlabs/apiflow-map';
 import { parseMap, serializeMap, sideOf } from '@junixlabs/apiflow-map';
 import type { MapDiff } from '@junixlabs/apiflow-map';
-import { diffMaps } from '@junixlabs/apiflow-map';
+import { diffMaps, diverged } from '@junixlabs/apiflow-map';
+import { renderMapDiff } from './diff';
 import { localRootFor } from '../workspace/registry';
 import { scanOrigin } from '../workspace/scanOrigin';
 import { GENERATOR as BE_GENERATOR, scanBackend } from './scanBe';
@@ -40,14 +41,7 @@ export interface CheckResult {
 export function checkAgainst(stored: ApiMapFile, fresh: ApiMapFile): CheckResult {
   const identical = serializeMap(stored) === serializeMap(fresh);
   const diff = diffMaps(stored, fresh);
-  const structural =
-    diff.endpoints.added.length > 0 ||
-    diff.endpoints.removed.length > 0 ||
-    diff.endpoints.changed.length > 0 ||
-    diff.calls.before !== diff.calls.after ||
-    diff.screens.before !== diff.screens.after ||
-    diff.unresolved.before !== diff.unresolved.after;
-  return { drifted: !identical, identical, diff, structural };
+  return { drifted: !identical, identical, diff, structural: diverged(diff) };
 }
 
 export function renderCheck(result: CheckResult, mapPath: string, reader?: string | null): string {
@@ -74,19 +68,7 @@ export function renderCheck(result: CheckResult, mapPath: string, reader?: strin
     lines.push('unresolved list or the metadata.');
   }
   lines.push('');
-  const show = (label: string, items: Array<{ method: string; path: string }>): void => {
-    if (items.length === 0) return;
-    lines.push(`### ${label} — ${items.length}`);
-    for (const e of items.slice(0, 20)) lines.push(`- \`${e.method} ${e.path}\``);
-    if (items.length > 20) lines.push(`- … and ${items.length - 20} more`);
-    lines.push('');
-  };
-  show('In the code, missing from the map', diff.endpoints.added);
-  show('In the map, gone from the code', diff.endpoints.removed);
-  show('Changed — auth gate or declaring side', diff.endpoints.changed);
-  lines.push(`**Screens**: ${diff.screens.before} → ${diff.screens.after}`);
-  lines.push(`**Calls**: ${diff.calls.before} → ${diff.calls.after}`);
-  lines.push(`**Unresolved**: ${diff.unresolved.before} → ${diff.unresolved.after}`);
+  lines.push(...renderMapDiff(diff, { before: 'the map', after: 'the code' }));
   if (!result.structural) {
     lines.push('');
     // cm:why Names the usual cause first. Measured on a live repo: same 27 screens / 182 calls, but

@@ -225,6 +225,25 @@ left, under the §3 axis.
 
 ## 9. Decision log
 
+- **2026-08-23** — **`apiflow diff` is added, reversing the entry below it, because the consumer
+  arrived.** The entry below refused this command on one ground and one only: "inventing a second
+  reporter here would be code for a consumer that does not exist yet." That reason expired when the
+  owner chose the target repo for ISS-9 and chose to build it **contract-first** — `be.apimap` and
+  `fe.apimap` written by hand *before* the source, then measured against a real `scan-be`/`scan-fe`
+  once the thing is built. There is no other command that can make that comparison: `check` re-scans
+  a side, and it refuses a map whose generator it does not know, which is every hand-written one.
+  The "second reporter" objection is answered by construction rather than argued with. `renderMapDiff`
+  is `check`'s own panel, lifted with the two sides named by the caller — there is one renderer, and
+  one exported `diverged()` predicate, not a copy of each per command.
+  Two defects fell out of pointing the new command at its own first transcript, and both were silent
+  passes: `MapDiff` counted four of the format's six collections, omitting `fields` and `reads` —
+  precisely "which field vanished" and "which screen reads something not in the contract" — and
+  `headlineFor` compared endpoint *counts*, so a build that swapped one route for another printed
+  `No meaningful change.` above the list of the two routes.
+  **This still does not open §7's hosted map.** The condition there is a real CI pushing a map, and
+  the repo this command was built for has not been written yet. A tool the finish line needs is not
+  the finish line, and ISS-9 stays open.
+
 - **2026-08-23** — **The determinism loop closes on the fixture, and that is not a consumer.** §8.4
   asked for "apiflow's own map committed and gated in its own CI" for eight days. It cannot be built:
   apiflow is a CLI, so it has no screen for `scan-fe` to find and no HTTP route for `scan-be` to read,

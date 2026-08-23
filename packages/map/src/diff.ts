@@ -13,7 +13,28 @@ export interface MapDiff {
   confidence: { before: Record<Confidence, number>; after: Record<Confidence, number> };
   unresolved: { before: number; after: number };
   screens: { before: number; after: number };
+  fields: { before: number; after: number };
+  reads: { before: number; after: number };
   headline: string;
+}
+
+// cm:guard Every top-level collection of ApiMapFile is counted here — one left out is a whole class
+// of change the gate passes in silence.
+// cm:why fields and reads were both missing, and they carry the two questions a contract map exists
+// to answer: which field vanished, and which screen started reading something not in the contract.
+// cm:guard Divergence is defined ONCE. A second copy inside a command drifts from this one, and two
+// answers to "are these the same map" is the failure the shared renderer exists to prevent.
+export function diverged(diff: MapDiff): boolean {
+  return (
+    diff.endpoints.added.length > 0 ||
+    diff.endpoints.removed.length > 0 ||
+    diff.endpoints.changed.length > 0 ||
+    diff.calls.before !== diff.calls.after ||
+    diff.screens.before !== diff.screens.after ||
+    diff.fields.before !== diff.fields.after ||
+    diff.reads.before !== diff.reads.after ||
+    diff.unresolved.before !== diff.unresolved.after
+  );
 }
 
 const key = (method: MapMethod, path: string) => `${method} ${path}`;
@@ -29,6 +50,14 @@ const share = (n: number, total: number) => (total === 0 ? 0 : (n / total) * 100
 // cm:why The headline is computed, not left to the reader: a dashboard is read as "bigger number =
 // better", so a scan that saw more while knowing less has to say so in words before showing the count.
 export function headlineFor(before: ApiMapFile, after: ApiMapFile): string {
+  // cm:guard Every count below can be flat while the endpoint LIST changed — a build that dropped
+  // one route and added another. Answered first, or the headline reports a swap as nothing.
+  const keysOf = (m: ApiMapFile) => new Set(m.endpoints.map((e) => key(e.method, e.path)));
+  const beforeKeys = keysOf(before);
+  const afterKeys = keysOf(after);
+  if (beforeKeys.size === afterKeys.size && [...afterKeys].some((k) => !beforeKeys.has(k))) {
+    return 'The same number of endpoints, but not the same endpoints.';
+  }
   const b = split(before);
   const a = split(after);
   const bt = before.calls.length;
@@ -107,6 +136,8 @@ export function diffMaps(before: ApiMapFile, after: ApiMapFile): MapDiff {
     confidence: { before: split(before), after: split(after) },
     unresolved: { before: before.unresolved.length, after: after.unresolved.length },
     screens: { before: before.screens.length, after: after.screens.length },
+    fields: { before: before.fields.length, after: after.fields.length },
+    reads: { before: before.reads.length, after: after.reads.length },
     headline: headlineFor(before, after),
   };
 }

@@ -52,6 +52,10 @@ const HELP = `apiflow — a screen ↔ endpoint ↔ field map
 
   apiflow impact <map> [--endpoint=… | --field=… | --screen=…] [--json]
   apiflow check <map> [--root=<dir>] [--json] [--write]
+  apiflow diff <before.apimap> <after.apimap> [--json]
+                                 compares two maps as files — no source, no scanner, any generator.
+                                 Exits 1 when the counted surface differs, so CI can gate a build
+                                 against the map it was designed from.
   apiflow view <map> --out=<file.html>
 
   apiflow mcp map                MCP server that READS THE MAP — 7 tools, for an agent
@@ -95,6 +99,7 @@ const SUBCOMMANDS = {
   link: 'commands/link.ts',
   impact: 'commands/impact.ts',
   check: 'commands/check.ts',
+  diff: 'commands/diff.ts',
   'mcp-map': 'mcp/mapServer.ts',
   view: 'commands/view.ts',
   project: 'commands/project.ts',

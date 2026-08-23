@@ -61,4 +61,9 @@ test. Writing one is [in CONTRIBUTING](https://github.com/junixlabs/apiflow/blob
     <h3>Unresolved is a backlog, not an error log</h3>
     <p>The same gap spelled 101 ways is one line of work. Ranking by shape is what shows that.</p>
   </a>
+  <a class="card" href="06-diff-two-maps.html">
+    <span class="pill shipped">shipped</span>
+    <h3>Did the build match the contract?</h3>
+    <p>Write the map before the source, then diff it against what got built. Two files, no scanner.</p>
+  </a>
 </div>

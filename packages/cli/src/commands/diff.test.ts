@@ -1,0 +1,141 @@
+import { describe, expect, it } from 'vitest';
+import { execFileSync } from 'child_process';
+import { mkdtempSync, rmSync, writeFileSync } from 'fs';
+import { tmpdir } from 'os';
+import { dirname, join, resolve } from 'path';
+import { fileURLToPath } from 'url';
+import type { ApiMapFile } from '@junixlabs/apiflow-map';
+import { createApiMap, endpointId, fieldId, finalizeApiMap, serializeMap, sideOf } from '@junixlabs/apiflow-map';
+import { diffAgainst, renderDiff, renderMapDiff } from './diff';
+
+const CLI = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..', 'bin', 'cli.js');
+
+function handWritten(paths: string[], withField: boolean): ApiMapFile {
+  const map = createApiMap('planner', 'github.com/acme/planner', 'hand-written/1');
+  for (const path of paths) {
+    const id = endpointId('GET', path);
+    map.endpoints.push({ id, method: 'GET', path });
+    if (withField) map.fields.push({ id: fieldId(id, 'id'), endpointId: id, path: 'id', kind: 'response' });
+  }
+  return finalizeApiMap(map);
+}
+
+function write(map: ApiMapFile, dir: string, name: string): string {
+  const file = join(dir, name);
+  writeFileSync(file, serializeMap(map));
+  return file;
+}
+
+function run(args: string[]): { status: number; out: string } {
+  try {
+    return { status: 0, out: execFileSync(process.execPath, [CLI, 'diff', ...args], { encoding: 'utf8' }) };
+  } catch (e) {
+    const err = e as { status?: number; stdout?: string; stderr?: string };
+    return { status: err.status ?? -1, out: `${err.stdout ?? ''}${err.stderr ?? ''}` };
+  }
+}
+
+describe('apiflow diff', () => {
+  // cm:why The case the command exists for. `check` refuses a hand-written generator outright, so a
+  // contract map written before the source could not be compared to anything until now.
+  it('compares maps whose generator check refuses', () => {
+    const map = handWritten(['/tasks'], false);
+    expect(sideOf(map)).toBeNull();
+    const result = diffAgainst(map, handWritten(['/tasks'], false));
+    expect(result.diverged).toBe(false);
+    expect(result.identical).toBe(true);
+  });
+
+  it('names the endpoint the build added and the one it dropped', () => {
+    const result = diffAgainst(handWritten(['/tasks'], false), handWritten(['/projects'], false));
+    expect(result.diverged).toBe(true);
+    const text = renderDiff(result, 'design.apimap', 'built.apimap');
+    expect(text).toContain('In the after map, missing from the before map');
+    expect(text).toContain('`GET /projects`');
+    expect(text).toContain('In the before map, gone from the after map');
+    expect(text).toContain('`GET /tasks`');
+  });
+
+  // cm:why A field vanishing while the endpoint list holds is the failure a contract gate is bought
+  // for, and every counter MapDiff had before this change stays flat through it.
+  it('diverges when a field disappears and no endpoint moved', () => {
+    const result = diffAgainst(handWritten(['/tasks'], true), handWritten(['/tasks'], false));
+    expect(result.diff.endpoints.added).toHaveLength(0);
+    expect(result.diff.endpoints.removed).toHaveLength(0);
+    expect(result.diff.fields).toEqual({ before: 1, after: 0 });
+    expect(result.diverged).toBe(true);
+  });
+
+  // cm:why Found by this command on its own first transcript: a design map and a build that swapped
+  // one route for another got the headline "No meaningful change." above a list of the two routes.
+  it('does not call a swapped endpoint no meaningful change', () => {
+    const result = diffAgainst(handWritten(['/tasks'], false), handWritten(['/projects'], false));
+    expect(result.diff.headline).toBe('The same number of endpoints, but not the same endpoints.');
+  });
+
+  it('reports the counted surface as matching when only the bytes moved', () => {
+    const before = handWritten(['/tasks'], false);
+    const after = createApiMap('planner', 'github.com/acme/planner', 'apiflow scan-be/4');
+    after.endpoints.push({ id: endpointId('GET', '/tasks'), method: 'GET', path: '/tasks' });
+    const result = diffAgainst(before, finalizeApiMap(after));
+    expect(result.diverged).toBe(false);
+    expect(result.identical).toBe(false);
+    expect(renderDiff(result, 'a', 'b')).toContain('the counted surface matches');
+  });
+
+  it('names the sides its caller gave it', () => {
+    const diff = diffAgainst(handWritten([], false), handWritten(['/tasks'], false)).diff;
+    expect(renderMapDiff(diff, { before: 'the map', after: 'the code' }).join('\n')).toContain(
+      'In the code, missing from the map',
+    );
+  });
+
+  describe('as a CI gate', () => {
+    it('exits 0 on a match and 1 on a divergence', () => {
+      const dir = mkdtempSync(join(tmpdir(), 'apiflow-diff-'));
+      try {
+        const a = write(handWritten(['/tasks'], false), dir, 'a.apimap');
+        const b = write(handWritten(['/tasks'], false), dir, 'b.apimap');
+        const c = write(handWritten(['/tasks', '/projects'], false), dir, 'c.apimap');
+        expect(run([a, b]).status).toBe(0);
+        expect(run([a, c]).status).toBe(1);
+      } finally {
+        rmSync(dir, { recursive: true, force: true });
+      }
+    });
+
+    // cm:guard 2 is "no verdict", never "they differ": a CI step that treats any non-zero as drift
+    // would report an unreadable path as a broken contract.
+    it('exits 2 when it cannot answer, not 1', () => {
+      const dir = mkdtempSync(join(tmpdir(), 'apiflow-diff-'));
+      try {
+        const a = write(handWritten(['/tasks'], false), dir, 'a.apimap');
+        expect(run([a]).status).toBe(2);
+        expect(run([a, join(dir, 'missing.apimap')]).status).toBe(2);
+        writeFileSync(join(dir, 'junk.apimap'), 'not json');
+        expect(run([a, join(dir, 'junk.apimap')]).status).toBe(2);
+      } finally {
+        rmSync(dir, { recursive: true, force: true });
+      }
+    });
+
+    it('emits json carrying the verdict and the diff', () => {
+      const dir = mkdtempSync(join(tmpdir(), 'apiflow-diff-'));
+      try {
+        const a = write(handWritten(['/tasks'], false), dir, 'a.apimap');
+        const c = write(handWritten(['/tasks', '/projects'], false), dir, 'c.apimap');
+        const parsed = JSON.parse(run([a, c, '--json']).out) as {
+          diverged: boolean;
+          identical: boolean;
+          diff: { endpoints: { added: Array<{ path: string }> }; fields: { before: number } };
+        };
+        expect(parsed.diverged).toBe(true);
+        expect(parsed.identical).toBe(false);
+        expect(parsed.diff.endpoints.added.map((e) => e.path)).toEqual(['/projects']);
+        expect(parsed.diff.fields.before).toBe(0);
+      } finally {
+        rmSync(dir, { recursive: true, force: true });
+      }
+    });
+  });
+});
