@@ -1,8 +1,8 @@
-import { parseMap } from '@junixlabs/apiflow-map';
-import { mkdirSync, readFileSync, realpathSync, writeFileSync } from 'fs';
+import { mkdirSync, realpathSync, writeFileSync } from 'fs';
 import { dirname, resolve } from 'path';
 import { fileURLToPath } from 'url';
 import { renderApp } from '../view/app';
+import { loadMapOrExit } from './loadMap';
 import { tolerateClosedPipe } from './stdio';
 
 // cm:why Renders the SAME app as `apiflow ui`, only with `live: false`.
@@ -21,8 +21,7 @@ function main(): void {
     process.exit(1);
   }
   const mapPath = resolve(positional[0]);
-  const map = parseMap(readFileSync(mapPath, 'utf8'));
-  if (map.version !== 1) throw new Error(`unsupported .apimap version: ${String(map.version)}`);
+  const map = loadMapOrExit(mapPath);
 
   const outPath = resolve(flag('out') ?? mapPath.replace(/\.apimap$/, '') + '.html');
   mkdirSync(dirname(outPath), { recursive: true });

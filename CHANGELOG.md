@@ -43,11 +43,15 @@ first transcript.
 `parseMap` validated `version` and nothing else, so a map that omitted an empty array — the ordinary
 way to hand-write one — reached the queries and died on `.length` deep inside them. Through `diff`
 that surfaced as an exit **1**, the "diverged" code, blaming the build for a malformed contract. Every
-collection is now asserted at parse time and names the key it is missing. `check` also catches the
-parse itself and exits **2**, its documented "cannot check" code — it was exiting 1, "drifted", as a
-raw Node stack trace. Knowingly left: `impact`, `link` and `view` still die the same way on a
-malformed map. None of them documents an exit-code contract, so none turns the crash into a false
-verdict the way `check` and `diff` did, and widening the fix to them is not this change's job.
+collection is now asserted at parse time and names the key it is missing.
+
+Every command that takes a map path reads it through one `loadMapOrExit`, which exits **2** — no
+verdict — and never 1. All six of them used to let `parseMap` throw, and node reports an uncaught
+throw as 1, which each of them spends on an answer *about* the map: `check` on drifted, `diff` on
+diverged, `impact` on nothing matched. So a file the command could not read came back as a verdict on
+the code, printed as a raw Node stack trace. `impact` was the worst of them — it declares "stdout
+stays valid JSON even when nothing matched, and the verdict rides on the exit code (0 found · 2
+nothing found)", and a malformed map broke both halves at once: exit 1 and zero bytes of stdout.
 
 `MapDiff` reported endpoints, calls, screens and unresolved. It did **not** report `fields` or
 `reads` — the two collections carrying "which field vanished" and "which screen started reading

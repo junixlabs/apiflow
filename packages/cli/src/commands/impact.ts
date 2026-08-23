@@ -1,14 +1,13 @@
-import { readFileSync, realpathSync } from 'fs';
+import { realpathSync } from 'fs';
 import { resolve } from 'path';
 import { fileURLToPath } from 'url';
 import type { ApiMapFile, Confidence, ImpactAnswer, MapMethod, SourceRef } from '@junixlabs/apiflow-map';
-import { endpointId, endpointsForScreen, normalizePath, parseMap, screenIdsForRoute, screensAffectedByEndpoint, screensAffectedByField, toMapMethod } from '@junixlabs/apiflow-map';
+import { endpointId, endpointsForScreen, normalizePath, screenIdsForRoute, screensAffectedByEndpoint, screensAffectedByField, toMapMethod } from '@junixlabs/apiflow-map';
+import { loadMapOrExit } from './loadMap';
 import { tolerateClosedPipe } from './stdio';
 
 export function loadMap(path: string): ApiMapFile {
-  const map = parseMap(readFileSync(path, 'utf8'));
-  if (map.version !== 1) throw new Error(`unsupported .apimap version: ${String(map.version)}`);
-  return map;
+  return loadMapOrExit(path);
 }
 
 // cm:guard A query that names a verb keeps it through the fuzzy fallback. Asking `POST /mcp` on a map

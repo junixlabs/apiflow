@@ -84,8 +84,8 @@ for (const { file, scan, command } of SIDES) {
   // cm:why Exit 2 is check declining to answer — wrong root, wrong side — so there is no verdict to
   // add a byte compare to, and re-scanning would invent a divergence out of a question never asked.
   if (write || (run.status !== 0 && run.status !== 1)) continue;
-  // cm:guard An unparseable map ALSO exits 1, because check dies on it and node reports 1 for an
-  // uncaught throw — so read the name defensively or the gate crashes instead of reporting.
+  // cm:edge contract -> packages/cli/src/commands/loadMap.ts — an unreadable map is exit 2, so the
+  // `continue` above already took it and this defensive read now only covers a file changing on disk.
   const name = mapName(map);
   if (name === null) continue;
   const fresh = join(scratch, file);

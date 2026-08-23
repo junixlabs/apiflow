@@ -154,6 +154,33 @@ describe('apiflow diff', () => {
       }
     });
 
+    // cm:guard The exit-2 contract is one loader's, shared by every command that takes a map path.
+    // Add a command that reads a map without it and this test is what says so.
+    // cm:why `impact` promises "0 found · 2 nothing found"; a malformed map broke both halves at once
+    // — exit 1, and zero bytes where its JSON should have been.
+    it('is the same refusal from every command that reads a map', () => {
+      const dir = mkdtempSync(join(tmpdir(), 'apiflow-diff-'));
+      try {
+        const bad = join(dir, 'bad.apimap');
+        writeFileSync(bad, '{"version":1,"metadata":{"name":"x","root":"y","generator":"hand-written/1"},"screens":[],"endpoints":[],"fields":[],"calls":[],"unresolved":[]}');
+        for (const argv of [['impact', bad], ['view', bad], ['probe', bad, '--emit'], ['link', bad, bad]]) {
+          let status = 0;
+          let out = '';
+          try {
+            execFileSync(process.execPath, [CLI, ...argv], { encoding: 'utf8' });
+          } catch (e) {
+            const err = e as { status?: number; stdout?: string; stderr?: string };
+            status = err.status ?? -1;
+            out = `${err.stdout ?? ''}${err.stderr ?? ''}`;
+          }
+          expect(status, `apiflow ${argv[0]}`).toBe(2);
+          expect(out, `apiflow ${argv[0]}`).toContain('missing "reads"');
+        }
+      } finally {
+        rmSync(dir, { recursive: true, force: true });
+      }
+    });
+
     it('emits json carrying the verdict and the diff', () => {
       const dir = mkdtempSync(join(tmpdir(), 'apiflow-diff-'));
       try {

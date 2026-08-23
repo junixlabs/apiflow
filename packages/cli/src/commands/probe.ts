@@ -2,21 +2,20 @@ import { existsSync, mkdirSync, readFileSync, realpathSync, writeFileSync } from
 import { dirname, join, resolve } from 'path';
 import { fileURLToPath } from 'url';
 import type { ApiMapFile } from '@junixlabs/apiflow-map';
-import { endpointsForScreen, finalizeApiMap, parseMap, screenIdsForRoute, undeliveredFields } from '@junixlabs/apiflow-map';
+import { endpointsForScreen, finalizeApiMap, screenIdsForRoute, undeliveredFields } from '@junixlabs/apiflow-map';
 import type { Stack } from '@junixlabs/apiflow-scan';
 import { detectStack } from '@junixlabs/apiflow-scan';
 import type { ProbeSample } from '@junixlabs/apiflow-scan';
 import { buildHarness, ingestSamples } from '@junixlabs/apiflow-scan';
 import { localRootFor } from '../workspace/registry';
+import { loadMapOrExit } from './loadMap';
 import { tolerateClosedPipe } from './stdio';
 
 const RESULT_FILE = 'apiflow-probe.json';
 const MANIFESTS = ['artisan', 'composer.json', 'package.json', 'go.mod', 'pyproject.toml', 'requirements.txt'];
 
 function loadMap(path: string): ApiMapFile {
-  const map = parseMap(readFileSync(path, 'utf8'));
-  if (map.version !== 1) throw new Error(`unsupported .apimap version: ${String(map.version)}`);
-  return map;
+  return loadMapOrExit(path);
 }
 
 function stackOf(root: string, override?: string): Stack {

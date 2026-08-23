@@ -1,8 +1,9 @@
-import { readFileSync, realpathSync } from 'fs';
+import { realpathSync } from 'fs';
 import { resolve } from 'path';
 import { fileURLToPath } from 'url';
 import type { ApiMapFile, MapDiff } from '@junixlabs/apiflow-map';
-import { diffMaps, diverged, parseMap, serializeMap } from '@junixlabs/apiflow-map';
+import { diffMaps, diverged, serializeMap } from '@junixlabs/apiflow-map';
+import { loadMapOrExit } from './loadMap';
 import { tolerateClosedPipe } from './stdio';
 
 export interface DiffSides {
@@ -74,10 +75,6 @@ export function renderDiff(result: DiffResult, beforePath: string, afterPath: st
   return lines.join('\n');
 }
 
-function load(path: string): ApiMapFile {
-  return parseMap(readFileSync(path, 'utf8'));
-}
-
 function main(): void {
   tolerateClosedPipe();
   const args = process.argv.slice(2);
@@ -90,16 +87,8 @@ function main(): void {
   const beforePath = resolve(positional[0]);
   const afterPath = resolve(positional[1]);
 
-  let before: ApiMapFile;
-  let after: ApiMapFile;
-  try {
-    before = load(beforePath);
-    after = load(afterPath);
-  } catch (e) {
-    console.error(`Cannot read a map: ${e instanceof Error ? e.message : String(e)}`);
-    process.exit(2);
-    return;
-  }
+  const before = loadMapOrExit(beforePath);
+  const after = loadMapOrExit(afterPath);
 
   // cm:guard No `sideOf()` gate here, and adding one would undo the command: refusing an
   // unrecognised generator is what makes `check` unusable on a hand-written contract map.

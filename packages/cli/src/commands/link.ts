@@ -1,14 +1,13 @@
-import { mkdirSync, readFileSync, realpathSync, writeFileSync } from 'fs';
+import { mkdirSync, realpathSync, writeFileSync } from 'fs';
 import { dirname, resolve } from 'path';
 import { fileURLToPath } from 'url';
 import type { ApiMapFile } from '@junixlabs/apiflow-map';
-import { endpointsWithTracedReads, linkMaps, orphanEndpoints, parseMap, serializeMap, undeliveredFields, unreadResponseFields } from '@junixlabs/apiflow-map';
+import { endpointsWithTracedReads, linkMaps, orphanEndpoints, serializeMap, undeliveredFields, unreadResponseFields } from '@junixlabs/apiflow-map';
+import { loadMapOrExit } from './loadMap';
 import { tolerateClosedPipe } from './stdio';
 
 function loadMap(path: string): ApiMapFile {
-  const map = parseMap(readFileSync(path, 'utf8'));
-  if (map.version !== 1) throw new Error(`unsupported .apimap version: ${String(map.version)}`);
-  return map;
+  return loadMapOrExit(path);
 }
 
 export function renderAudit(map: ApiMapFile): string {
