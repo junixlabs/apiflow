@@ -181,6 +181,9 @@ describe('apiflow diff', () => {
             err = thrown.stderr ?? '';
           }
           expect(status, `apiflow ${argv[0]}`).toBe(code);
+          // cm:guard Asserts the LOADER's sentence, not just the parse message. An uncaught throw
+          // prints the same message and exits 1, so impact's case would pass without the loader.
+          expect(err, `apiflow ${argv[0]}`).toMatch(/^Cannot read /);
           expect(err, `apiflow ${argv[0]}`).toContain('missing "reads"');
         }
       } finally {
@@ -207,7 +210,9 @@ describe('apiflow diff', () => {
         const missed = impact(good);
         expect(missed.status).toBe(2);
         expect(JSON.parse(missed.stdout)).toMatchObject({ found: false });
-        expect(impact(bad).status).toBe(1);
+        const unreadable = impact(bad);
+        expect(unreadable.status).toBe(1);
+        expect(unreadable.stdout).toBe('');
       } finally {
         rmSync(dir, { recursive: true, force: true });
       }

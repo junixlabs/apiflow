@@ -8,7 +8,9 @@ import { parseMap } from '@junixlabs/apiflow-map';
 // ANSWER — "nothing matched" — so handing it 2 here makes a map it could not read look like a miss.
 // cm:why Every one of them used to let parseMap throw instead, and node reports an uncaught throw as
 // 1: a raw stack trace wearing whichever verdict that command spends 1 on.
-export function loadMapOrExit(path: string, cannotAnswer: number): ApiMapFile {
+// cm:guard The union is the point — a bare `number` admits 0, and a caller passing 0 makes an
+// unreadable map exit SUCCESS, which is worse than the stack trace this loader replaced.
+export function loadMapOrExit(path: string, cannotAnswer: 1 | 2): ApiMapFile {
   try {
     return parseMap(readFileSync(path, 'utf8'));
   } catch (e) {

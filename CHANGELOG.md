@@ -35,10 +35,12 @@ counters. The MCP tool also gained the caveat the CLI already printed for the co
 is: same counts, different bytes, usually code that moved and took every `file:line` with it. It was
 reporting drift over five flat numbers with nothing to explain them.
 
-### Fixed — `MapDiff` counted four of six collections, and the headline could not see a swap
+### Fixed — five silent passes, uncovered while building the command above
 
-Two defects, both of which pass in silence, and both found by pointing the new command at its own
-first transcript.
+Two of them came from pointing `diff` at its own first transcript: the counters and the headline. The
+other three came from independent review of that work — the parse gap, the MCP tool's unexplained
+verdict, and two `cm:` annotations that had stopped being true. None of the five says anything when
+it fires.
 
 `parseMap` validated `version` and nothing else, so a map that omitted an empty array — the ordinary
 way to hand-write one — reached the queries and died on `.length` deep inside them. Through `diff`
@@ -76,6 +78,15 @@ the same endpoints.` It is a **fallback**, reached only where the headline would
 `No meaningful change.`, so a swap that also collapsed the confidence still reports the collapse —
 that is the louder fact. The two headlines that assert sameness outright change their words instead:
 `Not the same endpoints, and fewer of them have a declared shape.`
+
+Two `cm:` annotations were left untrue by the work above, and under a convention that bans ordinary
+comments precisely so the survivors can be trusted, that is a defect rather than untidiness.
+`scripts/fixture-map.mjs` claimed an unparseable map exits 1 "because check dies on it" — it is 2 now,
+and the line is a `cm:edge` onto the loader that owns the contract. And the `cm:edge` added to
+`packages/cli/src/view/panes.ts` sat inside a `String.raw` template, where codemap cannot read it: the
+repo edge count moved 73 → 74 for two added edges, so the lockstep meant to stop the delta pane losing
+a counter row was inert. It is hoisted above the literal, with a guard saying why annotations have to
+live there.
 
 ### Added — `unresolved` is ranked by shape, so the backlog reads as work
 

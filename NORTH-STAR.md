@@ -237,13 +237,17 @@ left, under the §3 axis.
   exported predicate — one text panel and one definition of divergence, not a copy of each per
   command. The MCP tool and the browser pane keep their own renderings, because their medium is not
   text, but they read the same counters.
-  Three defects fell out of pointing the new command at its own first transcript, all silent passes.
-  `parseMap` checked `version` and nothing else, so a map that omitted an empty array — the ordinary
-  way to hand-write one — crashed inside a query and exited **1**, the "diverged" code, blaming the
-  build for a bad contract. `MapDiff` counted four of the format's six collections, omitting `fields`
-  and `reads` — precisely "which field vanished" and "which screen reads something not in the
-  contract". And `headlineFor` compared endpoint *counts*, so a build that swapped one route for
-  another printed `No meaningful change.` above the list of the two routes.
+  Five silent passes were found on the way — two by pointing the command at its own first transcript,
+  three by independent review of that work. `MapDiff` counted four of the format's six collections,
+  omitting `fields` and `reads`, precisely "which field vanished" and "which screen reads something not
+  in the contract". `headlineFor` compared endpoint *counts*, so a build that swapped one route for
+  another printed `No meaningful change.` above the list of the two routes. `parseMap` checked
+  `version` and nothing else, so a map omitting an empty array crashed inside a query and exited a code
+  the command spends on an answer *about* the map — every command that reads a map path now refuses
+  through one loader, each with the code that means "no verdict" in its own protocol. The MCP `check`
+  tool reported drift over five flat counters with nothing to explain them. And two `cm:` annotations
+  had stopped being true, one of them inert inside a `String.raw` where codemap cannot read it — under
+  a convention that bans ordinary comments so the survivors can be trusted, that is a defect.
   What the parse fix is **not** is §7's "schema-generated type layer". The row is a *generated type
   layer*, and this is six `Array.isArray` calls in `parseMap` — the cheap half, and the half that was
   missing while `ApiMapFile` promised all six collections and `parseMap` checked only `version`. The
