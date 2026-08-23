@@ -75,6 +75,51 @@ describe('the fixture maps are gated, not just committed', () => {
     GATE_TIMEOUT,
   );
 
+  // cm:why `apiflow check` cannot catch this one: it decides on `serializeMap(stored) ===
+  // serializeMap(fresh)`, so it compares two maps it re-serialized and never the committed bytes.
+  // cm:guard A minified golden describes the code perfectly and is still not the file the pipeline
+  // emits — and these maps are shared as FILES, so the file is what the gate has to hold.
+  it(
+    'fails when a golden says the right thing in the wrong bytes',
+    () => {
+      const dir = tamperedCopy((name, text) =>
+        name === 'web.apimap' ? JSON.stringify(JSON.parse(text)) : text,
+      );
+      try {
+        const { code, out } = runGate(dir);
+        expect(out).toContain('still matches the code');
+        expect(out).toContain('the file differs from a fresh scan');
+        expect(out).toMatch(/First difference at line \d+/);
+        expect(code, out).toBe(1);
+      } finally {
+        rmSync(dir, { recursive: true, force: true });
+      }
+    },
+    GATE_TIMEOUT,
+  );
+
+  // cm:guard Dropping a map is the one action CONTRIBUTING forbids by name, so it must not be the
+  // case that answers with a stack trace instead of the sentence saying not to do it.
+  it(
+    'fails and says so when a golden has been deleted rather than refreshed',
+    () => {
+      const dir = mkdtempSync(join(tmpdir(), 'apiflow-tamper-'));
+      try {
+        for (const name of GOLDENS) {
+          if (name !== 'linked.apimap') copyFileSync(join(MAPS, name), join(dir, name));
+        }
+        const { code, out } = runGate(dir);
+        expect(code, out).toBe(1);
+        expect(out).toContain('not in the repo');
+        expect(out).not.toContain('at Object.readFileSync');
+        expect(out).toContain('npm run map:refresh');
+      } finally {
+        rmSync(dir, { recursive: true, force: true });
+      }
+    },
+    GATE_TIMEOUT,
+  );
+
   // cm:why A golden that is not JSON at all exits 1 the same way drift does, because `check` throws
   // and node reports 1 for an uncaught error — so the gate has to survive reading it.
   // cm:guard Without this it crashed on the read and its own "refresh and commit" line never printed:

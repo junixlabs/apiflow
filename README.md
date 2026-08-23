@@ -136,7 +136,7 @@ that MCP adds an argument-selection step performed by a model. Hence: list first
 
 ## Contributing
 
-Five gates, the docs-authoring rule and the diagram convention are in
+Six gates, the docs-authoring rule and the diagram convention are in
 [`CONTRIBUTING.md`](./CONTRIBUTING.md). **Read [`NORTH-STAR.md`](./NORTH-STAR.md) before proposing a
 feature** — §2 is the pain this exists for, §7 is what will not be built. A proposal that cannot be
 traced back to §2 is refused, including the API-to-API question above.

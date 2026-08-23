@@ -11,7 +11,8 @@ that cannot be traced back to §2 is refused.
 
 ## The six gates
 
-All six run in CI on every push, and a green local run is the same run.
+All six run in CI on every push, and a green local run is the same run — with one exception, stated
+under `map:check` below.
 
 ```bash
 npm test           # unit tests + the docs transcripts + the fixture-map gate's own tamper test
@@ -34,6 +35,20 @@ The linked map is compared differently, because `apiflow check` refuses a linked
 is no single side to re-scan, so the gate re-runs `apiflow link` over the two committed halves and
 compares bytes. Between them the whole chain is covered — `check` holds each half against the source,
 the re-link holds the join against the halves.
+
+Each half is then compared byte for byte against a fresh scan as well, which `check` does **not** do:
+it decides on `serializeMap(stored) === serializeMap(fresh)`, comparing two maps it re-serialized
+itself, so a golden reformatted or minified in place still passes it. That is the right call for
+`check` — a user's map is not required to be pretty — and the wrong one here, because the claim these
+three files exist to hold is about the file, not about what the file parses into.
+
+**The one place a local run is not the CI run.** A map records the repo it came from, and `check`
+exits 2 rather than reporting drift when the git origin does not match — so this gate needs a clone
+whose `origin` normalizes to `github.com/junixlabs/apiflow`. On a fork, on an ssh-alias remote such
+as `git@github-work:…`, or on a source download with no `.git` at all, it exits 2 and `map:refresh`
+cannot fix it: the origin check runs before the write. Nothing here can fix that either, because
+repo identity in the map is the property that makes the map shareable at all. Same constraint already
+binds `tests/guide.test.ts`, whose transcripts print that root verbatim.
 
 **When it goes red, the fix is to refresh and commit:**
 

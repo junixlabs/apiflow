@@ -1,5 +1,5 @@
 import { spawnSync } from 'node:child_process';
-import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -63,23 +63,41 @@ function reportDifference(stored, rebuilt) {
 
 // cm:why The halves are judged by `apiflow check` itself, not a byte compare written here: a gate the
 // product does not own can pass while the product is broken, and this puts `check` on the daily path.
+// cm:guard But `check` alone does NOT byte-gate the file: it decides on
+// `serializeMap(stored) === serializeMap(fresh)`, comparing two maps it re-serialized itself.
+// cm:guard So the committed bytes are re-scanned and compared here as well — measured: minifying a
+// golden to one line changes every byte after the first and `check` still says it matches.
 for (const { file, scan, command } of SIDES) {
   const map = join(dir, file);
   const run = apiflow(['check', map, `--root=${scan}`, ...(write ? ['--write'] : [])]);
   process.stdout.write(run.stdout ?? '');
   process.stderr.write(run.stderr ?? '');
-  if (run.status === 0) continue;
-  failures.push(`${relative(root, map)} — apiflow check exited ${String(run.status)}`);
-  // cm:why Exit 1 is drift and only drift. Exit 2 is check declining to answer — wrong root, wrong
-  // side — and re-scanning to diff against a map it never compared would invent a divergence.
-  if (run.status !== 1) continue;
+  if (run.status !== 0) failures.push(`${relative(root, map)} — apiflow check exited ${String(run.status)}`);
+  // cm:why Exit 2 is check declining to answer — wrong root, wrong side — so there is no verdict to
+  // add a byte compare to, and re-scanning would invent a divergence out of a question never asked.
+  if (write || (run.status !== 0 && run.status !== 1)) continue;
   // cm:guard An unparseable map ALSO exits 1, because check dies on it and node reports 1 for an
   // uncaught throw — so read the name defensively or the gate crashes instead of reporting.
   const name = mapName(map);
   if (name === null) continue;
   const fresh = join(scratch, file);
   const rescan = apiflow([command, scan, `--name=${name}`, `--out=${fresh}`]);
-  if (rescan.status === 0) reportDifference(readFileSync(map, 'utf8'), readFileSync(fresh, 'utf8'));
+  if (rescan.status !== 0) {
+    failures.push(`${relative(root, map)} — apiflow ${command} exited ${String(rescan.status)}`);
+    continue;
+  }
+  const stored = readFileSync(map, 'utf8');
+  const rebuilt = readFileSync(fresh, 'utf8');
+  if (stored === rebuilt) continue;
+  const line = reportDifference(stored, rebuilt);
+  // cm:why Only reported when `check` passed, because a drifted map is already in the list above and
+  // naming it twice reads as two problems.
+  if (run.status === 0) {
+    console.log('`apiflow check` passed on this map: it re-serializes what it parsed, so a difference');
+    console.log('in the file itself — formatting, key order, a missing trailing newline — is invisible');
+    console.log('to it. These maps are shared as FILES, so the file is what has to match.');
+    failures.push(`${relative(root, map)} — the file differs from a fresh scan at line ${String(line)}`);
+  }
 }
 
 // cm:why `apiflow check` REFUSES a linked map by design: `sideOf()` is null for generator `apiflow
@@ -107,11 +125,16 @@ if (write) {
   const fresh = join(scratch, LINKED);
   const run = apiflow(['link', fe, be, `--out=${fresh}`]);
   console.log('');
+  // cm:guard Reports a deleted map instead of throwing on the read: dropping a map from the gate is
+  // the one action CONTRIBUTING forbids by name, so it must not be the case that prints a stack trace.
+  const stored = existsSync(linked) ? readFileSync(linked, 'utf8') : null;
   if (run.status !== 0) {
     process.stderr.write(run.stderr ?? '');
     failures.push(`${relative(root, linked)} — apiflow link exited ${String(run.status)}`);
+  } else if (stored === null) {
+    console.log('**Verdict**: this map is not in the repo. It is not optional — see the note below.');
+    failures.push(`${relative(root, linked)} — missing`);
   } else {
-    const stored = readFileSync(linked, 'utf8');
     const rebuilt = readFileSync(fresh, 'utf8');
     if (stored === rebuilt) {
       console.log('Re-linking the two halves reproduced it byte for byte. Nothing to do.');

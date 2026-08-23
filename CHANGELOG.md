@@ -59,11 +59,22 @@ with no server, reviewing one in a pull request, and `check` gating somebody els
 it was **claimed in `NORTH-STAR.md` and checked nowhere**. Measured before the change: 5 tracked
 fixture source files, 0 tracked `.apimap`, five gates, none asserting determinism of the file.
 
+Each half is also compared byte for byte against a fresh scan, which `check` does not do: it decides
+on `serializeMap(stored) === serializeMap(fresh)`, comparing two maps it re-serialized itself, so a
+golden **minified in place passed it** — measured, and the reason that compare is here. Right call for
+`check`, since a user's map need not be pretty; wrong one for a claim about the file.
+
 Verified by tampering, not by assertion: rewriting one string in `packages/scan/src/feScanner.ts`
 turned the gate red with `First difference at line 107 of 152` and both versions of that line printed.
-`tests/fixture-map.test.ts` keeps that property — it corrupts a copy of each golden and asserts the
-gate exits 1, so the gate cannot quietly stop gating. The fix when it goes red is
-`npm run map:refresh` and a commit; the diff is the change in scanner output.
+`tests/fixture-map.test.ts` keeps that property — six cases, each corrupting a copy of a golden a
+different way (drift, reformatting, a tampered link, deletion, unparseable) and asserting exit 1 — so
+the gate cannot quietly stop gating. The fix when it goes red is `npm run map:refresh` and a commit;
+the diff is the change in scanner output.
+
+One limit, in `CONTRIBUTING.md` rather than worked around: the gate needs a clone whose `origin`
+normalizes to `github.com/junixlabs/apiflow`, because `check` exits 2 when the map's repo identity
+does not match the checkout. A fork, an ssh-alias remote or a `.git`-less download cannot run it, and
+`map:refresh` cannot rescue that — the same constraint `tests/guide.test.ts` has always had.
 
 The maps sit outside both scan roots and outside `.apiview/`, which stays gitignored: apiflow writing
 nothing into the tree it scans is worth more than the convenience of putting them there.
