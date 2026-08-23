@@ -6,6 +6,47 @@ All notable changes to apiflow are documented here.
 
 ## [Unreleased]
 
+### Added — `unresolved` is ranked by shape, so the backlog reads as work
+
+Both `scan-fe` and `scan-be` now print, under the flat `unresolved` list, the same entries grouped by
+**shape** and ordered by frequency.
+
+`unresolved` is the one number the map promises never to fold into another, which is what makes it
+long on a real codebase — and a long list of individually-true lines does not say what to do next.
+Three of the eight `reason` strings the two scanners emit interpolate variable text into the sentence,
+so one cause reads as N distinct lines: `<VERB> <path> — no request or response schema found in code`
+is written once per endpoint, `url is a variable or expression: <expr>` carries 60 characters of
+source, and a saturated attribution carries its fan-out count. On `fixtures/demo-app/api` that is 3
+lines, 3 strings, **1** shape. On the Hono API this repo measured — 2 routes understood out of 103 —
+it is ~101 lines and still **1** shape, which the flat list cannot show at all.
+
+Normalization is three narrow rules, one per interpolating producer: strip a leading `<VERB> <path> — `,
+cut at the **first** `: ` (feScanner slices 60 raw characters, so `…expression: id: string` arrives
+with a second colon and a trailing cut would keep half of it), and collapse digit runs to `N`. It is
+deliberately not a general "erase anything variable-looking" pass — a wider rule folds two different
+causes into one line, and a ranking that points at a shape nobody wrote is worse than no ranking. The
+five `reason` strings that are already fixed pass through byte-identical, asserted per string.
+
+Two consequences worth stating. A shape carries **no URL and no payload** — the variable half of the
+sentence is exactly what normalization removes — so a ranking is pasteable from a codebase you cannot
+show anyone. And nothing entered the `.apimap`: the ranking is derived when the report is printed,
+neither `GENERATOR` moved, and the fixture maps are byte-for-byte unchanged, so `apiflow check` can
+still tell "the code moved" from "the reader improved".
+
+Only the top five shapes print, and when there are more the last line states how many shapes and how
+many entries are not shown — a list that quietly shows its head reads as the whole backlog, which is
+the failure the flat 50-entry cap above it already has.
+
+`docs/guide/05-the-unresolved-backlog.md` is the replayed transcript.
+
+### Fixed — the guide's landing page can no longer disagree with a page
+
+`docs/guide/index.md` still showed page 02's pill as `upcoming` after the page had shipped. The pill is
+the only place a page's status is written twice, so it is the only place one can go stale, and nothing
+replayed it. `tests/guide.test.ts` now asserts every guide page has a card whose pill matches its
+frontmatter — the same discipline the statuses themselves already have: a test result, not a label
+somebody remembered to change.
+
 ### Fixed — a wrapper's definition line is no longer a call to itself
 
 `scan-fe` read a client wrapper's own signature as one more occurrence of `name(`, so

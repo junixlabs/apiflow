@@ -42,9 +42,9 @@ test. Writing one is [in CONTRIBUTING](https://github.com/junixlabs/apiflow/blob
     <p>Scan a frontend, ask which screens break, read the client → hook → screen chain.</p>
   </a>
   <a class="card" href="02-a-wrapper-definition-is-not-a-call.html">
-    <span class="pill upcoming">upcoming</span>
+    <span class="pill shipped">shipped</span>
     <h3>A wrapper definition is not a call</h3>
-    <p>A scanner defect the fixture found. CI asserts this transcript still fails.</p>
+    <p>A scanner defect the fixture found, now fixed. This transcript is the proof it is gone.</p>
   </a>
   <a class="card" href="03-probe.html">
     <span class="pill reference">reference</span>
@@ -55,5 +55,10 @@ test. Writing one is [in CONTRIBUTING](https://github.com/junixlabs/apiflow/blob
     <span class="pill reference">reference</span>
     <h3>FE here, BE elsewhere</h3>
     <p>Needs two machines, which is the whole point of the page.</p>
+  </a>
+  <a class="card" href="05-the-unresolved-backlog.html">
+    <span class="pill shipped">shipped</span>
+    <h3>Unresolved is a backlog, not an error log</h3>
+    <p>The same gap spelled 101 ways is one line of work. Ranking by shape is what shows that.</p>
   </a>
 </div>

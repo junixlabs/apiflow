@@ -128,6 +128,23 @@ const pages = [...guidePages, ...looseTranscripts];
 // 5s default failed 1 run in 3. The gate must fail on a wrong transcript, never on a slow machine.
 const REPLAY_TIMEOUT = 120_000;
 
+// cm:guard The landing page's pill is the only place a status is WRITTEN twice, so it is the only
+// place one can go stale — page 02 sat at `upcoming` on the index for a release after it shipped.
+// cm:edge lockstep -> docs/guide/index.md — a page added here needs a card, and a status change needs
+// the card's pill changed with it.
+describe('the landing page agrees with the pages', () => {
+  const index = readFileSync(join(GUIDE, 'index.md'), 'utf8');
+
+  for (const page of guidePages) {
+    it(`${page.file} — has a card whose pill says ${page.status}`, () => {
+      const href = page.file.replace(/^guide\//, '').replace(/\.md$/, '.html');
+      const card = new RegExp(`href="${href}">\\s*<span class="pill (\\w+)">(\\w+)</span>`).exec(index);
+      expect(card, `no card in guide/index.md links to ${href}`).not.toBeNull();
+      expect([card?.[1], card?.[2]]).toEqual([page.status, page.status]);
+    });
+  }
+});
+
 describe('the site is replayed, not trusted', () => {
   it('has at least one page', () => {
     expect(pages.length).toBeGreaterThan(0);

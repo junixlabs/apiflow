@@ -3,7 +3,7 @@ import type { Dirent } from 'fs';
 import { join, relative, resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import type { ApiMapFile, Confidence, ScreenNode, UnresolvedCall } from '@junixlabs/apiflow-map';
-import { createApiMap, finalizeApiMap, screenId, serializeMap } from '@junixlabs/apiflow-map';
+import { createApiMap, finalizeApiMap, screenId, serializeMap, unresolvedBacklog } from '@junixlabs/apiflow-map';
 import { scanOrigin } from '../workspace/scanOrigin';
 import type { ScanHints } from '@junixlabs/apiflow-scan';
 import { enclosingSymbols, isScannableFile, memberAt, objectMembers, routeFromFilePath, scanFile, symbolAt } from '@junixlabs/apiflow-scan';
@@ -148,6 +148,35 @@ export function skipReport(stats: {
   }
   if (stats.generatedSkipped.length > 0) {
     out.push(`**Generated files skipped**: ${stats.generatedSkipped.length} — ${show(stats.generatedSkipped)}`);
+  }
+  return out;
+}
+
+const BACKLOG_SHAPES = 5;
+
+// cm:why Top FIVE, and the cap states what it hid. A ranking that quietly showed only its head would
+// read as the whole backlog — the failure the flat 50-line list above it already has.
+// cm:edge contract -> packages/cli/src/commands/scanBe.ts — the BE report renders this same block, so
+// one shape ranking cannot be described two ways in the two halves.
+export function backlogReport(unresolved: readonly UnresolvedCall[]): string[] {
+  const shapes = unresolvedBacklog(unresolved);
+  if (shapes.length === 0) return [];
+  const plural = (n: number, one: string, many: string): string => `${n} ${n === 1 ? one : many}`;
+  const out = [
+    '',
+    `**Ranked by shape** — ${plural(shapes.length, 'shape', 'shapes')} behind ` +
+      `${plural(unresolved.length, 'entry', 'entries')}:`,
+  ];
+  for (const s of shapes.slice(0, BACKLOG_SHAPES)) {
+    out.push(`- ${s.count}× ${s.shape} (e.g. ${s.example.file}:${s.example.line})`);
+  }
+  const hiddenShapes = shapes.length - BACKLOG_SHAPES;
+  if (hiddenShapes > 0) {
+    const hiddenEntries = shapes.slice(BACKLOG_SHAPES).reduce((n, s) => n + s.count, 0);
+    out.push(
+      `- ... ${plural(hiddenShapes, 'more shape', 'more shapes')} not shown, ` +
+        `covering ${plural(hiddenEntries, 'entry', 'entries')}`
+    );
   }
   return out;
 }
@@ -379,6 +408,7 @@ export function renderReport(map: ApiMapFile, outPath: string): string {
     lines.push(`  \`${u.snippet}\``);
   }
   if (map.unresolved.length > 50) lines.push(`- ... ${map.unresolved.length - 50} more (see the .apimap file)`);
+  lines.push(...backlogReport(map.unresolved));
   return lines.join('\n');
 }
 

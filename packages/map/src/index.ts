@@ -7,3 +7,4 @@ export * from './shape';
 export * from './diff';
 export * from './summary';
 export * from './alerts';
+export * from './backlog';

@@ -8,7 +8,7 @@ import type { ClassIndex, SchemaDef, Stack } from '@junixlabs/apiflow-scan';
 import { detectStack, indexClasses, isBackendFile, laravelRouteFilePrefixes, resolveHandlerSchemas, scanBackendFile } from '@junixlabs/apiflow-scan';
 import { enclosingSymbols, symbolAt } from '@junixlabs/apiflow-scan';
 import { buildMountGraph, joinPrefix, prefixesFor } from '@junixlabs/apiflow-scan';
-import { buildResolver, readEntries, skipReport } from './scanFe';
+import { backlogReport, buildResolver, readEntries, skipReport } from './scanFe';
 import { tolerateClosedPipe } from './stdio';
 import { isNestedCheckout } from './scanScope';
 import { isGeneratedSource } from '@junixlabs/apiflow-scan';
@@ -256,6 +256,7 @@ export function renderBeReport(result: BeScanResult, outPath: string): string {
     lines.push(`- ${u.source.file}:${u.source.line} — ${u.reason}`);
   }
   if (map.unresolved.length > 50) lines.push(`- ... ${map.unresolved.length - 50} more (see the .apimap file)`);
+  lines.push(...backlogReport(map.unresolved));
   lines.push('');
   lines.push(
     observed === 0
