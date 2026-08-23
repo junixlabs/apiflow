@@ -6,8 +6,12 @@ import { endpointId, endpointsForScreen, normalizePath, screenIdsForRoute, scree
 import { loadMapOrExit } from './loadMap';
 import { tolerateClosedPipe } from './stdio';
 
-export function loadMap(path: string): ApiMapFile {
-  return loadMapOrExit(path);
+// cm:guard 1, not 2. `impact` spends 2 on "nothing matched" — an answer — so a map it could not read
+// must not land there, or a hook branching on 0-vs-2 reads an unreadable file as "no screens break".
+// cm:guard Not exported: `mcp/mapTools.ts` parses directly so a bad map answers the agent instead of
+// killing the server, and an exported process-killing loader one import away undoes that.
+function loadMap(path: string): ApiMapFile {
+  return loadMapOrExit(path, 1);
 }
 
 // cm:guard A query that names a verb keeps it through the fuzzy fallback. Asking `POST /mcp` on a map

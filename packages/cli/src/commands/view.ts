@@ -21,7 +21,7 @@ function main(): void {
     process.exit(1);
   }
   const mapPath = resolve(positional[0]);
-  const map = loadMapOrExit(mapPath);
+  const map = loadMapOrExit(mapPath, 2);
 
   const outPath = resolve(flag('out') ?? mapPath.replace(/\.apimap$/, '') + '.html');
   mkdirSync(dirname(outPath), { recursive: true });

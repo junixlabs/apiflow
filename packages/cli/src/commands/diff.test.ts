@@ -154,28 +154,60 @@ describe('apiflow diff', () => {
       }
     });
 
-    // cm:guard The exit-2 contract is one loader's, shared by every command that takes a map path.
-    // Add a command that reads a map without it and this test is what says so.
-    // cm:why `impact` promises "0 found · 2 nothing found"; a malformed map broke both halves at once
-    // — exit 1, and zero bytes where its JSON should have been.
+    // cm:guard Every command that reads a map path refuses through the one loader, and each names the
+    // code that means "no verdict" in ITS protocol. Add a seventh without it and this test says so.
+    // cm:guard `impact` must NOT be 2: 2 is its "nothing matched", an answer, so a map it could not
+    // read landing there tells a hook branching on 0-vs-2 that no screens break.
     it('is the same refusal from every command that reads a map', () => {
       const dir = mkdtempSync(join(tmpdir(), 'apiflow-diff-'));
       try {
         const bad = join(dir, 'bad.apimap');
         writeFileSync(bad, '{"version":1,"metadata":{"name":"x","root":"y","generator":"hand-written/1"},"screens":[],"endpoints":[],"fields":[],"calls":[],"unresolved":[]}');
-        for (const argv of [['impact', bad], ['view', bad], ['probe', bad, '--emit'], ['link', bad, bad]]) {
+        const cases: Array<{ argv: string[]; code: number }> = [
+          { argv: ['impact', bad, '--json'], code: 1 },
+          { argv: ['view', bad], code: 2 },
+          { argv: ['probe', bad, '--emit'], code: 2 },
+          { argv: ['link', bad, bad], code: 2 },
+          { argv: ['check', bad], code: 2 },
+        ];
+        for (const { argv, code } of cases) {
           let status = 0;
-          let out = '';
+          let err = '';
           try {
-            execFileSync(process.execPath, [CLI, ...argv], { encoding: 'utf8' });
+            execFileSync(process.execPath, [CLI, ...argv], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
           } catch (e) {
-            const err = e as { status?: number; stdout?: string; stderr?: string };
-            status = err.status ?? -1;
-            out = `${err.stdout ?? ''}${err.stderr ?? ''}`;
+            const thrown = e as { status?: number; stderr?: string };
+            status = thrown.status ?? -1;
+            err = thrown.stderr ?? '';
           }
-          expect(status, `apiflow ${argv[0]}`).toBe(2);
-          expect(out, `apiflow ${argv[0]}`).toContain('missing "reads"');
+          expect(status, `apiflow ${argv[0]}`).toBe(code);
+          expect(err, `apiflow ${argv[0]}`).toContain('missing "reads"');
         }
+      } finally {
+        rmSync(dir, { recursive: true, force: true });
+      }
+    });
+
+    // cm:guard The two states `impact` must keep apart. Same exit code for both and a hook reading
+    // the documented 0-vs-2 protocol reports a file it could not open as "nothing breaks".
+    it('keeps impact cannot-read distinct from impact nothing-matched', () => {
+      const dir = mkdtempSync(join(tmpdir(), 'apiflow-diff-'));
+      try {
+        const good = write(handWritten(['/tasks'], false), dir, 'good.apimap');
+        const bad = join(dir, 'bad.apimap');
+        writeFileSync(bad, '{"version":1,"metadata":{"name":"x","root":"y","generator":"hand-written/1"},"screens":[],"endpoints":[],"fields":[],"calls":[],"unresolved":[]}');
+        const impact = (map: string): { status: number; stdout: string } => {
+          try {
+            return { status: 0, stdout: execFileSync(process.execPath, [CLI, 'impact', map, '--field=nope', '--json'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }) };
+          } catch (e) {
+            const thrown = e as { status?: number; stdout?: string };
+            return { status: thrown.status ?? -1, stdout: thrown.stdout ?? '' };
+          }
+        };
+        const missed = impact(good);
+        expect(missed.status).toBe(2);
+        expect(JSON.parse(missed.stdout)).toMatchObject({ found: false });
+        expect(impact(bad).status).toBe(1);
       } finally {
         rmSync(dir, { recursive: true, force: true });
       }

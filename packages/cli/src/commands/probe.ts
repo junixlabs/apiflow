@@ -15,7 +15,7 @@ const RESULT_FILE = 'apiflow-probe.json';
 const MANIFESTS = ['artisan', 'composer.json', 'package.json', 'go.mod', 'pyproject.toml', 'requirements.txt'];
 
 function loadMap(path: string): ApiMapFile {
-  return loadMapOrExit(path);
+  return loadMapOrExit(path, 2);
 }
 
 function stackOf(root: string, override?: string): Stack {

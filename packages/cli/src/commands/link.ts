@@ -7,7 +7,7 @@ import { loadMapOrExit } from './loadMap';
 import { tolerateClosedPipe } from './stdio';
 
 function loadMap(path: string): ApiMapFile {
-  return loadMapOrExit(path);
+  return loadMapOrExit(path, 2);
 }
 
 export function renderAudit(map: ApiMapFile): string {

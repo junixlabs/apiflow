@@ -45,13 +45,21 @@ way to hand-write one — reached the queries and died on `.length` deep inside 
 that surfaced as an exit **1**, the "diverged" code, blaming the build for a malformed contract. Every
 collection is now asserted at parse time and names the key it is missing.
 
-Every command that takes a map path reads it through one `loadMapOrExit`, which exits **2** — no
-verdict — and never 1. All six of them used to let `parseMap` throw, and node reports an uncaught
-throw as 1, which each of them spends on an answer *about* the map: `check` on drifted, `diff` on
-diverged, `impact` on nothing matched. So a file the command could not read came back as a verdict on
-the code, printed as a raw Node stack trace. `impact` was the worst of them — it declares "stdout
-stays valid JSON even when nothing matched, and the verdict rides on the exit code (0 found · 2
-nothing found)", and a malformed map broke both halves at once: exit 1 and zero bytes of stdout.
+The six commands that take a map path — `check`, `diff`, `impact`, `link`, `probe`, `view` — read it
+through one `loadMapOrExit`. Each used to let `parseMap` throw, and node reports an uncaught throw as
+1, so a file the command could not open came back as a raw Node stack trace wearing whichever verdict
+that command spends 1 on.
+
+One loader, but deliberately **not** one exit code: there is no number free across all six. `check`,
+`diff` and `probe` spend 2 on a refusal, so 2 is theirs. `impact` spends 2 on an *answer* — it
+declares "stdout stays valid JSON even when nothing matched, and the verdict rides on the exit code
+(0 found · 2 nothing found)" — so it takes **1**, and a map it could not read stays distinguishable
+from a query that matched nothing. A test holds both states apart, because collapsing them is how a
+hook comes to report an unopenable file as "no screens break".
+
+Not covered, and worth saying rather than implying otherwise: `project import` and
+`project add --be-map` also take a user-supplied map path and still parse it directly. They already
+fail with a clean message rather than a stack trace, so there is no false verdict to fix there.
 
 `MapDiff` reported endpoints, calls, screens and unresolved. It did **not** report `fields` or
 `reads` — the two collections carrying "which field vanished" and "which screen started reading

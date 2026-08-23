@@ -87,8 +87,8 @@ function main(): void {
   const beforePath = resolve(positional[0]);
   const afterPath = resolve(positional[1]);
 
-  const before = loadMapOrExit(beforePath);
-  const after = loadMapOrExit(afterPath);
+  const before = loadMapOrExit(beforePath, 2);
+  const after = loadMapOrExit(afterPath, 2);
 
   // cm:guard No `sideOf()` gate here, and adding one would undo the command: refusing an
   // unrecognised generator is what makes `check` unusable on a hand-written contract map.
