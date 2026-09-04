@@ -3,11 +3,12 @@
 This is the public contract. Anything that reads or writes an `.apimap` reads this file, so it lives
 with the package that owns the format rather than in `docs/`.
 
-Every type below is `Infer<typeof someSchema>` (`src/schema.ts`), not a hand-written interface —
-`parseMap` walks the same schema, so a file's shape and what validates it cannot drift apart the way
-a hand-written type and a hand-written check can. It validates the full document, not just
-`version`: every required key, every field's type, every array element, with the exact path of the
-first divergence in the error (`.apimap.calls[3].source.line: expected number, got string`).
+Every `.apimap` type below is `Infer<typeof someSchema>` (`src/schema.ts`), not a hand-written
+interface — `parseMap` walks the same schema, so a file's shape and what validates it cannot drift
+apart the way a hand-written type and a hand-written check can. It validates the full document, not
+just `version`: every required key, every field's type, every array element, with every
+divergence's exact path named in the error, one per line
+(`.apimap.calls[3].source.line: expected number, got string`).
 
 `schema/v1.apimap` (ships in the npm package — see `files` in `package.json`) is a small,
 hand-written, committed document pinned to this version. It is outside `scripts/fixture-map.mjs`'s
