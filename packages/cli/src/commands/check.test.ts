@@ -41,7 +41,7 @@ describe('apiflow check', () => {
         out = `${err.stdout ?? ''}${err.stderr ?? ''}`;
       }
       expect(status).toBe(2);
-      expect(out).toContain('missing "reads"');
+      expect(out).toContain('.apimap.reads: expected array, got undefined');
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }

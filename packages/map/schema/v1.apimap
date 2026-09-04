@@ -1,0 +1,60 @@
+{
+  "version": 1,
+  "metadata": {
+    "name": "external-reader-fixture",
+    "root": "github.com/acme/app//apps/web",
+    "generator": "apiflow scan-fe/1"
+  },
+  "screens": [
+    {
+      "id": "sc_users-param",
+      "label": "/users/{param}",
+      "route": "/users/{param}",
+      "source": { "file": "src/pages/users/[id].tsx", "line": 1 },
+      "viaHops": 2
+    }
+  ],
+  "endpoints": [
+    {
+      "id": "ep_get-api-users-param",
+      "method": "GET",
+      "path": "/api/users/{param}",
+      "auth": true,
+      "source": { "file": "app/Http/routes.php", "line": 42 }
+    }
+  ],
+  "fields": [
+    {
+      "id": "fl_ep_get-api-users-param_data-email",
+      "endpointId": "ep_get-api-users-param",
+      "path": "data.email",
+      "kind": "response",
+      "declared": true,
+      "observed": true
+    }
+  ],
+  "calls": [
+    {
+      "screenId": "sc_users-param",
+      "endpointId": "ep_get-api-users-param",
+      "via": "axios",
+      "confidence": "inferred",
+      "source": { "file": "src/api/users.ts", "line": 5 }
+    }
+  ],
+  "reads": [
+    {
+      "screenId": "sc_users-param",
+      "fieldId": "fl_ep_get-api-users-param_data-email",
+      "confidence": "guess",
+      "source": { "file": "src/pages/users/[id].tsx", "line": 6 }
+    }
+  ],
+  "unresolved": [
+    {
+      "source": { "file": "src/api/gen.ts", "line": 210 },
+      "reason": "url is a variable or expression: endpoint",
+      "snippet": "return fetch(endpoint, init);"
+    }
+  ]
+}

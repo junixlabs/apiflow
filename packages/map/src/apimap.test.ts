@@ -1,6 +1,12 @@
+import { readFileSync } from 'fs';
+import { join } from 'path';
 import { describe, expect, it } from 'vitest';
 import type { ApiMapFile } from './apimap';
 import { createApiMap, endpointId, endpointsForScreen, fieldId, finalizeApiMap, normalizePath, parseMap, screenId, screensAffectedByEndpoint, screensAffectedByField, serializeMap, unreadResponseFields } from './apimap';
+
+const FIXTURE_DIR = join(import.meta.dirname, '..', 'schema');
+const validDoc = (): Record<string, unknown> =>
+  JSON.parse(readFileSync(join(FIXTURE_DIR, 'v1.apimap'), 'utf8')) as Record<string, unknown>;
 
 describe('normalizePath', () => {
   it('strips origin, query and hash', () => {
@@ -216,6 +222,12 @@ describe('chain interning', () => {
     expect(text).not.toContain('chainNodes');
     expect(text).toBe(`${JSON.stringify(bare, null, 2)}\n`);
   });
+
+  it('rejects a chain index out of range for chainNodes rather than yielding a node missing every field', () => {
+    const stored = JSON.parse(serializeMap(withChain())) as { calls: Array<{ chain?: number[] }> };
+    stored.calls[1].chain = [99];
+    expect(() => parseMap(JSON.stringify(stored))).toThrow('.apimap.calls[1].chain[0]: index 99 is out of range for chainNodes (length 3)');
+  });
 });
 
 // cm:why Two call sites in one screen used to be two rows, so the headline "N screen(s) break"
@@ -318,5 +330,52 @@ describe('one endpoint seen by two readers keeps both halves', () => {
     map.endpoints.push({ id, method: 'GET', path: '/x', source: { file: 'a.ts', line: 1 }, auth: false });
     map.endpoints.push({ id, method: 'GET', path: '/x', source: { file: 'b.ts', line: 1 }, auth: true });
     expect(finalizeApiMap(map).endpoints[0].auth).toBe(true);
+  });
+});
+
+// cm:why `schema/v1.apimap` ships in the npm package (package.json "files") specifically so a repo
+// on the other side of `.apimap` has something to pin its own parseMap-compatibility test against.
+describe('parseMap validates the whole document', () => {
+  it('accepts the pinned external-reader fixture', () => {
+    const map = parseMap(JSON.stringify(validDoc()));
+    expect(map.screens).toHaveLength(1);
+    expect(map.endpoints[0].path).toBe('/api/users/{param}');
+    expect(map.calls[0].confidence).toBe('inferred');
+  });
+
+  it('rejects an unsupported version, naming what it saw', () => {
+    const doc = { ...validDoc(), version: 2 };
+    expect(() => parseMap(JSON.stringify(doc))).toThrow('.apimap.version: expected 1, got 2');
+  });
+
+  it('rejects a missing required collection, naming the key', () => {
+    const doc = validDoc();
+    delete doc.reads;
+    expect(() => parseMap(JSON.stringify(doc))).toThrow('.apimap.reads: expected array, got undefined');
+  });
+
+  it('rejects a field of the wrong type at its exact path', () => {
+    const doc = validDoc() as { calls: Array<Record<string, unknown>> };
+    doc.calls[0].source = { file: 'src/api/users.ts', line: 'five' };
+    expect(() => parseMap(JSON.stringify(doc))).toThrow('.apimap.calls[0].source.line: expected number, got string');
+  });
+
+  it('reports every divergence in one throw, not just the first', () => {
+    const doc = validDoc() as Record<string, unknown>;
+    doc.screens = [{ id: 'sc_x' }];
+    doc.endpoints = 'nope';
+    try {
+      parseMap(JSON.stringify(doc));
+      expect.unreachable();
+    } catch (e) {
+      const message = (e as Error).message;
+      expect(message).toContain('.apimap.screens[0].label: expected string, got undefined');
+      expect(message).toContain('.apimap.endpoints: expected array, got string');
+    }
+  });
+
+  it('does not reject a field this version does not know about', () => {
+    const doc = { ...validDoc(), fromTheFuture: true };
+    expect(() => parseMap(JSON.stringify(doc))).not.toThrow();
   });
 });

@@ -1,7 +1,8 @@
 // cm:why Declares its own verb set rather than reusing a client library's: those unions leave out
 // OPTIONS, while the Laravel and Express scanners both match `options`.
 export const MAP_METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS', 'HEAD', 'UNKNOWN'] as const;
-import type { ShapeType } from './shape';
+import { arr, bool, enumOf, type Infer, literal, num, obj, opt, parseWith, str } from './schema';
+import { SHAPE_TYPES } from './shape';
 
 export type MapMethod = (typeof MAP_METHODS)[number];
 
@@ -14,115 +15,122 @@ export function toMapMethod(raw: string): MapMethod {
 
 // cm:why Three levels, not a boolean: a generic scanner resolves most call sites only partly, and
 // a map that cannot say how sure it is gets trusted for coverage it does not have.
-export type Confidence = 'exact' | 'inferred' | 'guess';
+export const CONFIDENCE_VALUES = ['exact', 'inferred', 'guess'] as const;
+export type Confidence = (typeof CONFIDENCE_VALUES)[number];
 
-export interface SourceRef {
-  file: string;
-  line: number;
-}
+// cm:guard This module's wire-format types are all `Infer<typeof ...Schema>`, never a hand-written
+// interface — a shape and its validator drawn from two places is exactly the gap this file used to have.
+export const sourceRefSchema = obj({ file: str(), line: num() });
+export type SourceRef = Infer<typeof sourceRefSchema>;
 
-export interface ScreenNode {
-  id: string;
-  label: string;
-  route?: string;
-  source: SourceRef;
-  // cm:why Kept alongside label so the caller-hop can re-attribute this call later: label is for
-  // humans, but the hop needs the exact symbol and object member it came from.
-  symbol?: string;
-  member?: string;
-  viaHops?: number;
-}
+// cm:why symbol/member ride with label so a caller-hop can re-attribute this call later: label is
+// for humans, but the hop needs the exact symbol and object member it came from.
+export const screenNodeSchema = obj({
+  id: str(),
+  label: str(),
+  route: opt(str()),
+  source: sourceRefSchema,
+  symbol: opt(str()),
+  member: opt(str()),
+  viaHops: opt(num()),
+});
+export type ScreenNode = Infer<typeof screenNodeSchema>;
 
-export interface EndpointNode {
-  id: string;
-  method: MapMethod;
-  path: string;
-  baseUrlVar?: string;
-  source?: SourceRef;
-  handler?: string;
-  auth?: boolean;
-  probed?: boolean;
+export const endpointNodeSchema = obj({
+  id: str(),
+  method: enumOf(MAP_METHODS),
+  path: str(),
+  baseUrlVar: opt(str()),
+  source: opt(sourceRefSchema),
+  handler: opt(str()),
+  auth: opt(bool()),
+  probed: opt(bool()),
   // cm:why Set only by `link`, and only on a pair it actually matched — `handler` looked like the
   // same signal but an inline arrow route has none, so it read every Express endpoint as unlinked.
-  linked?: true;
-}
+  linked: opt(literal(true)),
+});
+export type EndpointNode = Infer<typeof endpointNodeSchema>;
 
-export type FieldKind = 'request' | 'response';
+export const FIELD_KIND_VALUES = ['request', 'response'] as const;
+export type FieldKind = (typeof FIELD_KIND_VALUES)[number];
 
 // cm:why Independent booleans, not an enum: declared-without-observed means the code lies, and
 // observed-without-any-read means payload nobody consumes. Both need the flags to coexist.
-export interface FieldNode {
-  id: string;
-  endpointId: string;
-  path: string;
-  kind: FieldKind;
-  type?: ShapeType;
-  nullable?: boolean;
-  optional?: boolean;
-  declared?: boolean;
-  observed?: boolean;
-  declaredAs?: string;
+export const fieldNodeSchema = obj({
+  id: str(),
+  endpointId: str(),
+  path: str(),
+  kind: enumOf(FIELD_KIND_VALUES),
+  type: opt(enumOf(SHAPE_TYPES)),
+  nullable: opt(bool()),
+  optional: opt(bool()),
+  declared: opt(bool()),
+  observed: opt(bool()),
+  declaredAs: opt(str()),
   // cm:edge contract -> packages/scan/src/shape.ts#isDictionary — set only on a `{key}` path, and it
   // holds how many keys collapsed into it: "a keyed collection this wide", not "a field".
-  keys?: number;
-  source?: SourceRef;
-}
+  keys: opt(num()),
+  source: opt(sourceRefSchema),
+});
+export type FieldNode = Infer<typeof fieldNodeSchema>;
 
-export interface ChainNode {
-  file: string;
-  symbol: string;
-  line: number;
-  role: 'client' | 'hook' | 'component' | 'module' | 'screen';
-  precise: boolean;
-}
+const CHAIN_ROLE_VALUES = ['client', 'hook', 'component', 'module', 'screen'] as const;
 
-export interface CallEdge {
-  screenId: string;
-  endpointId: string;
-  via: string;
-  confidence: Confidence;
-  source: SourceRef;
-  // cm:why The PATH, not its length: "3 hop" cannot be read, while
-  // `api client -> useUpdateUser -> UserEditForm -> /user/:id` can. Optional, so older maps stay v1.
-  chain?: ChainNode[];
-}
+// cm:guard `precise` is computed by `expandChains`, never stored — the schema below covers only
+// what a `chainNodes` table entry has ON DISK; ChainNode adds `precise` back for in-memory callers.
+const storedChainNodeSchema = obj({ file: str(), symbol: str(), line: num(), role: enumOf(CHAIN_ROLE_VALUES) });
+export type ChainNode = Infer<typeof storedChainNodeSchema> & { precise: boolean };
+
+const callEdgeShape = {
+  screenId: str(),
+  endpointId: str(),
+  via: str(),
+  confidence: enumOf(CONFIDENCE_VALUES),
+  source: sourceRefSchema,
+};
+
+// cm:why The PATH, not its length: "3 hop" cannot be read, while
+// `api client -> useUpdateUser -> UserEditForm -> /user/:id` can. Optional, so older maps stay v1.
+export type CallEdge = Infer<ReturnType<typeof obj<typeof callEdgeShape>>> & { chain?: ChainNode[] };
 
 // cm:guard On-disk shape ONLY. Every layer above works with `chain` inline; indices exist so a file
 // path is written once instead of once per call, and `link` never has to renumber anything.
-interface StoredCallEdge extends Omit<CallEdge, 'chain'> {
-  chain?: number[];
-  impreciseFrom?: number;
-}
+const storedCallEdgeSchema = obj({
+  ...callEdgeShape,
+  chain: opt(arr(num())),
+  impreciseFrom: opt(num()),
+});
+type StoredCallEdge = Infer<typeof storedCallEdgeSchema>;
 
-export interface ReadEdge {
-  screenId: string;
-  fieldId: string;
-  confidence: Confidence;
-  source: SourceRef;
-}
+export const readEdgeSchema = obj({
+  screenId: str(),
+  fieldId: str(),
+  confidence: enumOf(CONFIDENCE_VALUES),
+  source: sourceRefSchema,
+});
+export type ReadEdge = Infer<typeof readEdgeSchema>;
 
-export interface UnresolvedCall {
-  source: SourceRef;
-  reason: string;
-  snippet: string;
-}
+export const unresolvedCallSchema = obj({ source: sourceRefSchema, reason: str(), snippet: str() });
+export type UnresolvedCall = Infer<typeof unresolvedCallSchema>;
 
-export interface ApiMapFile {
-  version: 1;
+// cm:guard `version` is `literal(1)`, so a bad or future version fails HERE with the value it saw —
+// see SPEC.md "Version policy" for what changing this number is allowed to mean.
+const storedApiMapFileSchema = obj({
+  version: literal(1),
   // cm:why No generatedAt: a timestamp would change every scan and defeat the byte-identical
   // guarantee below. Git already records when the map was written.
-  metadata: {
-    name: string;
-    root: string;
-    generator: string;
-  };
-  screens: ScreenNode[];
-  endpoints: EndpointNode[];
-  fields: FieldNode[];
-  calls: CallEdge[];
-  reads: ReadEdge[];
-  unresolved: UnresolvedCall[];
-}
+  metadata: obj({ name: str(), root: str(), generator: str() }),
+  screens: arr(screenNodeSchema),
+  endpoints: arr(endpointNodeSchema),
+  fields: arr(fieldNodeSchema),
+  calls: arr(storedCallEdgeSchema),
+  reads: arr(readEdgeSchema),
+  unresolved: arr(unresolvedCallSchema),
+  chainNodes: opt(arr(storedChainNodeSchema)),
+});
+type StoredApiMapFile = Infer<typeof storedApiMapFileSchema>;
+
+export type ApiMapFile = Omit<StoredApiMapFile, 'calls' | 'chainNodes'> & { calls: CallEdge[] };
 
 // cm:guard Ids below derive from content, never a counter or timestamp — re-scanning an unchanged
 // repo must emit a byte-identical .apimap, else every scan is a whole-file git diff.
@@ -633,42 +641,36 @@ export function serializeMap(map: ApiMapFile): string {
   return `${JSON.stringify(body, null, 2)}\n`;
 }
 
-export function expandChains(raw: unknown): ApiMapFile {
-  const map = raw as Omit<ApiMapFile, 'calls'> & { chainNodes?: ChainNode[]; calls: StoredCallEdge[] };
+// cm:guard A `chain` index without a `chainNodes` table is dropped rather than trusted —
+// `serializeMap` only ever emits one alongside the other, so this pair is malformed input.
+// cm:guard An index out of range for the table throws instead of spreading `table[i]` as
+// `undefined` — a schema check on `number` cannot see the table's length, only this can.
+export function expandChains(map: StoredApiMapFile): ApiMapFile {
   const table = map.chainNodes;
-  if (table === undefined) return map as unknown as ApiMapFile;
-  const calls: CallEdge[] = map.calls.map((call) => {
+  const calls: CallEdge[] = map.calls.map((call, callIndex) => {
     const { chain, impreciseFrom, ...rest } = call;
-    if (chain === undefined) return rest;
+    if (chain === undefined || table === undefined) return rest;
     return {
       ...rest,
-      chain: chain.map((i, position) => ({
-        ...table[i],
-        precise: impreciseFrom === undefined ? true : position < impreciseFrom,
-      })),
+      chain: chain.map((i, position) => {
+        const node = table[i];
+        if (node === undefined) {
+          throw new Error(
+            `.apimap.calls[${String(callIndex)}].chain[${String(position)}]: index ${String(i)} is out of range for chainNodes (length ${String(table.length)})`,
+          );
+        }
+        return { ...node, precise: impreciseFrom === undefined ? true : position < impreciseFrom };
+      }),
     };
   });
   const { chainNodes: _drop, ...withoutTable } = map;
-  return { ...withoutTable, calls } as ApiMapFile;
+  return { ...withoutTable, calls };
 }
 
-const COLLECTIONS = ['screens', 'endpoints', 'fields', 'calls', 'reads', 'unresolved'] as const;
-
-// cm:guard Every collection is asserted present, not just `version`. A map that arrives from outside
-// this repo — hand-written, or written by another tool — omits an empty array as a matter of course.
-// cm:why Left to the reader, the omission surfaces as `TypeError: cannot read length of undefined`
-// from whichever query touched it first, which reads as a bug in apiflow rather than in the file.
-function assertCollections(map: ApiMapFile): void {
-  for (const name of COLLECTIONS) {
-    if (!Array.isArray(map[name])) throw new Error(`.apimap is missing "${name}": it must be an array, even when empty`);
-  }
-}
-
+// cm:why The whole document is validated before expansion: a `chain` index into a missing
+// `chainNodes` table is a shape error, and reporting it as one here beats a bad index reaching a query.
 export function parseMap(text: string): ApiMapFile {
-  const raw = JSON.parse(text) as ApiMapFile;
-  if (raw.version !== 1) throw new Error(`unsupported .apimap version: ${String(raw.version)}`);
-  assertCollections(raw);
-  const map = expandChains(raw);
-  assertCollections(map);
-  return map;
+  const raw: unknown = JSON.parse(text);
+  const stored = parseWith(storedApiMapFileSchema, raw, '.apimap');
+  return expandChains(stored);
 }

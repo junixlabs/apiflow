@@ -148,7 +148,7 @@ describe('apiflow diff', () => {
         );
         const outcome = run([a, partial]);
         expect(outcome.status).toBe(2);
-        expect(outcome.out).toContain('missing "reads"');
+        expect(outcome.out).toContain('.apimap.reads: expected array, got undefined');
       } finally {
         rmSync(dir, { recursive: true, force: true });
       }
@@ -184,7 +184,7 @@ describe('apiflow diff', () => {
           // cm:guard Asserts the LOADER's sentence, not just the parse message. An uncaught throw
           // prints the same message and exits 1, so impact's case would pass without the loader.
           expect(err, `apiflow ${argv[0]}`).toMatch(/^Cannot read /);
-          expect(err, `apiflow ${argv[0]}`).toContain('missing "reads"');
+          expect(err, `apiflow ${argv[0]}`).toContain('.apimap.reads: expected array, got undefined');
         }
       } finally {
         rmSync(dir, { recursive: true, force: true });

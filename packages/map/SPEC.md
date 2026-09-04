@@ -3,10 +3,32 @@
 This is the public contract. Anything that reads or writes an `.apimap` reads this file, so it lives
 with the package that owns the format rather than in `docs/`.
 
-**Known gap:** the TypeScript types in `src/apimap.ts` are hand-written, i.e. they are the source
-rather than a derivative of a schema. SCIP names exactly this as the first reason LSIF was slow to
-work with (`docs/research/product-shape.md` §2). `parseMap` validates `version` and nothing
-structural, which is enough for a file you produced yourself and not enough for a file you received.
+Every type below is `Infer<typeof someSchema>` (`src/schema.ts`), not a hand-written interface —
+`parseMap` walks the same schema, so a file's shape and what validates it cannot drift apart the way
+a hand-written type and a hand-written check can. It validates the full document, not just
+`version`: every required key, every field's type, every array element, with the exact path of the
+first divergence in the error (`.apimap.calls[3].source.line: expected number, got string`).
+
+`schema/v1.apimap` (ships in the npm package — see `files` in `package.json`) is a small,
+hand-written, committed document pinned to this version. It is outside `scripts/fixture-map.mjs`'s
+reach (that gate only touches `fixtures/demo-app/maps/`), so a scanner change can never rewrite it
+out from under an external reader. Pin your own compatibility test against it: parse it with
+`parseMap` and assert on the fields you depend on.
+
+## Version policy
+
+`parseMap` rejects any `version` it does not recognize — currently only `1` — by construction,
+naming the value it saw. That is the version-compatibility contract:
+
+- **Compatible with v1, no bump:** adding a new optional field, either at the top level or on an
+  item in one of the six collections. `parseMap` ignores a field it does not know about (a
+  generator ahead of a reader), so an old reader stays working against a newer producer.
+- **Requires a new version:** removing a field, renaming a field, changing what an existing field's
+  value means (not just widening its type), or changing which fields are required. Any of these
+  breaks a reader written against the old shape without it being able to tell.
+- A bump adds a new schema and a new literal to what `version` accepts — it does not loosen the
+  existing one. An old reader that still only understands `1` is expected to refuse a `2` outright,
+  which is exactly what an unrecognized `literal(1)` mismatch already does today.
 
 
 Two file types, one workspace layout.

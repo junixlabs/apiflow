@@ -20,8 +20,8 @@ function linkedMap(): ApiMapFile {
     { id: 'e3', method: 'GET', path: '/api/orphan' } as never,
   );
   m.calls.push(
-    { id: 'c1', endpointId: 'e1', screenId: 'sc', confidence: 'inferred', source: { file: 'account.tsx', line: 3 } } as never,
-    { id: 'c2', endpointId: 'e2', screenId: 'sc', confidence: 'inferred', source: { file: 'account.tsx', line: 4 } } as never,
+    { endpointId: 'e1', screenId: 'sc', via: 'fetch', confidence: 'inferred', source: { file: 'account.tsx', line: 3 } },
+    { endpointId: 'e2', screenId: 'sc', via: 'fetch', confidence: 'inferred', source: { file: 'account.tsx', line: 4 } },
   );
   return finalizeApiMap(m);
 }
